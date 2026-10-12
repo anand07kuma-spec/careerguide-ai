@@ -1,0 +1,140 @@
+@import "tailwindcss";
+
+/* CareerGuide AI design tokens.
+   Light theme everywhere except the active call screen, which uses the navy ramp. */
+@theme {
+  --color-navy: #0b1730;
+  --color-navy-700: #12233f;
+  --color-navy-600: #1b3055;
+  --color-brand: #2563eb;
+  --color-brand-dark: #1d4ed8;
+  --color-brand-light: #60a5fa;
+  --color-brand-mist: #dbeafe;
+  --color-teal: #14b8a6;
+  --color-teal-mist: #ccfbf1;
+  --color-canvas: #f5f8ff;
+  --color-surface: #ffffff;
+  --color-ink: #172033;
+  --color-muted: #64748b;
+  --color-line: #e2e8f5;
+  --color-success: #16a34a;
+  --color-success-mist: #dcfce7;
+  --color-warning: #f59e0b;
+  --color-warning-mist: #fef3c7;
+  --color-danger: #dc2626;
+  --color-danger-mist: #fee2e2;
+
+  --radius-card: 18px;
+
+  --shadow-card: 0 1px 2px rgb(23 32 51 / 0.04), 0 8px 24px -12px rgb(11 23 48 / 0.12);
+  --shadow-lift: 0 2px 4px rgb(23 32 51 / 0.06), 0 18px 40px -16px rgb(11 23 48 / 0.22);
+
+  --font-sans: var(--font-geist-sans);
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--color-canvas);
+    color: var(--color-ink);
+    font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+    /* Mobile browsers add momentum scrolling; keep the page from drifting sideways. */
+    overflow-x: hidden;
+  }
+
+  *:focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+
+  ::selection {
+    background: var(--color-brand-mist);
+  }
+}
+
+/* Honour the in-app accessibility switch as well as the OS setting. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+html[data-reduced-motion="true"] *,
+html[data-reduced-motion="true"] *::before,
+html[data-reduced-motion="true"] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+
+html[data-high-contrast="true"] {
+  --color-muted: #334155;
+  --color-line: #94a3b8;
+}
+
+html[data-high-contrast="true"] .cg-card {
+  border-color: #475569;
+}
+
+@utility cg-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line) transparent;
+}
+
+/* Shared surface recipe so cards look identical across every screen. */
+@layer components {
+  .cg-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card);
+  }
+
+  .cg-signal {
+    position: relative;
+  }
+
+  .cg-signal::after {
+    content: "";
+    position: absolute;
+    inset: -6px;
+    border-radius: 9999px;
+    border: 1px solid rgb(96 165 250 / 0.35);
+    animation: cg-pulse 2.4s ease-out infinite;
+  }
+}
+
+@keyframes cg-pulse {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1.35);
+    opacity: 0;
+  }
+}
+
+@keyframes cg-wave {
+  0%,
+  100% {
+    transform: scaleY(0.35);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+.cg-wave-bar {
+  animation: cg-wave 1s ease-in-out infinite;
+  transform-origin: center;
+}

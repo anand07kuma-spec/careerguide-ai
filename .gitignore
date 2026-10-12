@@ -1,0 +1,50 @@
+# --- secrets and local config -------------------------------------------------
+.env
+.env.local
+.env*.local
+backend/.env
+
+# --- python -------------------------------------------------------------------
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# --- private data -------------------------------------------------------------
+# The database holds real student conversations. Never commit it, including any
+# copy or backup of it (*.db, *.db-journal, *.db.bak).
+*.db
+*.db*
+*.sqlite
+*.sqlite3
+backend/careerguide.db*
+
+# The pristine create-next-app history, kept out of the way while the whole
+# project lives in one repository at the project root.
+**/.git-scaffold-backup/
+
+# generated speech audio
+backend/media/
+
+# --- node / next --------------------------------------------------------------
+node_modules/
+.next/
+out/
+dist/
+*.tsbuildinfo
+next-env.d.ts
+npm-debug.log*
+yarn-error.log*
+
+# --- editors and OS -----------------------------------------------------------
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# --- local AI assistant scratch ----------------------------------------------
+.qoder/
+.next-docs/

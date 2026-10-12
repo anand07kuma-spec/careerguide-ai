@@ -1,0 +1,14 @@
+# Backend dependencies for CareerGuide AI
+# Install into a virtual environment:
+#   python -m venv .venv
+#   .venv\Scripts\python.exe -m pip install -r requirements.txt
+
+fastapi==0.143.0
+uvicorn[standard]==0.46.0
+sqlalchemy==2.0.49
+pydantic==2.13.4
+pydantic-settings==2.14.2
+python-dotenv==1.2.4
+python-multipart==0.0.32
+httpx==0.28.1
+edge-tts==7.2.8
