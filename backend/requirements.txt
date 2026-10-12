@@ -12,3 +12,7 @@ python-dotenv==1.2.4
 python-multipart==0.0.32
 httpx==0.28.1
 edge-tts==7.2.8
+
+# PostgreSQL driver — only needed when DATABASE_URL points at Postgres
+# (e.g. a Supabase project). SQLite works without it.
+psycopg[binary]==3.3.6

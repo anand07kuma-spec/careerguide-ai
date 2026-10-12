@@ -9,15 +9,20 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Integer,
-    JSON,
     String,
     Text,
     TypeDecorator,
     UniqueConstraint,
 )
+from sqlalchemy import JSON as _JSON
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .database import Base
+
+# Generic JSON keeps working on SQLite (stored as TEXT); hosted Postgres gets
+# JSONB so the columns stay indexable there.
+JSON = _JSON().with_variant(JSONB, "postgresql")
 
 
 def utcnow() -> datetime:
