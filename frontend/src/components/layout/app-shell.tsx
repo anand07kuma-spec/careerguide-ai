@@ -27,24 +27,26 @@ import { classLabel, cn, initials } from "@/lib/utils";
 interface NavItem {
   href: string;
   label: string;
+  /** Short form used inside the mobile drawer, where the full label would wrap. */
+  short: string;
   icon: typeof Home;
   group: "guide" | "explore" | "grow" | "family";
 }
 
 const NAV: NavItem[] = [
-  { href: "/app", label: "Home", icon: Home, group: "guide" },
-  { href: "/app/call", label: "Start AI Call", icon: Mic, group: "guide" },
-  { href: "/app/chat", label: "Chat Instead", icon: MessagesSquare, group: "guide" },
-  { href: "/app/careers", label: "Career Explorer", icon: Briefcase, group: "explore" },
-  { href: "/app/interests", label: "Discover My Interests", icon: Lightbulb, group: "explore" },
-  { href: "/app/resources", label: "Resources", icon: BookOpen, group: "explore" },
-  { href: "/app/scholarships", label: "Scholarships & Aid", icon: Wallet, group: "explore" },
-  { href: "/app/institutes", label: "Institutes & Courses", icon: Building2, group: "explore" },
-  { href: "/app/journey", label: "My Journey", icon: Compass, group: "grow" },
-  { href: "/app/plans", label: "Study & Skill Plans", icon: GraduationCap, group: "grow" },
-  { href: "/app/reports", label: "Reports", icon: FileText, group: "grow" },
-  { href: "/parent", label: "Parent Dashboard", icon: ShieldCheck, group: "family" },
-  { href: "/app/settings", label: "Settings", icon: Settings, group: "family" },
+  { href: "/app", label: "Home", short: "Home", icon: Home, group: "guide" },
+  { href: "/app/call", label: "Start AI Call", short: "AI Call", icon: Mic, group: "guide" },
+  { href: "/app/chat", label: "Chat Instead", short: "Chat", icon: MessagesSquare, group: "guide" },
+  { href: "/app/careers", label: "Career Explorer", short: "Careers", icon: Briefcase, group: "explore" },
+  { href: "/app/interests", label: "Discover My Interests", short: "Interests", icon: Lightbulb, group: "explore" },
+  { href: "/app/resources", label: "Resources", short: "Resources", icon: BookOpen, group: "explore" },
+  { href: "/app/scholarships", label: "Scholarships & Aid", short: "Scholarships", icon: Wallet, group: "explore" },
+  { href: "/app/institutes", label: "Institutes & Courses", short: "Institutes", icon: Building2, group: "explore" },
+  { href: "/app/journey", label: "My Journey", short: "Journey", icon: Compass, group: "grow" },
+  { href: "/app/plans", label: "Study & Skill Plans", short: "Plans", icon: GraduationCap, group: "grow" },
+  { href: "/app/reports", label: "Reports", short: "Reports", icon: FileText, group: "grow" },
+  { href: "/parent", label: "Parent Dashboard", short: "Parent", icon: ShieldCheck, group: "family" },
+  { href: "/app/settings", label: "Settings", short: "Settings", icon: Settings, group: "family" },
 ];
 
 const GROUP_TITLES: Record<NavItem["group"], string> = {
@@ -123,9 +125,14 @@ export function AppShell({ children }: { children: ReactNode }) {
     );
   }
 
-  const items = NAV.filter((item) =>
-    isParent ? item.group === "family" || item.href === "/parent" || item.href === "/app/settings" : true,
-  );
+  // A student tapping Parent Dashboard is bounced straight back to /app, because
+  // that route is guarded for parents — so it is not offered to them. A parent
+  // keeps the family pages; the student pages read a child's private answers,
+  // which the backend only ever serves to that child.
+  const items = NAV.filter((item) => {
+    if (item.href === "/parent") return isParent;
+    return !isParent || item.group === "family";
+  });
 
   const sidebar = (
     <nav aria-label="Main" className="flex h-full flex-col bg-navy text-white/80">
@@ -209,7 +216,6 @@ export function AppShell({ children }: { children: ReactNode }) {
           "fixed inset-0 z-50 lg:hidden",
           drawerOpen ? "pointer-events-auto" : "pointer-events-none",
         )}
-        aria-label="Main menu"
         inert={!drawerOpen}
       >
         <button
@@ -222,21 +228,75 @@ export function AppShell({ children }: { children: ReactNode }) {
           )}
         />
         <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Main menu"
           className={cn(
-            "absolute inset-y-0 left-0 w-[288px] max-w-[86vw] bg-navy shadow-[0_0_70px_rgba(4,10,22,0.55)] ring-1 ring-white/10 transition-transform duration-300 ease-out",
+            "absolute inset-y-0 left-0 flex w-[288px] max-w-[86vw] flex-col bg-navy text-white/80 shadow-[0_0_70px_rgba(4,10,22,0.55)] ring-1 ring-white/10 transition-transform duration-300 ease-out",
             drawerOpen ? "translate-x-0" : "-translate-x-full",
           )}
         >
-          {sidebar}
-          <button
-            type="button"
-            ref={closeButtonRef}
-            onClick={() => closeDrawer(true)}
-            aria-label="Close menu"
-            className="absolute right-3 top-5 rounded-full bg-white/10 p-2 text-white hover:bg-white/20"
-          >
-            <X className="h-4 w-4" aria-hidden />
-          </button>
+          {/* Every page this account can open, in two compact columns: the full
+              list fits a short phone screen without the student having to find a
+              scrollbar. Long labels would wrap, so the drawer uses short names. */}
+          <div className="flex items-center justify-between gap-3 px-4 pb-3 pt-4">
+            <Wordmark tone="white" compact />
+            <button
+              type="button"
+              ref={closeButtonRef}
+              onClick={() => closeDrawer(true)}
+              aria-label="Close menu"
+              className="shrink-0 rounded-full bg-white/10 p-2 text-white hover:bg-white/20"
+            >
+              <X className="h-4 w-4" aria-hidden />
+            </button>
+          </div>
+
+          <nav className="cg-scrollbar flex-1 overflow-y-auto px-3 pb-2">
+            <ul className="grid grid-cols-2 gap-1.5">
+              {items.map((item) => {
+                const active = isActive(pathname, item.href);
+                const Icon = item.icon;
+                return (
+                  <li key={item.href}>
+                    <Link
+                      href={item.href}
+                      onClick={() => closeDrawer(false)}
+                      aria-current={active ? "page" : undefined}
+                      className={cn(
+                        "flex min-h-10 items-center gap-2 rounded-xl px-2.5 py-2 text-xs font-medium transition-colors",
+                        active
+                          ? "bg-brand text-white"
+                          : "text-white/70 hover:bg-white/8 hover:text-white",
+                      )}
+                    >
+                      <Icon className="h-4 w-4 shrink-0" aria-hidden />
+                      <span className="truncate">{item.short}</span>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </nav>
+
+          <div className="flex items-center gap-2 border-t border-white/10 px-3 py-2.5">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand text-[11px] font-semibold text-white">
+              {initials(user?.display_name)}
+            </span>
+            <p className="min-w-0 flex-1 truncate text-xs font-medium text-white">
+              {user?.display_name}
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                closeDrawer(false);
+                void signOut();
+              }}
+              className="shrink-0 rounded-lg px-2 py-1 text-[11px] font-medium text-white/60 hover:bg-white/10 hover:text-white"
+            >
+              Sign out
+            </button>
+          </div>
         </div>
       </div>
 

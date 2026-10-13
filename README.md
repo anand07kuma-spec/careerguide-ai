@@ -94,45 +94,64 @@ cp frontend/.env.example frontend/.env.local
 | `SESSION_TOKEN_TTL_HOURS` | backend | `720` | Opaque device tokens stored in `auth_tokens` |
 | `NEXT_PUBLIC_BACKEND_URL` | frontend | `http://localhost:8000` | API origin the browser calls, and the origin that serves generated speech |
 
-### Using a hosted database (Supabase)
+### Using a hosted database
 
 SQLite is the default and needs nothing. To keep the same data in a hosted
-PostgreSQL, put your Supabase connection string in `backend/.env` and restart
-uvicorn. Type the value into the file yourself; never paste it into a chat, a
-screenshot or a commit, because it contains the database password.
+PostgreSQL, set `DATABASE_URL` and restart uvicorn. Type the value into the file
+yourself; never paste it into a chat, a screenshot or a commit, because it contains
+the database password. The app puts the right driver on the URL itself —
+`app/config.py` turns a plain `postgresql://…` into `postgresql+psycopg://…`, the only
+PostgreSQL driver in `requirements.txt` — so a connection string copied from any host
+works as written.
+
+**The route that is actually used for the deployed site** is a Vercel marketplace
+database, which needs no separate account and writes the variable for you:
+
+```bash
+cd backend
+npx vercel install prisma/prisma-postgres      # opens a browser to accept its terms
+npx vercel env pull .env.local                # DATABASE_URL lands here
+.venv/Scripts/python.exe scripts/db_init.py --from-vercel
+```
+
+`--from-vercel` reads the URL from the `.env.local` that `vercel env pull` writes (the
+app never loads that file), insists on TLS, creates the tables and seeds the catalogue.
+Add `--recreate-if-empty` when a column definition changed — it drops and rebuilds only
+while every table still holds zero rows, and refuses the moment there is data. Other
+marketplace options work the same way (`npx vercel integration discover postgres`).
+
+**Supabase** works identically, with the connection string typed into `backend/.env`:
 
 1. Supabase dashboard: **Connect → Client libraries → Connection string → URI**,
    with **Direct connection** or **Session pooler** selected. Both pooler modes
    work here (port `5432` session, `6543` transaction); the engine recycles
    connections and avoids prepared statements for that reason.
-2. Set the value, adding the `+psycopg` driver part:
-
-   ```
-   DATABASE_URL=postgresql+psycopg://postgres.<project-ref>:<password>@<host>:5432/postgres
-   ```
-
-   A password containing `@ : /` or `%` has to be URL-encoded, or the URL will
-   not parse. Append `?sslmode=require` if the server insists on TLS.
-3. Start the backend once. It creates every table and seeds the career
-   catalogue, so a new project is usable immediately.
-4. Confirm what the app actually sees:
+2. A password containing `@ : /` or `%` has to be URL-encoded, or the URL will not
+   parse. Append `?sslmode=require` if the server insists on TLS.
+3. Confirm what the app actually sees:
 
    ```bash
    .venv/Scripts/python.exe scripts/db_check.py     # backend/, driver installed
    ```
 
-   It prints the dialect, the server version, the tables and a row count per
-   table, with the password masked. `pip install -r requirements.txt` first if
-   the PostgreSQL driver is missing.
+   It prints the dialect, the server version, the tables and a row count per table,
+   with the password masked. `pip install -r requirements.txt` first if the
+   PostgreSQL driver is missing.
 
-Two things this does not change. The privacy model is still the app's: consent
-gates, server-side ownership checks and transcript deletion all keep working,
-and nothing is stored in Supabase Auth or the browser. But moving a child's
-conversations off your own machine does change where that data lives, who can
-reach it and how long it survives, which is exactly the kind of processing
-needing qualified legal review before this goes to real users — see
-[Honest status](#4-honest-status). Supabase free-tier projects also pause after
-a week of inactivity and need to be restored manually.
+One thing to know before trusting any hosted setup: **SQLite silently accepts a string
+longer than a column's declared length and PostgreSQL rejects it.** The catalogue was
+seeded on SQLite from day one, so a 163-character `institutions.fee_range` row only
+failed against real Postgres. `scripts/schema_fit_check.py` measures every seeded value
+against its declared column and needs no database at all — run it after touching the
+catalogue.
+
+Two things none of this changes. The privacy model is still the app's: consent gates,
+server-side ownership checks and transcript deletion all keep working, and nothing is
+stored in Supabase Auth or the browser. But moving a child's conversations off your own
+machine does change where that data lives, who can reach it and how long it survives,
+which is exactly the kind of processing needing qualified legal review before this goes
+to real users — see [Honest status](#4-honest-status). Supabase free-tier projects also
+pause after a week of inactivity and need to be restored manually.
 
 ### Turning on a real AI model
 
@@ -149,6 +168,112 @@ AI_MODEL=<model name>
 Restart uvicorn. `GET /api/health` reports `demo_mode: false`, and the demo labels disappear.
 Everything else in the app keeps working either way.
 
+### Deploying to Vercel
+
+Two Vercel projects, one repository — Vercel finds the FastAPI `app` in
+`backend/app/main.py` and the Next.js app in `frontend/` without configuration.
+
+| Project | Root Directory | Needs in Environment Variables |
+| --- | --- | --- |
+| `careerguide-api` | `backend` | `DATABASE_URL` (a Postgres URL — without one every data endpoint answers 503), `DB_AUTO_SETUP=false`, `CORS_ORIGINS=https://<frontend-origin>` |
+| `careerguide-web` | `frontend` | `NEXT_PUBLIC_BACKEND_URL=https://<backend-origin>` (read at build time, so set it before deploying) |
+
+In each project's Settings → General, set **Root Directory** to the path above.
+`.vercelignore` in both directories keeps `*.db`, `.env`, `backend/media/` and
+`.venv/` out of the upload — the database holds real conversations and must never
+leave your machine that way.
+
+Order that works:
+
+```bash
+# 1. log in (this opens a browser device-auth you complete yourself)
+npx vercel login
+
+# 2. backend first, so the frontend has an origin to point at
+cd backend && npx vercel link --yes --project careerguide-api
+
+# 3. a database, provisioned on the account — this writes DATABASE_URL for you
+npx vercel install prisma/prisma-postgres
+npx vercel env pull .env.local
+npx vercel env add DB_AUTO_SETUP production        # answer: false
+
+# 4. prepare the schema, then deploy the API
+.venv/Scripts/python.exe scripts/db_init.py --from-vercel
+npx vercel env add CORS_ORIGINS production         # the frontend origin, once known
+npx vercel deploy --prod --yes
+
+# 5. then the frontend
+cd ../frontend && npx vercel link --yes --project careerguide-web
+echo -n "https://<backend-origin>" | npx vercel env add NEXT_PUBLIC_BACKEND_URL production --type config
+npx vercel deploy --prod --yes
+```
+
+`npx vercel env add NAME production` with no `--type config` stores a **Secret**: it is
+hidden in the dashboard and cannot be read back, which is what a database URL wants.
+`npx vercel install` opens a browser for the integration's terms and has to be accepted
+there; it also drops a `.claude/skills/` folder next to the project, which both ignore
+files exclude.
+
+**What is live right now, from this machine:** `careerguide-api` at
+`https://careerguide-api-omega.vercel.app` (Postgres attached, `/api/health` reports
+`"storage": "ready"`) and `careerguide-web` at `https://careerguide-web.vercel.app`,
+verified end to end in a real browser — see [Honest status](#4-honest-status).
+
+What hosting on serverless functions changed in the code, and what to expect:
+
+* **Speech is no longer a file.** Edge TTS audio used to be written to
+  `backend/media/tts/` and served from there. A serverless instance cannot hand
+  a file to the next request, and pointing the browser back at a path would mean
+  putting the reply's text into a URL that gets logged, so `tts.synthesize()` now
+  returns a `data:audio/mpeg;base64,…` URL inside the reply itself. Nothing is
+  written to disk and nothing is cached server-side, which means each play
+  re-synthesises (~1–2 s) and a spoken reply costs about 30–70 KB of JSON.
+* **The schema is prepared out of band.** `DB_AUTO_SETUP=false` stops every cold
+  start from running `create_all` and the seed; run `scripts/db_init.py` when the
+  catalogue changes.
+* **One function, 60 s ceiling.** `backend/vercel.json` sets `maxDuration: 60` on
+  the whole API. Connection pools are small (2 + 3 overflow) because each warm
+  instance opens its own — which is also why a pooled endpoint (Supabase's
+  transaction pooler on port 6543, for instance) is the right shape.
+* **Microsoft's free voice does not answer for cloud servers.** Edge TTS works on a
+  home connection and returns `403` from Vercel's datacenter IPs, so on the deployed
+  site the reply arrives with `audio_error` and the browser speaks it with its own
+  `speechSynthesis` voice instead. That is a different sound, and the screen says so.
+  To get the recorded voices back, point the app at a text-to-speech service that
+  accepts server requests with a key (`AI_*` settings already cover the text side).
+* **Still true after deploying:** replies are demo-generated until an AI key is
+  configured, and are labelled as such; Edge TTS needs internet and is not an
+  offline guarantee; there are no passwords, so a student's account lives in the
+  browser that created it, now on a public origin.
+* **Before real children use a public URL**, the privacy points in
+  [Honest status](#4-honest-status) need a qualified legal review — a deployed
+  app is exactly the situation that review is for. Vercel's Hobby plan is
+  non-commercial, which fits a personal pilot but not a paid service.
+
+### How the app learns the rest of a profile
+
+`/onboarding` asks one question only — student or parent — because the remaining facts change as
+a child grows and are not something a first screen should demand. `backend/app/services/
+profile_facts.py` is what gathers them during the conversation instead:
+
+* The guide asks for **one missing fact at a time**, at the stage where the answer matters:
+  class and age band early, where the student studies once the chat has a theme, and cost only
+  when it reaches practical next steps. Each ask is phrased as a single question, so the
+  "exactly one question per reply" rule holds.
+* An answer is stored only when it is usable: `class-9`, `ninth class`, `कक्षा ९` count; a stray
+  number in an unrelated sentence does not. A class or age is read only on the turn the guide
+  asked for it (or in a reply of seven words or fewer), so a misread can never silently steer a
+  recommendation.
+* Facts are written as **short fixed descriptions**, not the child's sentences — "Studies at a
+  government school.", "The family said cost is a constraint, so low-cost and free paths come
+  first." Nothing overwrites a field that already has a value, and a fact is asked at most once
+  per conversation.
+* The chat returns what it stored as `profile_updates`, and the reply bubble shows it as a
+  "Saved: Class 8" badge, so storage stays visible rather than silent. A class also fills the age
+  band (`class-8` → `11-12`), which is what chooses the conversation's depth.
+* Unknown age is treated as the youngest band (6–8), the protective default, until the guide
+  learns the class.
+
 ### Which language the guide uses
 
 The guide answers in the language the student actually uses, message by message — it does not
@@ -162,7 +287,7 @@ stay in whatever language the account was created with.
   switch also picks the text-to-speech voice (`hi` → `hi-IN-SwaraNeural`, `hinglish`/`en` →
   `en-IN-NeerjaNeural`). Switching back mid-call is normal and supported.
 * A conversation **opens** in the account's language, which now defaults to Hinglish
-  (`UserSettings.language`, the onboarding picker, and `SessionStartIn.language`). Settings →
+  (`UserSettings.language`, the value onboarding saves, and `SessionStartIn.language`). Settings →
   Language changes it, and the guide still follows the student from the first message onward.
 * The reply carries its language in `POST /api/conversations/{id}/messages` (`language`), so the
   chat and call screens use the right locale for browser-voice fallback and dictation.
@@ -184,7 +309,7 @@ words they typed or said decide the language.
 | Route | Purpose |
 | --- | --- |
 | `/` | Landing page, including "What CareerGuide AI will not do" |
-| `/onboarding` | 4-step wizard: who is using it → about you → your situation → permission and privacy |
+| `/onboarding` | One question — student or parent — plus an optional nickname and the two consent confirmations; everything else is gathered in conversation |
 | `/app` | Student dashboard: journey counts, directions worth exploring, saved careers, next step |
 | `/app/call` | Voice call screen — 10 explicit states, captions, typed fallback, microphone only while listening |
 | `/app/chat` | The same conversation by typing, with dictation and read-aloud as options |
@@ -207,7 +332,7 @@ words they typed or said decide the language.
 cd backend && ./.venv/Scripts/python.exe scripts/smoke_test.py
 ```
 
-94 checks run the whole API against a throwaway database — consent gates, server-side ownership
+96 checks run the whole API against a throwaway database — consent gates, server-side ownership
 (a parent cannot read another family's data by changing an id), conversation pipeline,
 recommendations, plans, reports, transparency rules, transcript deletion, logout.
 It prints each check and exits non-zero on any failure.
@@ -219,15 +344,32 @@ It prints each check and exits non-zero on any failure.
 Tested and working in this environment:
 
 * Production build: TypeScript clean, 19/19 routes generated.
-* Backend smoke suite: **94 passed, 0 failed**.
-* Walked in a real browser with a logged-in session: onboarding wizard end-to-end (4 steps →
-  signed-in dashboard), dashboard with live data, chat send → reply → spoken audio,
+* Backend smoke suite: **96 passed, 0 failed**, plus `scripts/conversation_facts_test.py`:
+  **14 passed, 0 failed** (the guide asking for facts inside the chat).
+* Walked in a real browser with a logged-in session: onboarding end-to-end (the single
+  role question → consent gate → signed-in dashboard), the conversation learning a class from
+  a Hinglish reply and showing it as a "Saved: Class 8" badge, dashboard with live data,
+  chat send → reply → spoken audio,
   voice call start → greeting → typed answer → spoken reply → end, voice-consent gate,
   career search + save, interests answering, plan creation + step status, report generation and
   rendering, resources/scholarships/institutes, parent share-code linking and the guidance answer.
   No console errors on any of those routes.
-* Edge text-to-speech produces real audio (`/media/tts/*.mp3`, ~49 KB) and plays back with
-  pause/stop controls.
+* **Running on Vercel against a real PostgreSQL, walked in a browser on the public URL.**
+  `https://careerguide-web.vercel.app` + `https://careerguide-api-omega.vercel.app`, with the
+  catalogue in Postgres 17.2 through `psycopg`: `GET /api/health` → `"storage": "ready"`,
+  `GET /api/careers/categories` counted real rows, onboarding created a student (consent
+  records included), and a Hinglish message got a Hinglish reply labelled
+  "Demo guide answer" while the conversation saved "Where you study" and an interest — all
+  of it persisted server-side, not in the tab. The test account was then deleted from the
+  database (row counts verified back to zero, catalogue untouched). `serverless_guard_test.py`
+  adds **10 checks** for the no-database shape and `schema_fit_check.py` keeps the seed content
+  inside its declared column lengths.
+* Edge text-to-speech produces real audio and plays back with pause/stop controls
+  **from a home connection** — Microsoft answers `403` to datacenter IPs, so the deployed
+  site falls back to the browser's own voice.
+  It now arrives as a data URL rather than a saved file: in the chat screen the
+  browser decoded a real 8.8-second clip from it (`loadedmetadata` fired at
+  8.784 s, no media error) and the controls moved to the playing state.
 
 Needs configuration, or cannot be verified from here — please test these yourself:
 
@@ -248,6 +390,10 @@ Needs configuration, or cannot be verified from here — please test these yours
   key events that do not trigger a button's default activation, so only the pointer path is proven
   here. It is an ordinary focused `<button>`, so Enter/Space should work in a real window.
 * **Real model replies** — needs an AI key (section above).
+* **The public voice quality on a phone.** The deployed API no longer produces the Edge
+  voices (see the 403 note under [Deploying to Vercel](#deploying-to-vercel)); a student
+  hears their browser's or the phone's own voice for the language. Which voice that is,
+  and whether Hindi comes out readable, has to be heard on the device.
 * This is **not** full-duplex streaming audio: one voice speaks at a time, and the call screen says
   so. Edge TTS needs the internet and is not an offline guarantee.
 

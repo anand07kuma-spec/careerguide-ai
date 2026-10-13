@@ -48,3 +48,12 @@ Thumbs.db
 # --- local AI assistant scratch ----------------------------------------------
 .qoder/
 .next-docs/
+
+# --- deploys -----------------------------------------------------------------
+# `vercel link` writes the account's project ids here; it is local machine state.
+.vercel/
+
+# Vercel database integrations drop agent-skill folders next to the project.
+.claude/
+.agents/
+skills-lock.json

@@ -219,6 +219,8 @@ export interface ChatReply {
   provider: string;
   /** The language the guide answered in — it follows the student, not the account. */
   language: string;
+  /** Profile facts this turn taught the app, already saved to the student's profile. */
+  profile_updates?: Record<string, unknown>;
 }
 
 export interface InterestPrompt {
@@ -449,6 +451,7 @@ export interface ConsentRecord {
 
 export interface Health {
   status: string;
+  storage: string;
   ai_provider: string;
   ai_configured: boolean;
   tts_provider: string;

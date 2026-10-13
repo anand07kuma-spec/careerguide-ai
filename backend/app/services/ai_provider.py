@@ -19,7 +19,7 @@ from sqlalchemy.orm import Session
 
 from ..config import get_settings
 from ..models import Message
-from . import prompts
+from . import profile_facts, prompts
 from .themes import THEMES, detect_themes, expresses_uncertainty, possible_distress
 
 
@@ -47,6 +47,11 @@ class GuideContext:
     known_themes: list[str] = field(default_factory=list)
     career_suggestions: list[str] = field(default_factory=list)
     next_activity: str | None = None
+    # Profile facts the conversation should still learn, and the ones already
+    # asked about in this session. Onboarding now asks a single question, so the
+    # guide picks these up one at a time as the student talks.
+    missing_facts: list[str] = field(default_factory=list)
+    asked_facts: list[str] = field(default_factory=list)
 
 
 def _lang(language: str) -> str:
@@ -278,6 +283,16 @@ def _advance(stage: int, new_themes: list[str], text: str) -> int:
     return min(stage + 1, 7)
 
 
+def _due_fact_question(ctx: GuideContext) -> str | None:
+    """The one profile fact worth asking about right now, or None."""
+    for key in ctx.missing_facts:
+        if key in ctx.asked_facts:
+            continue
+        if ctx.stage >= profile_facts.FACT_MIN_STAGE[key]:
+            return key
+    return None
+
+
 def demo_respond(user_text: str, ctx: GuideContext) -> GuideReply:
     """Scripted guide used when no AI credentials are configured."""
     language = _lang(ctx.language)
@@ -295,8 +310,31 @@ def demo_respond(user_text: str, ctx: GuideContext) -> GuideReply:
             safety_flag=True,
         )
 
-    # A short or unclear answer gets one gentle clarification, not a verdict.
-    if len(user_text.split()) <= 2 and not hits:
+    stage = ctx.stage
+
+    # Onboarding deliberately leaves the student's situation unknown, so the
+    # guide asks for one missing fact at a time, only once the conversation has
+    # reached the stage where it matters, and never twice in a session. It comes
+    # before the clarifications below so that a short "hi" still moves the
+    # student somewhere useful, and each fact is answered in a turn of its own.
+    due = _due_fact_question(ctx)
+    if due:
+        bucket = profile_facts.FACT_QUESTION[due]
+        question = bucket.get(language) or bucket["en"]
+        ack = _pick(OPEN_ACK, language) if hits or stage == 1 else ""
+        greeting = name_greeting(ctx.name, language) if stage <= 1 else ""
+        return GuideReply(
+            text=_sent([ack, greeting, question]),
+            stage=stage,
+            themes=combined,
+            provider="demo",
+            demo_generated=True,
+        )
+
+    # A short or unclear answer gets one gentle clarification, not a verdict. An
+    # answer that supplies a profile fact ("class 8") counts as content, not as
+    # something unclear.
+    if len(user_text.split()) <= 2 and not hits and not profile_facts.detect_facts(user_text):
         return GuideReply(
             text=_pick(SHORT_CLARIFY, language),
             stage=ctx.stage,
@@ -315,7 +353,6 @@ def demo_respond(user_text: str, ctx: GuideContext) -> GuideReply:
             demo_generated=True,
         )
 
-    stage = ctx.stage
     if hits or stage == 1:
         ack = _pick(OPEN_ACK, language)
     else:
@@ -396,6 +433,7 @@ async def _openai_compatible_respond(user_text: str, ctx: GuideContext, history:
         age_range=ctx.age_range,
         stage=ctx.stage,
         known_themes=ctx.known_themes,
+        missing_facts=ctx.missing_facts,
     )
     turns = [{"role": "system", "content": system}]
     for message in history[-12:]:

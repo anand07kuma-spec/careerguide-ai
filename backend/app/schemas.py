@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -209,6 +209,10 @@ class ChatOut(BaseModel):
     provider: str
     # The language the reply was written in, so playback and dictation can follow it.
     language: str = "en"
+    # What this turn taught the app about the student, already saved to their
+    # profile. Onboarding asks one question, so the conversation is where the
+    # rest of the picture comes from — and it is shown, not stored silently.
+    profile_updates: dict[str, Any] = Field(default_factory=dict)
 
 
 # ------------------------------------------------------------ interests

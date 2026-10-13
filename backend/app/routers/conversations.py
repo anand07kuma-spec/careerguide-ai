@@ -27,10 +27,11 @@ from ..schemas import (
     SessionStartIn,
 )
 from ..security import ensure_settings, get_current_user, require_student
-from ..services import ai_provider, tts
+from ..services import ai_provider, profile_facts, tts
 from ..services.language import detect as detect_language
 from ..services.recommender import build_recommendations
 from ..services.themes import possible_distress
+from .auth import CLASS_TO_AGE
 
 router = APIRouter(prefix="/api/conversations", tags=["conversations"])
 
@@ -127,6 +128,23 @@ async def send_message(
     profile = db.get(StudentProfile, student_id)
     history = list(session.messages)
 
+    # Onboarding asks a single question, so a fact the student states here fills
+    # the gap in its place. Only empty fields are written, the values are normal
+    # fixed descriptions rather than the student's own words, and a class or age
+    # is trusted only when the guide has just asked for it — see profile_facts.
+    current_profile = {
+        "class_level": profile.class_level if profile else None,
+        "age_range": profile.age_range if profile else None,
+        "education_context": profile.education_context if profile else None,
+        "financial_context": profile.financial_context if profile else None,
+    }
+    learned = profile_facts.applicable_facts(text, profile_facts.last_asked_key(history), current_profile)
+    if profile and learned:
+        for key, value in learned.items():
+            setattr(profile, key, value)
+        if "class_level" in learned and not profile.age_range:
+            profile.age_range = CLASS_TO_AGE.get(learned["class_level"])
+
     ctx = ai_provider.GuideContext(
         name=profile_user.display_name if profile_user else "friend",
         language=session.language,
@@ -136,6 +154,13 @@ async def send_message(
         known_themes=_known_themes(db, student_id),
         career_suggestions=_suggestion_titles(db, student_id),
         next_activity=None,
+        missing_facts=profile_facts.missing_facts(
+            profile.class_level if profile else None,
+            profile.age_range if profile else None,
+            profile.education_context if profile else None,
+            profile.financial_context if profile else None,
+        ),
+        asked_facts=profile_facts.asked_keys(history),
     )
 
     reply = await ai_provider.respond(text, ctx, history, db)
@@ -193,6 +218,7 @@ async def send_message(
         detected_themes=new_themes,
         provider=reply.provider,
         language=session.language,
+        profile_updates=learned,
     )
 
 

@@ -155,8 +155,10 @@ export default function StudentHome() {
         profile?.class_level ? (
           <span className="text-sm text-muted">{classLabel(profile.class_level)}</span>
         ) : (
-          <LinkButton href="/app/settings" variant="outline" size="sm">
-            Finish your profile
+          // Onboarding no longer asks for a class, so this points at the
+          // conversation where the guide asks for it, not at a form.
+          <LinkButton href="/app/chat" variant="outline" size="sm">
+            Tell the guide your class
           </LinkButton>
         )
       }

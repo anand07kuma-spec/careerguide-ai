@@ -24,7 +24,7 @@ import { Toggle } from "@/components/ui/field";
 import { useToast } from "@/components/ui/toast";
 import { api, isOffline } from "@/lib/api";
 import { useSession } from "@/lib/session";
-import { cn } from "@/lib/utils";
+import { classLabel, cn } from "@/lib/utils";
 import { THEME_LABELS, type ChatMessage, type ConversationInfo, type ThemeKey } from "@/lib/types";
 import {
   MIC_ERROR_TEXT,
@@ -37,12 +37,21 @@ import {
 interface Turn extends ChatMessage {
   /** Themes the guide noticed in this reply, shown under the bubble. */
   themes?: string[];
+  /** What this turn saved to the profile, in words the student can read. */
+  saved?: string[];
 }
 
 const GUIDE_STAGES = 7;
 
+/** How to tell a student what the conversation just taught the app. */
+const FACT_NOTICES: Record<string, string> = {
+  age_range: "Age group",
+  education_context: "Where you study",
+  financial_context: "Cost preference",
+};
+
 export default function ChatPage() {
-  const { settings, user } = useSession();
+  const { settings, user, reload } = useSession();
   const { toast } = useToast();
   const player = useAudioPlayer();
 
@@ -146,6 +155,14 @@ export default function ChatPage() {
         const answer = await api.sendMessage(session.id, trimmed, speakOn);
         // Follow the guide's language for the next dictation and any fallback voice.
         setSpoken(answer.language || language);
+        // Anything this turn revealed about the student is already saved on the
+        // server. Saying so here keeps the storage visible instead of silent.
+        const saved: string[] = [];
+        for (const [key, value] of Object.entries(answer.profile_updates ?? {})) {
+          const label =
+            key === "class_level" ? classLabel(String(value)) : FACT_NOTICES[key] ?? key;
+          if (label) saved.push(label);
+        }
         setMessages((current) => [
           ...current,
           {
@@ -155,9 +172,10 @@ export default function ChatPage() {
             demo_generated: false,
             created_at: new Date().toISOString(),
           },
-          { ...answer.reply, themes: answer.detected_themes },
+          { ...answer.reply, themes: answer.detected_themes, saved },
         ]);
         setSession({ ...session, stage: answer.stage });
+        if (saved.length) void reload();
 
         if (answer.audio_url) {
           setLastAudio(answer.audio_url);
@@ -178,7 +196,7 @@ export default function ChatPage() {
         setSending(false);
       }
     },
-    [dictation, language, player, sending, session, speakOn],
+    [dictation, language, player, reload, sending, session, speakOn],
   );
 
   const canSend = Boolean(session) && draft.trim().length > 0 && !sending;
@@ -356,6 +374,13 @@ export default function ChatPage() {
                           ? message.themes.map((theme) => (
                               <Badge key={theme} tone="teal">
                                 {THEME_LABELS[theme as ThemeKey] ?? theme}
+                              </Badge>
+                            ))
+                          : null}
+                        {message.saved?.length
+                          ? message.saved.map((label) => (
+                              <Badge key={label} tone="brand">
+                                Saved: {label}
                               </Badge>
                             ))
                           : null}

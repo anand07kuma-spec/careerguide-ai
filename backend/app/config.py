@@ -2,7 +2,13 @@
 
 from functools import lru_cache
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# `psycopg` is the PostgreSQL driver in requirements.txt. A host that hands over a
+# plain `postgresql://` URL (Vercel's database integrations do) would otherwise send
+# SQLAlchemy looking for psycopg2, which is not installed here.
+BARE_PG_SCHEMES = ("postgres://", "postgresql://")
 
 
 class Settings(BaseSettings):
@@ -12,6 +18,19 @@ class Settings(BaseSettings):
 
     app_name: str = "CareerGuide AI"
     database_url: str = "sqlite:///./careerguide.db"
+
+    @field_validator("database_url")
+    @classmethod
+    def use_the_shipped_postgres_driver(cls, value: str) -> str:
+        for scheme in BARE_PG_SCHEMES:
+            if value.startswith(scheme):
+                return "postgresql+psycopg://" + value[len(scheme) :]
+        return value
+
+    # Creating the tables and seeding the catalogue happens on the first boot.
+    # Set DB_AUTO_SETUP=false once the database is prepared, so a serverless cold
+    # start does not run schema DDL on every new instance.
+    db_auto_setup: bool = True
     cors_origins: str = (
         "http://localhost:3000,http://127.0.0.1:3000,http://careerguide.localhost:3000"
     )

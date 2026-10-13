@@ -22,7 +22,7 @@ import {
 import { GuideAvatar, VoiceWave, Wordmark } from "@/components/brand";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { api, ApiError, isOffline } from "@/lib/api";
+import { api, ApiError, BACKEND_URL, isOffline } from "@/lib/api";
 import { useSession } from "@/lib/session";
 import { cn } from "@/lib/utils";
 import { THEME_LABELS, type ConversationInfo, type ThemeKey } from "@/lib/types";
@@ -542,9 +542,16 @@ export default function VoiceCallPage() {
 
           {offline ? (
             <p className="max-w-md text-xs leading-relaxed text-white/60">
-              The CareerGuide server is not reachable on port 8000. Start it with
-              <code className="mx-1 rounded bg-white/10 px-1.5 py-0.5">uvicorn app.main:app --reload</code>
-              and try again.
+              {/localhost|127\.0\.0\.1/.test(BACKEND_URL) ? (
+                <>
+                  The CareerGuide server is not reachable on port 8000. Start it with
+                  <code className="mx-1 rounded bg-white/10 px-1.5 py-0.5">uvicorn app.main:app --reload</code>
+                  and try again.
+                </>
+              ) : (
+                "The CareerGuide server is not reachable just now. Your call was not recorded. " +
+                  "Try again in a moment, or switch to text."
+              )}
             </p>
           ) : null}
         </div>

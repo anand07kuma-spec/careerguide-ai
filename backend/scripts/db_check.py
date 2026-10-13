@@ -30,9 +30,10 @@ def mask(url: str) -> str:
     if url.startswith("sqlite"):
         return url
     head, _, tail = url.partition("://")
-    creds, _, host = tail.rpartition("@")
+    creds, _, rest = tail.rpartition("@")
+    host, _, query = rest.partition("?")
     user, _, _ = creds.partition(":")
-    return f"{head}://{user}:****@{host}{('?' + tail.split('?', 1)[1]) if '?' in tail else ''}"
+    return f"{head}://{user}:****@{host}{('?' + query) if query else ''}"
 
 
 print("DATABASE_URL :", mask(settings.database_url))

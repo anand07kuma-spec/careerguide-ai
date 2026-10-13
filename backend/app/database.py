@@ -23,12 +23,16 @@ _is_sqlite = settings.database_url.startswith("sqlite")
 # modes (5432 session, 6543 transaction) working. `prepare_threshold` is a
 # driver argument, so it travels in `connect_args`; passing it to
 # `create_engine` directly raises TypeError.
+#
+# On serverless hosting every warm function instance opens its own pool, so the
+# pool is kept small on purpose — a large one would exhaust the database's
+# connection limit as soon as traffic arrives.
 if _is_sqlite:
     connect_args = {"check_same_thread": False}
     pool_args: dict = {}
 else:
     connect_args = {"prepare_threshold": None}
-    pool_args = {"pool_recycle": 300}
+    pool_args = {"pool_recycle": 300, "pool_size": 2, "max_overflow": 3}
 
 engine = create_engine(
     settings.database_url,

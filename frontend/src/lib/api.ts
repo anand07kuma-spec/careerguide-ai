@@ -36,14 +36,14 @@ export const BACKEND_URL = (
 ).replace(/\/$/, "");
 
 /**
- * Generated speech is served by the backend, which is a different origin from
- * this app, so a path like `/media/tts/x.mp3` must be made absolute before an
- * <audio> element can load it.
+ * Speech comes back either as a `data:audio/mpeg` URL the reply already carries,
+ * or as a path on the backend — which is a different origin from this app — so a
+ * path must be made absolute before an <audio> element can load it.
  */
-export function mediaUrl(path: string | null | undefined): string | null {
-  if (!path) return null;
-  if (/^https?:\/\//i.test(path)) return path;
-  return `${BACKEND_URL}${path.startsWith("/") ? "" : "/"}${path}`;
+export function mediaUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  if (/^(https?:|data:)/i.test(url)) return url;
+  return `${BACKEND_URL}${url.startsWith("/") ? "" : "/"}${url}`;
 }
 
 export class ApiError extends Error {
@@ -75,7 +75,8 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     response = await fetch(`${BACKEND_URL}${path}`, { ...init, headers, cache: "no-store" });
   } catch {
     throw new ApiError(
-      "Cannot reach the CareerGuide AI server. Check that the backend is running on port 8000.",
+      "Cannot reach the CareerGuide AI server right now. It may be starting up or " +
+        "temporarily offline — please try again in a moment.",
       0,
     );
   }

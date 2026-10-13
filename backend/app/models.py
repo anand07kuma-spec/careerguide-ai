@@ -339,7 +339,7 @@ class Institution(Base, TimestampMixin):
     education_level: Mapped[str] = mapped_column(String(32), default="undergraduate")
     career_areas: Mapped[list] = mapped_column(JSON, default=list)
     courses: Mapped[list] = mapped_column(JSON, default=list)
-    fee_range: Mapped[str | None] = mapped_column(String(80))
+    fee_range: Mapped[str | None] = mapped_column(Text)
     admission_info: Mapped[str | None] = mapped_column(Text)
     scholarships_note: Mapped[str | None] = mapped_column(Text)
     website: Mapped[str] = mapped_column(String(400))

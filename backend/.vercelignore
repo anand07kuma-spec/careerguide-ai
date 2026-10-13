@@ -1,0 +1,16 @@
+# Never upload local data, secrets or build junk to Vercel.
+# The database file holds real student conversations; audio clips and the
+# virtualenv are large and useless on the server.
+*.db
+*.db-journal
+*.bak
+.env
+.env.*
+media/
+.venv/
+__pycache__/
+*.pyc
+scripts/
+
+# Installed by the Vercel Prisma integration; local tooling, never uploaded.
+.claude/

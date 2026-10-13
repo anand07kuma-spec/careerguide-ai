@@ -7,18 +7,15 @@ every failure here surfaces as a readable error and the UI keeps the text.
 from __future__ import annotations
 
 import asyncio
+import base64
 import logging
 import re
-import uuid
-from pathlib import Path
 
 import edge_tts
 
 from ..config import get_settings
 
 log = logging.getLogger(__name__)
-
-MEDIA_DIR = Path(__file__).resolve().parents[2] / "media" / "tts"
 
 VOICES = {
     "hi": [
@@ -34,8 +31,6 @@ VOICES = {
 
 ALLOWED_VOICES = {v["id"] for group in VOICES.values() for v in group}
 
-_SAFE = re.compile(r"[^A-Za-z0-9]+")
-
 
 class TTSError(RuntimeError):
     pass
@@ -50,27 +45,27 @@ def voice_for(language: str, override: str | None = None) -> str:
     return settings.tts_voice_en
 
 
-def _slug(text: str) -> str:
-    cleaned = _SAFE.sub("-", text.strip().lower()).strip("-")
-    return cleaned[:48] or "speech"
+async def _collect(communicate: edge_tts.Communicate) -> bytes:
+    audio = bytearray()
+    async for chunk in communicate.stream():
+        if chunk["type"] == "audio":
+            audio.extend(chunk["data"])
+    return bytes(audio)
 
 
-async def synthesize(text: str, language: str, override_voice: str | None = None) -> str:
-    """Speak `text` and return a URL path the browser can play."""
+async def synthesize_bytes(text: str, language: str, override_voice: str | None = None) -> bytes:
+    """Speak `text` and return the mp3 bytes."""
     if not text or not text.strip():
         raise TTSError("There was nothing to read out.")
 
-    MEDIA_DIR.mkdir(parents=True, exist_ok=True)
     voice = voice_for(language, override_voice)
     # edge-tts rejects markup, and long paragraphs sound exhausting when spoken.
     clean = re.sub(r"[#*_`]", "", text).strip()[:1200]
-    filename = f"{_slug(voice)}-{uuid.uuid4().hex[:12]}.mp3"
-    target = MEDIA_DIR / filename
     settings = get_settings()
 
     try:
         communicate = edge_tts.Communicate(clean, voice)
-        await asyncio.wait_for(communicate.save(str(target)), timeout=settings.tts_timeout_seconds)
+        audio = await asyncio.wait_for(_collect(communicate), timeout=settings.tts_timeout_seconds)
     except asyncio.TimeoutError as exc:
         raise TTSError(
             "The speech service took too long to respond. You can read the reply, or try again."
@@ -81,10 +76,22 @@ async def synthesize(text: str, language: str, override_voice: str | None = None
             "Voice audio is unavailable right now. The written reply is still here, and you can try again."
         ) from exc
 
-    if not target.exists() or target.stat().st_size == 0:
+    if not audio:
         raise TTSError("The speech service returned no audio.")
+    return audio
 
-    return f"/media/tts/{filename}"
+
+async def synthesize(text: str, language: str, override_voice: str | None = None) -> str:
+    """Speak `text` and return something an `<audio>` element can play directly.
+
+    The clip comes back inside the reply as a data URL instead of a saved file:
+    on serverless hosting a file written by one instance is invisible to the next
+    request, and a path the browser has to fetch again would either need the
+    reply's text in a logged URL or a signed-URL secret this app does not need
+    yet.
+    """
+    audio = await synthesize_bytes(text, language, override_voice)
+    return "data:audio/mpeg;base64," + base64.b64encode(audio).decode("ascii")
 
 
 def voice_options() -> list[dict]:
