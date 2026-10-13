@@ -183,6 +183,24 @@ In each project's Settings → General, set **Root Directory** to the path above
 `.venv/` out of the upload — the database holds real conversations and must never
 leave your machine that way.
 
+**Root Directory is not optional once the repository is connected to Git.** A project
+that builds the repository root finds no `package.json`, no `requirements.txt` and no
+Next.js marker, so Vercel's framework auto-detection picks something arbitrary — this
+repository was guessed as *Brunch* and every build died with
+`sh: line 1: brunch: command not found`. Both projects are connected now:
+
+```bash
+npx vercel git connect --project careerguide-api    # from the repository root
+npx vercel git connect --project careerguide-web
+```
+
+A push to `main` then builds each project from its own directory. Feature branches and
+pull requests build *preview* deployments, and a preview currently gets the same
+`DATABASE_URL` as production, so it reads and writes the real database. Scope
+`DATABASE_URL` to Production only if you do not want that — without it, the guard in
+`app/main.py` makes a preview answer 503 for every data endpoint instead, which is the
+safer default for children's data.
+
 Order that works:
 
 ```bash
@@ -211,13 +229,16 @@ npx vercel deploy --prod --yes
 `npx vercel env add NAME production` with no `--type config` stores a **Secret**: it is
 hidden in the dashboard and cannot be read back, which is what a database URL wants.
 `npx vercel install` opens a browser for the integration's terms and has to be accepted
-there; it also drops a `.claude/skills/` folder next to the project, which both ignore
-files exclude.
+there; it also drops agent-skill files next to the project (`.claude/`, `.agents/`,
+`skills-lock.json`), which the ignore files exclude.
 
-**What is live right now, from this machine:** `careerguide-api` at
+**What is live right now:** `careerguide-api` at
 `https://careerguide-api-omega.vercel.app` (Postgres attached, `/api/health` reports
 `"storage": "ready"`) and `careerguide-web` at `https://careerguide-web.vercel.app`,
-verified end to end in a real browser — see [Honest status](#4-honest-status).
+verified end to end in a real browser — see [Honest status](#4-honest-status). Both are
+connected to `github.com/anand07kuma-spec/careerguide-ai`, and the API's production
+deployment was built by that Git trigger and re-checked, so a push to `main` now ships
+the site without any CLI deploy.
 
 What hosting on serverless functions changed in the code, and what to expect:
 
