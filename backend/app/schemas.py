@@ -44,6 +44,23 @@ class SessionOut(BaseModel):
     user: "UserOut"
     profile: "ProfileOut | None"
     settings: "SettingsOut"
+    # Present only in the one response that mints a fresh code. The server keeps
+    # just a salted digest, so a code can never be read back out afterwards.
+    comeback_code: str | None = None
+
+
+class LoginIn(BaseModel):
+    code: str = Field(min_length=5, max_length=40)
+
+
+class ComebackCodeOut(BaseModel):
+    code: str
+    note: str
+
+
+class ComebackStatusOut(BaseModel):
+    has_code: bool
+    note: str
 
 
 class UserOut(ORMModel):

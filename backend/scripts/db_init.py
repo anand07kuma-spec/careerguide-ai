@@ -48,6 +48,7 @@ from sqlalchemy import inspect, text  # noqa: E402
 from app import models  # noqa: E402, F401  (registers every table on Base.metadata)
 from app.database import Base, SessionLocal, engine, settings  # noqa: E402
 from app.seed import seed_if_empty  # noqa: E402
+from app.schema_sync import add_missing_columns  # noqa: E402
 
 
 def mask(url: str) -> str:
@@ -81,6 +82,10 @@ if "--recreate-if-empty" in sys.argv:
 
 Base.metadata.create_all(bind=engine)
 print(f"tables       : {len(inspect(engine).get_table_names())} created or confirmed")
+
+added = add_missing_columns(engine)
+if added:
+    print("columns      : " + ", ".join(added))
 
 with SessionLocal() as db:
     counts = seed_if_empty(db)

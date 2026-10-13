@@ -1,4 +1,4 @@
-"""Onboarding, session tokens, profile, settings, consent and parent linking."""
+"""Onboarding, sign-in, session tokens, profile, settings, consent and parent linking."""
 
 from __future__ import annotations
 
@@ -18,10 +18,13 @@ from ..models import (
     UserSettings,
 )
 from ..schemas import (
+    ComebackCodeOut,
+    ComebackStatusOut,
     ConsentIn,
     ConsentOut,
     GuardianOut,
     LinkChildIn,
+    LoginIn,
     OnboardingIn,
     ProfileIn,
     ProfileOut,
@@ -33,11 +36,15 @@ from ..schemas import (
     UserOut,
 )
 from ..security import (
+    CODE_ALPHABET,
     ensure_settings,
+    find_account_by_code,
+    format_code,
     get_current_user,
     get_raw_token,
     issue_token,
     require_parent,
+    set_code_for,
 )
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -56,9 +63,6 @@ CLASS_TO_AGE = {
     "class-11": "adult",
     "class-12": "adult",
 }
-
-# No look-alike characters, because this is read out loud or typed by a child.
-CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 
 
 def new_share_code(db: Session) -> str:
@@ -156,10 +160,37 @@ def onboarding(payload: OnboardingIn, db: Session = Depends(get_db)) -> SessionO
     db.commit()
 
     token = issue_token(db, user.id)
+    # The new account is handed a come-back code at the same moment it gets its
+    # first token, because this is the only time the plaintext can be shown.
     return SessionOut(
         token=token,
         user=UserOut.model_validate(user),
         profile=_profile_payload(db, student_id),
+        settings=_settings_payload(db, user.id),
+        comeback_code=format_code(set_code_for(db, user)),
+    )
+
+
+@router.post("/login", response_model=SessionOut)
+def login(payload: LoginIn, db: Session = Depends(get_db)) -> SessionOut:
+    """Sign an existing account back in with its come-back code.
+
+    Without this, signing out — or simply switching browser or phone — left no
+    way back into an account that still held a child's profile on the server.
+    """
+    user = find_account_by_code(db, payload.code)
+
+    student_id = user.id
+    if user.role == "parent":
+        link = db.scalars(
+            select(Guardianship).where(Guardianship.parent_id == user.id).limit(1)
+        ).first()
+        student_id = link.student_id if link else 0
+
+    return SessionOut(
+        token=issue_token(db, user.id),
+        user=UserOut.model_validate(user),
+        profile=_profile_payload(db, student_id) if student_id else None,
         settings=_settings_payload(db, user.id),
     )
 
@@ -188,6 +219,45 @@ def logout(token: str = Depends(get_raw_token), db: Session = Depends(get_db)) -
     if record is not None:
         db.delete(record)
         db.commit()
+
+
+@router.get("/comeback-code", response_model=ComebackStatusOut)
+def comeback_code_status(
+    user: User = Depends(get_current_user),
+) -> ComebackStatusOut:
+    """Whether an account can sign in elsewhere yet. The code itself is unreadable."""
+    if user.comeback_hash:
+        return ComebackStatusOut(
+            has_code=True,
+            note=(
+                "A code was created for this account and shown once. Only an "
+                "unreadable check of it is stored, so it cannot be displayed again. "
+                "Creating a new code switches the old one off."
+            ),
+        )
+    return ComebackStatusOut(
+        has_code=False,
+        note=(
+            "This account has no come-back code yet, so it can only be opened in the "
+            "browser it was created in. Creating one lets you sign in again after "
+            "clearing your browser data or changing device."
+        ),
+    )
+
+
+@router.post("/comeback-code", response_model=ComebackCodeOut)
+def create_comeback_code(
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ComebackCodeOut:
+    """Mint or replace the account's sign-in code. Shown once, then only as a digest."""
+    return ComebackCodeOut(
+        code=format_code(set_code_for(db, user)),
+        note=(
+            "Keep this code somewhere safe — anyone who has it can open this account, "
+            "so do not share it. The previous code stopped working now."
+        ),
+    )
 
 
 @router.patch("/profile", response_model=ProfileOut)

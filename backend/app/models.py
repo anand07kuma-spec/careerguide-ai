@@ -67,6 +67,12 @@ class User(Base, TimestampMixin):
     display_name: Mapped[str] = mapped_column(String(80))
     preferred_language: Mapped[str] = mapped_column(String(8), default="en")
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    # A come-back code lets the same account be reached again from another
+    # browser, which a device token alone cannot do. Only derived values are
+    # stored: an unsalted index to find the row, and a salted PBKDF2 digest to
+    # check it. The code itself is never recoverable from the database.
+    comeback_index: Mapped[str | None] = mapped_column(String(64), index=True)
+    comeback_hash: Mapped[str | None] = mapped_column(String(128))
 
     profile: Mapped[StudentProfile | None] = relationship(uselist=False)
     settings: Mapped[UserSettings | None] = relationship(uselist=False)

@@ -54,8 +54,10 @@ origins. Note that logins live in browser storage *per address*, so an account c
 `localhost:3000` is not signed in on `careerguide.localhost:3000` — onboard once per address you
 use, or keep to one.
 
-Sign-in starts at `/onboarding`; the app asks for no email and no password, so the account lives
-in this browser only.
+Sign-in starts at `/onboarding`; the app asks for no email and no password. Onboarding hands out a
+one-time **come-back code** (15 characters, shown once) which signs in at `/login` from any device,
+so the account is no longer trapped in one browser. Only a digest of that code is stored — see
+*Sign-in codes* below.
 
 If a port is already taken (another project's dev server, for example) Next silently moves to
 3001, which then also needs adding to `CORS_ORIGINS`. Freeing 3000 is usually simpler:
@@ -396,7 +398,8 @@ words they typed or said decide the language.
 | Route | Purpose |
 | --- | --- |
 | `/` | Landing page, including "What CareerGuide AI will not do" |
-| `/onboarding` | One question — student or parent — plus an optional nickname and the two consent confirmations; everything else is gathered in conversation |
+| `/onboarding` | One question — student or parent — plus an optional nickname and the two consent confirmations; everything else is gathered in conversation. Ends by showing the one-time come-back code |
+| `/login` | Sign in with a come-back code. Uppercases and groups what you type, and says so when a code simply does not exist |
 | `/app` | Student dashboard: journey counts, directions worth exploring, saved careers, next step |
 | `/app/call` | Voice call screen — 10 explicit states, captions, typed fallback, microphone only while listening |
 | `/app/chat` | The same conversation by typing, with dictation and read-aloud as options |
@@ -408,8 +411,44 @@ words they typed or said decide the language.
 | `/app/resources` | Free learning resources |
 | `/app/scholarships` | Financial-guidance leads with a "how to check a scheme is real" checklist |
 | `/app/institutes` | Sample directory; sponsored entries are badged and the order is explicitly not a ranking |
-| `/app/settings` | Language, voice, profile, privacy and data, family access, accessibility, honest limitations |
+| `/app/settings` | Six icon rows that open a panel each: language and voice, profile, privacy and consent, family access, sign-in code, about this build |
 | `/parent` | Parent dashboard: summary not surveillance, guidance for common worries, access management |
+
+### Signing back in
+
+An account can be reached again with a **come-back code** — 15 characters from an alphabet with no
+`O`, `I`, `0` or `1`, so a copied code cannot be misread. The code is generated at the end of
+onboarding, shown exactly once, and can be replaced any time from Settings → Sign-in code; making a
+new one switches the old one off immediately.
+
+Only derived values are stored, in two new nullable columns on `users`:
+
+* `comeback_index` — the first 48 hex characters of an unsalted SHA-256 of the normalised code,
+  indexed so the server can find which row to check;
+* `comeback_hash` — a salted PBKDF2-SHA256 digest (210,000 iterations) compared with
+  `hmac.compare_digest`.
+
+The code itself is never recoverable from the database, and no email, phone or password column was
+added. There is deliberately no rate limiter: ~100 ms of PBKDF2 per guess makes online brute force
+pointless, and a serverless function cannot keep an in-memory counter honest. A wrong code and an
+unknown code return the identical message, so the endpoint cannot be used to enumerate accounts.
+
+An existing database needs those two columns before this code is deployed — `Base.metadata.create_all`
+never alters a table that already exists, so run:
+
+```bash
+cd backend
+npx vercel env pull .env.local          # or point DATABASE_URL at the target database
+./.venv/Scripts/python.exe scripts/db_init.py --from-vercel
+```
+
+`scripts/db_init.py` adds only missing nullable columns and their index; it never drops or rewrites
+anything unless `--recreate-if-empty` is passed while every table is still empty. Local SQLite setup
+does this automatically at startup when `DB_AUTO_SETUP=true`.
+
+`scripts/login_test.py` covers the whole flow — format and entropy, what is and is not stored, sign-in
+returning a usable session, rotation killing the old code, legacy accounts with no code, parent versus
+student codes, the stale-schema repair itself, and the identical refusal for wrong and unknown codes.
 
 ---
 
@@ -417,12 +456,17 @@ words they typed or said decide the language.
 
 ```bash
 cd backend && ./.venv/Scripts/python.exe scripts/smoke_test.py
+cd backend && ./.venv/Scripts/python.exe scripts/login_test.py
 ```
 
 96 checks run the whole API against a throwaway database — consent gates, server-side ownership
 (a parent cannot read another family's data by changing an id), conversation pipeline,
 recommendations, plans, reports, transparency rules, transcript deletion, logout.
 It prints each check and exits non-zero on any failure.
+
+59 more checks cover sign-in alone: the come-back code format and entropy, the fact that no readable
+copy of it is stored, a session returned by `/api/auth/login`, rotation killing the old code, legacy
+accounts that never had one, and the schema repair that adds the columns to an older database.
 
 ---
 
@@ -503,8 +547,10 @@ Known limits of the product itself:
 * Careers, resources, scholarships and institutions are **sample data** for exploration. Nothing is
   verified against live portals; fees, deadlines and placements must be checked on official sites.
 * **Payments are not implemented at all** — by design, until a real provider is configured and tested.
-* Auth is a device-local opaque token, so a child's account only exists in that browser. Do not use
-  a shared or public computer; that warning is on the onboarding screen too.
+* The session token is device-local, and the come-back code is what survives a changed browser or
+  device. There is no email or phone recovery on purpose — so **losing the code means losing the
+  account**, and the code must be kept private, since anyone who has it can sign in. Do not use a
+  shared or public computer; the onboarding and settings screens say this too.
 * Consent, privacy and data-minimisation rules are implemented in the API, not only the frontend, but
   this build has **not** had a qualified legal review. Get one before real children use it.
 

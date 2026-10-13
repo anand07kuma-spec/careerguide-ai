@@ -22,6 +22,7 @@ from .config import get_settings
 from .database import Base, SessionLocal, engine
 from .routers import auth, catalogue, careers, conversations, interests
 from .routers import journey, recommendations, reports, study_plans, voice
+from .schema_sync import add_missing_columns
 from .seed import seed_if_empty
 from .services import tts
 
@@ -51,6 +52,9 @@ async def lifespan(app: FastAPI):
         )
     elif settings.db_auto_setup:
         Base.metadata.create_all(bind=engine)
+        added = add_missing_columns(engine)
+        if added:
+            log.info("Added missing columns to an existing schema: %s", added)
         with SessionLocal() as db:
             counts = seed_if_empty(db)
         if counts:
