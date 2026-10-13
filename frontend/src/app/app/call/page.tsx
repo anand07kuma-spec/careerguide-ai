@@ -148,8 +148,13 @@ export default function VoiceCallPage() {
   const onEndedRef = useRef<() => void>(() => {});
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
-  sessionRef.current = session;
-  mutedRef.current = muted;
+  // These three refs hold the newest values for callbacks that fire from browser
+  // events (recognition results, audio ending, a timer). They are written after
+  // commit, never during render.
+  useEffect(() => {
+    sessionRef.current = session;
+    mutedRef.current = muted;
+  }, [session, muted]);
 
   const go = useCallback((next: CallState) => {
     stateRef.current = next;
@@ -159,7 +164,6 @@ export default function VoiceCallPage() {
   const player = useAudioPlayer({ onEnded: () => onEndedRef.current() });
   const stt = useSpeechInput({ language: spoken, onFinal: (text) => onFinalRef.current(text) });
   const sttRef = useRef(stt);
-  sttRef.current = stt;
 
   const clearSilenceTimer = useCallback(() => {
     if (silenceTimer.current !== null) {
@@ -284,18 +288,22 @@ export default function VoiceCallPage() {
     [beginListening, clearSilenceTimer, go, player, settings.continuous_conversation, spoken],
   );
 
-  onFinalRef.current = (text) => {
-    // Recognition closes a sentence on its own; one turn per sentence keeps the
-    // conversation from doubling up if a word arrives twice.
-    if (stateRef.current !== "listening") return;
-    void sendTurn(text);
-  };
-
-  onEndedRef.current = () => {
-    if (stateRef.current !== "speaking" && stateRef.current !== "greeting") return;
-    if (settings.continuous_conversation) beginListening();
-    else go("ready");
-  };
+  // The recognition and audio callbacks are wired after commit, so each one sees
+  // the same closures the rendered call screen uses.
+  useEffect(() => {
+    sttRef.current = stt;
+    onFinalRef.current = (text) => {
+      // Recognition closes a sentence on its own; one turn per sentence keeps the
+      // conversation from doubling up if a word arrives twice.
+      if (stateRef.current !== "listening") return;
+      void sendTurn(text);
+    };
+    onEndedRef.current = () => {
+      if (stateRef.current !== "speaking" && stateRef.current !== "greeting") return;
+      if (settings.continuous_conversation) beginListening();
+      else go("ready");
+    };
+  }, [beginListening, go, sendTurn, settings.continuous_conversation, stt]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -695,7 +703,7 @@ export default function VoiceCallPage() {
 
         <p className="mt-4 pb-6 text-center text-[11px] leading-relaxed text-white/40">
           The microphone only records while the call screen is listening — never in the background,
-          and raw audio is not stored. Speech recognition is your browser's, spoken replies come
+          and raw audio is not stored. Speech recognition is your browser&apos;s, spoken replies come
           from Microsoft Edge text-to-speech over the internet, and this is not full-duplex
           streaming: one voice speaks at a time.
         </p>

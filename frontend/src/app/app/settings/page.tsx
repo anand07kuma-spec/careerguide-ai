@@ -1,13 +1,19 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   Accessibility,
+  AlertTriangle,
   Bookmark,
+  Check,
+  ChevronRight,
   Contrast,
+  Copy,
+  DoorOpen,
   EyeOff,
   Info,
   KeyRound,
+  Languages as LanguagesIcon,
   Link2,
   LogOut,
   Mic,
@@ -15,18 +21,12 @@ import {
   Trash2,
   UserRound,
   Volume2,
-  Languages as LanguagesIcon,
 } from "lucide-react";
 import { Screen } from "@/components/layout/app-shell";
-import { Card, CardHeader } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Button, LinkButton } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  ErrorState,
-  LoadingPanel,
-  EmptyState,
-  Skeleton,
-} from "@/components/ui/feedback";
+import { EmptyState, ErrorState, LoadingPanel, Skeleton } from "@/components/ui/feedback";
 import { Input, Select, Toggle } from "@/components/ui/field";
 import { Modal } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
@@ -35,6 +35,7 @@ import { useSession } from "@/lib/session";
 import type {
   ConsentRecord,
   ConversationInfo,
+  ComebackStatus,
   GuardianLink,
   Health,
   Settings,
@@ -43,7 +44,7 @@ import type {
   VoiceInfo,
 } from "@/lib/types";
 import { AGE_BANDS, CLASS_OPTIONS, INTEREST_OPTIONS, LANGUAGE_OPTIONS } from "@/lib/types";
-import { cn, relativeTime } from "@/lib/utils";
+import { classLabel, cn, initials, relativeTime } from "@/lib/utils";
 
 type Resource<T> = {
   state: "loading" | "ready" | "error";
@@ -103,10 +104,80 @@ const CONSENT_SCOPES: {
     scope: "history_sharing",
     label: "Include my themes in the parent summary",
     grant:
-      "Lets a linked parent see the themes, saved careers and progress counts on their dashboard. Your conversation text is never included unless you switch it on for that parent below.",
+      "Lets a linked parent see the themes, saved careers and progress counts on their dashboard. Your conversation text is never included unless you switch it on for that parent.",
     withdraw: "Withdraw any time — the parent's dashboard stops updating.",
   },
 ];
+
+const BUILD_NOTES = [
+  {
+    icon: Bookmark,
+    text: "The AI guide is scripted demo content until an API key is configured on the server — replies are sample conversations, not a live model.",
+  },
+  {
+    icon: ShieldCheck,
+    text: "The career catalogue is seeded sample data. Fees, entrances and eligibility change yearly — always verify against official sources before deciding anything.",
+  },
+  {
+    icon: Mic,
+    text: "Speech recognition depends on your browser: it works best in recent Chrome and Edge on desktop, and typing always remains available as a fallback.",
+  },
+  {
+    icon: EyeOff,
+    text: "There are no payments, courses or paid services anywhere in this app, and guidance is never influenced by partners.",
+  },
+  {
+    icon: Info,
+    text: "Qualified legal review (including child-data rules like India's DPDP Act) is needed before any real deployment with children. This build makes no compliance claim.",
+  },
+];
+
+type SectionKey = "language" | "profile" | "privacy" | "family" | "code" | "about";
+
+/** One line of the settings list. The detail lives behind it, not on the page. */
+function Row({
+  icon: Icon,
+  tone,
+  title,
+  value,
+  attention,
+  onClick,
+}: {
+  icon: typeof LanguagesIcon;
+  tone: string;
+  title: string;
+  value: ReactNode;
+  attention?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-canvas focus-visible:bg-canvas"
+    >
+      <span
+        className={cn(
+          "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl",
+          attention ? "bg-warning-mist text-amber-700" : tone,
+        )}
+      >
+        <Icon className="h-4 w-4" aria-hidden />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-semibold text-ink">{title}</span>
+        <span className="mt-0.5 block truncate text-xs text-muted">{value}</span>
+      </span>
+      <ChevronRight className="h-4 w-4 shrink-0 text-muted" aria-hidden />
+    </button>
+  );
+}
+
+function SubHeading({ children }: { children: ReactNode }) {
+  return (
+    <p className="text-xs font-semibold uppercase tracking-wide text-muted">{children}</p>
+  );
+}
 
 export default function SettingsScreen() {
   const { user, profile, settings, isStudent, saveSettings, saveProfile, signOut } = useSession();
@@ -118,11 +189,15 @@ export default function SettingsScreen() {
   const [consent, setConsent] = useState<Resource<ConsentRecord[]>>(initial);
   const [shareCode, setShareCode] = useState<Resource<ShareCode>>(initial);
   const [guardians, setGuardians] = useState<Resource<GuardianLink[]>>(initial);
+  const [comeback, setComeback] = useState<Resource<ComebackStatus>>(initial);
 
+  const [section, setSection] = useState<SectionKey | null>(null);
   const [pendingProfile, setPendingProfile] = useState<Partial<StudentProfile> | null>(null);
   const [busyToggle, setBusyToggle] = useState<string | null>(null);
-
   const [codeBusy, setCodeBusy] = useState<"new" | "revoke" | null>(null);
+  const [mintedCode, setMintedCode] = useState<string | null>(null);
+  const [minting, setMinting] = useState(false);
+  const [copied, setCopied] = useState<"share" | "signin" | null>(null);
   const [historyModal, setHistoryModal] = useState(false);
   const [clearingHistory, setClearingHistory] = useState(false);
   const [removeTarget, setRemoveTarget] = useState<GuardianLink | null>(null);
@@ -132,7 +207,6 @@ export default function SettingsScreen() {
   /* ------------------------------------------------------------------ loaders */
 
   const loadVoices = useCallback(async () => {
-    setVoices({ state: "loading", data: null, error: null });
     try {
       setVoices({ state: "ready", data: await api.voices(), error: null });
     } catch (error) {
@@ -141,7 +215,6 @@ export default function SettingsScreen() {
   }, []);
 
   const loadHealth = useCallback(async () => {
-    setHealth({ state: "loading", data: null, error: null });
     try {
       setHealth({ state: "ready", data: await api.health(), error: null });
     } catch (error) {
@@ -150,7 +223,6 @@ export default function SettingsScreen() {
   }, []);
 
   const loadConversations = useCallback(async () => {
-    setConversations({ state: "loading", data: null, error: null });
     try {
       setConversations({ state: "ready", data: await api.listConversations(), error: null });
     } catch (error) {
@@ -159,7 +231,6 @@ export default function SettingsScreen() {
   }, []);
 
   const loadConsent = useCallback(async () => {
-    setConsent({ state: "loading", data: null, error: null });
     try {
       setConsent({ state: "ready", data: await api.listConsent(), error: null });
     } catch (error) {
@@ -168,7 +239,6 @@ export default function SettingsScreen() {
   }, []);
 
   const loadShareCode = useCallback(async () => {
-    setShareCode({ state: "loading", data: null, error: null });
     try {
       setShareCode({ state: "ready", data: await api.shareCode(), error: null });
     } catch (error) {
@@ -177,7 +247,6 @@ export default function SettingsScreen() {
   }, []);
 
   const loadGuardians = useCallback(async () => {
-    setGuardians({ state: "loading", data: null, error: null });
     try {
       setGuardians({ state: "ready", data: await api.guardians(), error: null });
     } catch (error) {
@@ -185,14 +254,35 @@ export default function SettingsScreen() {
     }
   }, []);
 
+  const loadComeback = useCallback(async () => {
+    try {
+      setComeback({ state: "ready", data: await api.comebackStatus(), error: null });
+    } catch (error) {
+      setComeback({ state: "error", data: null, error: messageFor(error) });
+    }
+  }, []);
+
   useEffect(() => {
+    // Fetching is the whole purpose of this effect, and every setState inside
+    // those loaders happens after an await.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadVoices();
     void loadHealth();
     void loadConsent();
     void loadGuardians();
+    void loadComeback();
     if (isStudent) void loadConversations();
     if (isStudent) void loadShareCode();
-  }, [isStudent, loadVoices, loadHealth, loadConsent, loadGuardians, loadConversations, loadShareCode]);
+  }, [
+    isStudent,
+    loadVoices,
+    loadHealth,
+    loadConsent,
+    loadGuardians,
+    loadComeback,
+    loadConversations,
+    loadShareCode,
+  ]);
 
   /* ------------------------------------------------------------------- saves */
 
@@ -271,7 +361,7 @@ export default function SettingsScreen() {
     setCodeBusy("new");
     try {
       setShareCode({ state: "ready", data: await api.newShareCode(), error: null });
-      toast("New code ready. The previous one stopped working.", "success");
+      toast("New sharing code ready. The previous one stopped working.", "success");
     } catch (error) {
       toast(messageFor(error), "error");
     } finally {
@@ -290,6 +380,38 @@ export default function SettingsScreen() {
       setCodeBusy(null);
     }
   }, [toast]);
+
+  const mintComebackCode = useCallback(async () => {
+    setMinting(true);
+    try {
+      const next = await api.newComebackCode();
+      setMintedCode(next.code);
+      setComeback({
+        state: "ready",
+        data: { has_code: true, note: next.note },
+        error: null,
+      });
+      toast("Sign-in code created. Write it down now — it will not be shown again.", "success");
+    } catch (error) {
+      toast(messageFor(error), "error");
+    } finally {
+      setMinting(false);
+    }
+  }, [toast]);
+
+  const copyValue = useCallback(
+    async (value: string, which: "share" | "signin") => {
+      try {
+        await navigator.clipboard.writeText(value);
+      } catch {
+        toast("Your browser blocked copying — please write it down instead.", "info");
+        return;
+      }
+      setCopied(which);
+      setTimeout(() => setCopied(null), 2000);
+    },
+    [toast],
+  );
 
   const setTranscripts = useCallback(
     async (link: GuardianLink, granted: boolean) => {
@@ -374,17 +496,8 @@ export default function SettingsScreen() {
 
   /* -------------------------------------------------------------- derived UI */
 
-  // The session provider keeps a full settings object once ready; this guard
-  // only satisfies the nullable type and covers the brief pre-ready paint.
-  if (!settings) {
-    return (
-      <Screen title="Settings and privacy" description="Loading your preferences…">
-        <LoadingPanel label="Loading your settings…" />
-      </Screen>
-    );
-  }
-
-  const activeGroup = voiceGroupFor(settings.language);
+  const language = settings?.language ?? "en";
+  const activeGroup = voiceGroupFor(language);
   const consentByScope = useMemo(() => {
     const map = new Map<string, ConsentRecord>();
     for (const record of consent.data ?? []) map.set(record.scope, record); // later wins = latest
@@ -392,8 +505,13 @@ export default function SettingsScreen() {
   }, [consent.data]);
 
   const sessionCount = (conversations.data ?? []).length;
+  const grantedCount = CONSENT_SCOPES.filter((entry) => consentByScope.get(entry.scope)?.granted).length;
+  const guardianCount = (guardians.data ?? []).length;
+  const hasCode = comeback.data?.has_code ?? false;
+  const languageLabel =
+    LANGUAGE_OPTIONS.find((option) => option.value === language)?.label ?? language;
+  const interestCount = (view.interest_areas ?? []).length;
 
-  const languageOptions = [...LANGUAGE_OPTIONS].map((option) => ({ ...option }));
   const classOptions = [...CLASS_OPTIONS].map((option) => ({ ...option }));
   const ageOptions = AGE_BANDS.map((band) => ({ value: band.value as string, label: band.label }));
 
@@ -421,14 +539,12 @@ export default function SettingsScreen() {
     );
   };
 
+  const closeSection = () => setSection(null);
+
   return (
     <Screen
-      title="Settings and privacy"
-      description={
-        isStudent
-          ? "Your language, profile and data choices — every one of them can be changed or withdrawn at any time."
-          : "Your app preferences and how family data is handled on CareerGuide AI."
-      }
+      title="Settings"
+      description="Six things you can change. Open one to see what it does."
       badge={
         <Badge tone="brand" icon={<ShieldCheck className="h-3.5 w-3.5" aria-hidden />}>
           {isStudent ? "Student account" : "Parent account"}
@@ -436,210 +552,359 @@ export default function SettingsScreen() {
       }
     >
       <div className="max-w-3xl space-y-5">
-        {/* ------------------------------------------------ Language & conversation */}
-        <Card>
-          <CardHeader
-            icon={<LanguagesIcon className="h-4 w-4" aria-hidden />}
-            title="Language and conversation"
-            description="How the guide speaks and listens to you."
-          />
-          <div className="mt-4 space-y-4">
-            <Select
-              label="Reply language"
-              options={languageOptions}
-              value={settings.language}
-              onChange={(event) => void patchSettings({ language: event.target.value })}
-              hint="This is only how the guide opens the conversation — it answers in whatever language you actually use, and Hinglish mixes Hindi and English the way friends talk. Nothing about this setting sends your data anywhere new."
-            />
-
-            {voices.state === "loading" ? (
-              <Skeleton className="h-11" />
-            ) : voices.state === "error" ? (
-              <ErrorState
-                title="Voice list could not load"
-                description={voices.error ?? undefined}
-                onRetry={loadVoices}
-              />
+        {/* ------------------------------------------------------------- Identity */}
+        <Card className="flex flex-wrap items-center gap-4">
+          <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-brand text-lg font-semibold text-white">
+            {initials(user?.display_name)}
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-base font-semibold text-ink">{user?.display_name}</p>
+            <p className="mt-0.5 truncate text-sm text-muted">
+              {isStudent
+                ? [classLabel(profile?.class_level) ?? "Class not set", languageLabel].join(" · ")
+                : "Parent account · sees only what a child shares"}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {isStudent ? (
+              <LinkButton href="/app" variant="outline" size="sm">
+                Dashboard
+              </LinkButton>
             ) : (
-              <div className="space-y-4">
-                {(voices.data?.voices ?? []).map((group) => {
-                  const active = group.language === activeGroup;
-                  return (
-                    <Select
-                      key={group.language}
-                      label={
-                        group.language === "hi"
-                          ? "Voice — Hindi"
-                          : group.language === "en"
-                            ? "Voice — English (also used for Hinglish)"
-                            : `Voice — ${group.language}`
-                      }
-                      options={group.voices.map((voice) => ({ value: voice.id, label: voice.label }))}
-                      placeholder="Use the default voice"
-                      value={active ? (settings.voice ?? "") : ""}
-                      disabled={!active}
-                      onChange={(event) =>
-                        void patchSettings({ voice: event.target.value || null })
-                      }
-                      hint={
-                        active
-                          ? voices.data?.note
-                          : "Not available for your current reply language — switch the language above to pick from this set."
-                      }
-                    />
-                  );
-                })}
-              </div>
+              <LinkButton href="/parent" variant="outline" size="sm">
+                Parent dashboard
+              </LinkButton>
             )}
-
-            <div className="space-y-3 rounded-2xl bg-canvas p-4">
-              <Toggle
-                checked={settings.speak_responses}
-                onChange={(next) => void patchSettings({ speak_responses: next })}
-                label={
-                  <span className="inline-flex items-center gap-1.5">
-                    <Volume2 className="h-4 w-4 text-brand-dark" aria-hidden />
-                    Read replies aloud
-                  </span>
-                }
-                description="Replies are read aloud using Microsoft Edge text-to-speech — it needs an internet connection and is not a human voice."
-              />
-              <Toggle
-                checked={settings.continuous_conversation}
-                onChange={(next) => void patchSettings({ continuous_conversation: next })}
-                label={
-                  <span className="inline-flex items-center gap-1.5">
-                    <Mic className="h-4 w-4 text-brand-dark" aria-hidden />
-                    Hands-free conversation on calls
-                  </span>
-                }
-                description="Keeps listening during an open call so you do not tap each turn. It never listens between calls, and nothing is recorded."
-              />
-            </div>
-
-            {health.state === "ready" && health.data?.demo_mode ? (
-              <p className="flex items-start gap-1.5 rounded-xl bg-warning-mist/60 px-3.5 py-2.5 text-xs leading-relaxed text-ink">
-                <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-700" aria-hidden />
-                Answers come from a built-in demo guide until an AI key is added on the server. The
-                demo still walks you through real exploration — but replies are scripted samples.
-              </p>
-            ) : null}
-            {health.state === "error" ? (
-              <ErrorState title="Server status unknown" description={health.error ?? undefined} onRetry={loadHealth} />
-            ) : null}
+            <Button variant="ghost" size="sm" onClick={() => setSection("code")}>
+              <KeyRound className="h-4 w-4" aria-hidden />
+              Sign-in code
+            </Button>
           </div>
         </Card>
 
-        {/* ----------------------------------------------------------- My profile */}
-        {isStudent ? (
-          <Card>
-            <CardHeader
-              icon={<UserRound className="h-4 w-4" aria-hidden />}
+        {/* No code means signing out loses the account, so say it where it is visible. */}
+        {comeback.state === "ready" && !hasCode ? (
+          <button
+            type="button"
+            onClick={() => setSection("code")}
+            className="flex w-full items-center gap-3 rounded-card border border-warning/40 bg-warning-mist/60 px-4 py-3.5 text-left"
+          >
+            <AlertTriangle className="h-4 w-4 shrink-0 text-amber-700" aria-hidden />
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-semibold text-ink">
+                This account has no sign-in code yet
+              </span>
+              <span className="mt-0.5 block text-xs text-muted">
+                Create one before you sign out, or you will not be able to come back to it.
+              </span>
+            </span>
+            <ChevronRight className="h-4 w-4 shrink-0 text-amber-700" aria-hidden />
+          </button>
+        ) : null}
+
+        {/* ------------------------------------------------------------ Settings list */}
+        <Card className="divide-y divide-line overflow-hidden p-0">
+          <Row
+            icon={LanguagesIcon}
+            tone="bg-brand-mist text-brand-dark"
+            title="Language and voice"
+            value={`${languageLabel} · ${settings?.speak_responses ? "reads replies aloud" : "silent"} · ${settings?.continuous_conversation ? "hands-free on" : "tap to speak"}`}
+            onClick={() => setSection("language")}
+          />
+          {isStudent ? (
+            <Row
+              icon={UserRound}
+              tone="bg-teal-mist text-teal"
               title="My profile"
-              description="Only these coarse details are stored — never your full name at school, address, documents, Aadhaar, bank details or passwords. We do not ask for those, ever."
+              value={`${classLabel(profile?.class_level) ?? "Class not set"} · ${interestCount} interest${interestCount === 1 ? "" : "s"}`}
+              onClick={() => setSection("profile")}
             />
-            <div className="mt-4 space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Select
-                  label="Class"
-                  options={classOptions}
-                  placeholder="Not set"
-                  value={view.class_level ?? ""}
-                  onChange={(event) => void patchProfile({ class_level: event.target.value || null })}
-                  hint="Sets how simply the guide explains things."
-                />
-                <Select
-                  label="Age band"
-                  options={ageOptions}
-                  placeholder="Not set"
-                  value={view.age_range ?? ""}
-                  onChange={(event) => void patchProfile({ age_range: event.target.value || null })}
-                  hint={AGE_BANDS.find((band) => band.value === view.age_range)?.note}
-                />
-              </div>
-
-              <div>
-                <p className="mb-1.5 block text-sm font-medium text-ink">
-                  Interests <span className="text-xs font-normal text-muted">(pick up to 12)</span>
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {INTEREST_OPTIONS.map((interest) => {
-                    const selected = (view.interest_areas ?? []).includes(interest);
-                    return (
-                      <button
-                        key={interest}
-                        type="button"
-                        aria-pressed={selected}
-                        onClick={() => toggleInterest(interest)}
-                        className={cn(
-                          "rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors",
-                          selected
-                            ? "border-brand bg-brand text-white"
-                            : "border-line bg-surface text-muted hover:border-brand-light hover:text-ink",
-                        )}
-                      >
-                        {interest}
-                      </button>
-                    );
-                  })}
-                </div>
-                <p className="mt-2 text-xs text-muted">
-                  Interests are things you might enjoy trying — they never decide what you are allowed
-                  to become.
-                </p>
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                {contextSelect(
-                  "School setting",
-                  "education_context",
-                  view.education_context,
-                  EDUCATION_CONTEXT_OPTIONS,
-                  "Helps the guide suggest realistic routes. Change it any time — nothing here is a judgment about you.",
-                )}
-                {contextSelect(
-                  "Cost situation",
-                  "financial_context",
-                  view.financial_context,
-                  FINANCIAL_CONTEXT_OPTIONS,
-                  "A coarse band used only to suggest affordable routes and scholarships — never a judgment about your family. We never ask for bank details or documents.",
-                )}
-              </div>
-            </div>
-          </Card>
-        ) : (
-          <Card>
-            <CardHeader
-              icon={<UserRound className="h-4 w-4" aria-hidden />}
+          ) : (
+            <Row
+              icon={UserRound}
+              tone="bg-teal-mist text-teal"
               title="My account"
-              description="You are signed in as a parent, so your profile has no class, age band or interests — those belong to your child's own account."
+              value="A parent account holds no class, age or interests"
+              onClick={() => setSection("profile")}
             />
-            <div className="mt-4">
-              <Input label="Display name" value={user?.display_name ?? ""} readOnly disabled />
-              <p className="mt-1.5 text-xs text-muted">
-                Your child's name and profile live on their account and can only be changed by them.
+          )}
+          <Row
+            icon={EyeOff}
+            tone="bg-brand-mist text-brand-dark"
+            title="Privacy, consent and display"
+            value={
+              consent.state === "loading"
+                ? "Checking your consent…"
+                : `${grantedCount} of ${CONSENT_SCOPES.length} consents given · ${settings?.save_history ? "history saved" : "history not saved"}`
+            }
+            onClick={() => setSection("privacy")}
+          />
+          {isStudent ? (
+            <Row
+              icon={Link2}
+              tone="bg-success-mist text-success"
+              title="Family access"
+              value={
+                guardians.state === "loading"
+                  ? "Checking linked adults…"
+                  : guardianCount === 0
+                    ? "No adult can see your summary"
+                    : `${guardianCount} adult${guardianCount === 1 ? "" : "s"} can see your summary`
+              }
+              onClick={() => setSection("family")}
+            />
+          ) : null}
+          <Row
+            icon={KeyRound}
+            tone={hasCode ? "bg-brand-mist text-brand-dark" : "bg-warning-mist text-amber-700"}
+            title="Sign-in code"
+            value={
+              comeback.state === "loading"
+                ? "Checking…"
+                : comeback.state === "error"
+                  ? "Status unknown — open to retry"
+                  : hasCode
+                    ? "Created already — a new code replaces the old one"
+                    : "Not created — do this before you sign out"
+            }
+            onClick={() => setSection("code")}
+          />
+          <Row
+            icon={Info}
+            tone="bg-slate-100 text-slate-600"
+            title="About this build"
+            value={`${BUILD_NOTES.length} honest limitations, in plain words`}
+            onClick={() => setSection("about")}
+          />
+        </Card>
+
+        {/* ------------------------------------------------------------- Sign out */}
+        <Card className="flex flex-wrap items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-ink">Sign out</p>
+            <p className="mt-0.5 text-xs text-muted">
+              Your settings and consent choices stay on the account for next time.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <LinkButton href="/login" variant="outline" size="sm">
+              <DoorOpen className="h-4 w-4" aria-hidden />
+              Sign-in page
+            </LinkButton>
+            <Button variant="secondary" loading={signingOut} onClick={() => void doSignOut()}>
+              <LogOut className="h-4 w-4" aria-hidden />
+              Sign out
+            </Button>
+          </div>
+        </Card>
+      </div>
+
+      {/* --------------------------------------------------- Language and voice */}
+      <Modal
+        open={section === "language"}
+        onClose={closeSection}
+        title="Language and voice"
+        description="How the guide speaks and listens to you."
+        footer={<Button variant="outline" onClick={closeSection}>Done</Button>}
+      >
+        <div className="space-y-4">
+          <Select
+            label="Reply language"
+            options={[...LANGUAGE_OPTIONS].map((option) => ({ ...option }))}
+            value={language}
+            onChange={(event) => void patchSettings({ language: event.target.value })}
+            hint="This is only how the guide opens the conversation — it answers in whatever language you actually use, and Hinglish mixes Hindi and English the way friends talk. Nothing about this setting sends your data anywhere new."
+          />
+
+          {voices.state === "loading" ? (
+            <Skeleton className="h-11" />
+          ) : voices.state === "error" ? (
+            <ErrorState
+              title="Voice list could not load"
+              description={voices.error ?? undefined}
+              onRetry={loadVoices}
+            />
+          ) : (
+            (voices.data?.voices ?? []).map((group) => {
+              const active = group.language === activeGroup;
+              return (
+                <Select
+                  key={group.language}
+                  label={
+                    group.language === "hi"
+                      ? "Voice — Hindi"
+                      : group.language === "en"
+                        ? "Voice — English (also used for Hinglish)"
+                        : `Voice — ${group.language}`
+                  }
+                  options={group.voices.map((voice) => ({ value: voice.id, label: voice.label }))}
+                  placeholder="Use the default voice"
+                  value={active ? (settings?.voice ?? "") : ""}
+                  disabled={!active}
+                  onChange={(event) => void patchSettings({ voice: event.target.value || null })}
+                  hint={
+                    active
+                      ? voices.data?.note
+                      : "Not available for your current reply language — switch the language above to pick from this set."
+                  }
+                />
+              );
+            })
+          )}
+
+          <div className="space-y-3 rounded-2xl bg-canvas p-4">
+            <Toggle
+              checked={settings?.speak_responses ?? false}
+              onChange={(next) => void patchSettings({ speak_responses: next })}
+              label={
+                <span className="inline-flex items-center gap-1.5">
+                  <Volume2 className="h-4 w-4 text-brand-dark" aria-hidden />
+                  Read replies aloud
+                </span>
+              }
+              description="Replies are read aloud by an online Microsoft text-to-speech service when the server has one configured, and by your browser's own voice otherwise. Either way it is not a human voice, and the words stay on screen."
+            />
+            <Toggle
+              checked={settings?.continuous_conversation ?? false}
+              onChange={(next) => void patchSettings({ continuous_conversation: next })}
+              label={
+                <span className="inline-flex items-center gap-1.5">
+                  <Mic className="h-4 w-4 text-brand-dark" aria-hidden />
+                  Hands-free conversation on calls
+                </span>
+              }
+              description="Keeps listening during an open call so you do not tap each turn. It never listens between calls, and nothing is recorded."
+            />
+          </div>
+
+          {health.state === "ready" && health.data?.demo_mode ? (
+            <p className="flex items-start gap-1.5 rounded-xl bg-warning-mist/60 px-3.5 py-2.5 text-xs leading-relaxed text-ink">
+              <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-700" aria-hidden />
+              Answers come from a built-in demo guide until an AI key is added on the server. The demo
+              still walks you through real exploration — but replies are scripted samples.
+            </p>
+          ) : null}
+          {health.state === "error" ? (
+            <ErrorState
+              title="Server status unknown"
+              description={health.error ?? undefined}
+              onRetry={loadHealth}
+            />
+          ) : null}
+        </div>
+      </Modal>
+
+      {/* ---------------------------------------------------------- My profile */}
+      <Modal
+        open={section === "profile"}
+        onClose={closeSection}
+        title={isStudent ? "My profile" : "My account"}
+        description={
+          isStudent
+            ? "Only coarse details are stored — never your full name at school, address, documents, Aadhaar, bank details or passwords. We do not ask for those, ever."
+            : "You are signed in as a parent, so your profile has no class, age band or interests — those belong to your child's own account."
+        }
+        footer={<Button variant="outline" onClick={closeSection}>Done</Button>}
+      >
+        {isStudent ? (
+          <div className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Select
+                label="Class"
+                options={classOptions}
+                placeholder="Not set"
+                value={view.class_level ?? ""}
+                onChange={(event) => void patchProfile({ class_level: event.target.value || null })}
+                hint="Sets how simply the guide explains things."
+              />
+              <Select
+                label="Age band"
+                options={ageOptions}
+                placeholder="Not set"
+                value={view.age_range ?? ""}
+                onChange={(event) => void patchProfile({ age_range: event.target.value || null })}
+                hint={AGE_BANDS.find((band) => band.value === view.age_range)?.note}
+              />
+            </div>
+
+            <div>
+              <p className="mb-1.5 block text-sm font-medium text-ink">
+                Interests <span className="text-xs font-normal text-muted">(pick up to 12)</span>
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {INTEREST_OPTIONS.map((interest) => {
+                  const selected = (view.interest_areas ?? []).includes(interest);
+                  return (
+                    <button
+                      key={interest}
+                      type="button"
+                      aria-pressed={selected}
+                      onClick={() => toggleInterest(interest)}
+                      className={cn(
+                        "rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors",
+                        selected
+                          ? "border-brand bg-brand text-white"
+                          : "border-line bg-surface text-muted hover:border-brand-light hover:text-ink",
+                      )}
+                    >
+                      {interest}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="mt-2 text-xs text-muted">
+                Interests are things you might enjoy trying — they never decide what you are allowed to
+                become.
               </p>
             </div>
-          </Card>
-        )}
 
-        {/* ------------------------------------------------------- Privacy & data */}
-        <Card>
-          <CardHeader
-            icon={<EyeOff className="h-4 w-4" aria-hidden />}
-            title="Privacy and data"
-            description="What gets stored, who can see it, and how to erase it."
-          />
-          <div className="mt-4 space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              {contextSelect(
+                "School setting",
+                "education_context",
+                view.education_context,
+                EDUCATION_CONTEXT_OPTIONS,
+                "Helps the guide suggest realistic routes. Change it any time — nothing here is a judgment about you.",
+              )}
+              {contextSelect(
+                "Cost situation",
+                "financial_context",
+                view.financial_context,
+                FINANCIAL_CONTEXT_OPTIONS,
+                "A coarse band used only to suggest affordable routes and scholarships — never a judgment about your family. We never ask for bank details or documents.",
+              )}
+            </div>
+          </div>
+        ) : (
+          <div>
+            <Input label="Display name" value={user?.display_name ?? ""} readOnly disabled />
+            <p className="mt-1.5 text-xs text-muted">
+              Your child&apos;s name and profile live on their account and can only be changed by them.
+            </p>
+          </div>
+        )}
+      </Modal>
+
+      {/* -------------------------------------------------- Privacy and consent */}
+      <Modal
+        open={section === "privacy"}
+        onClose={closeSection}
+        title="Privacy, consent and display"
+        description="What gets stored, what you have agreed to, and how to erase it."
+        footer={<Button variant="outline" onClick={closeSection}>Done</Button>}
+      >
+        <div className="space-y-5">
+          <div className="space-y-4">
+            <SubHeading>Storage and appearance</SubHeading>
             <div className="space-y-3 rounded-2xl bg-canvas p-4">
               <Toggle
-                checked={settings.save_history}
+                checked={settings?.save_history ?? false}
                 onChange={(next) => void patchSettings({ save_history: next })}
                 label="Save my conversation history"
                 description="If this is off, closing a conversation deletes its messages."
               />
               <Toggle
-                checked={settings.reduced_motion}
+                checked={settings?.reduced_motion ?? false}
                 onChange={(next) => void patchSettings({ reduced_motion: next })}
                 label={
                   <span className="inline-flex items-center gap-1.5">
@@ -650,7 +915,7 @@ export default function SettingsScreen() {
                 description="Turns off animations and transitions across the whole app."
               />
               <Toggle
-                checked={settings.high_contrast}
+                checked={settings?.high_contrast ?? false}
                 onChange={(next) => void patchSettings({ high_contrast: next })}
                 label={
                   <span className="inline-flex items-center gap-1.5">
@@ -661,94 +926,99 @@ export default function SettingsScreen() {
                 description="Darker text and stronger borders for easier reading."
               />
             </div>
-
-            {isStudent ? (
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line p-4">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-ink">Delete my conversation history</p>
-                  <p className="mt-0.5 text-xs leading-relaxed text-muted">
-                    {conversations.state === "loading"
-                      ? "Checking your stored conversations…"
-                      : conversations.state === "error"
-                        ? conversations.error
-                        : sessionCount === 0
-                          ? "No conversations are stored right now."
-                          : `${sessionCount} conversation${sessionCount === 1 ? "" : "s"} stored. Deleting ends each one and removes its messages.`}
-                  </p>
-                </div>
-                <Button
-                  variant="danger"
-                  size="sm"
-                  disabled={conversations.state !== "ready" || sessionCount === 0}
-                  onClick={() => setHistoryModal(true)}
-                >
-                  <Trash2 className="h-4 w-4" aria-hidden />
-                  Delete history
-                </Button>
-              </div>
-            ) : (
-              <p className="rounded-2xl border border-line p-4 text-xs leading-relaxed text-muted">
-                Your parent account does not store conversations. Conversation history belongs to each
-                child's own account, and only they can view or delete it.
-              </p>
-            )}
-
-            <div>
-              <p className="text-sm font-semibold text-ink">Consent records</p>
-              <p className="mt-0.5 text-xs text-muted">
-                Exactly what you have agreed to, with the date. You can withdraw any of these here at
-                any time — that is what this screen is for.
-              </p>
-              <div className="mt-3 space-y-3">
-                {consent.state === "loading" ? (
-                  <LoadingPanel label="Loading your consent records…" />
-                ) : consent.state === "error" ? (
-                  <ErrorState description={consent.error ?? undefined} onRetry={loadConsent} />
-                ) : (
-                  CONSENT_SCOPES.map((entry) => {
-                    const record = consentByScope.get(entry.scope);
-                    const granted = record?.granted ?? false;
-                    return (
-                      <div key={entry.scope} className="rounded-2xl border border-line p-4">
-                        <Toggle
-                          checked={granted}
-                          disabled={busyToggle === `consent:${entry.scope}`}
-                          onChange={(next) => void setConsentScope(entry.scope, next)}
-                          label={entry.label}
-                          description={entry.grant}
-                        />
-                        <p className="mt-2 text-[11px] text-muted">
-                          {record
-                            ? `Last updated ${relativeTime(record.created_at)} · consent version ${record.version}`
-                            : "No decision recorded yet — treating this as not granted."}
-                          {" · "}
-                          {entry.withdraw}
-                        </p>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </div>
-
-            <p className="rounded-xl bg-brand-mist/50 px-3.5 py-2.5 text-xs leading-relaxed text-brand-dark">
-              What this app protects: your conversations are not shared with parents by default, links
-              only exist because a student chose them, and there are no ads or payments. What it does
-              not protect: this is a demo build without a legal/compliance certification — do not enter
-              real personal documents, and get qualified review before using it with actual children.
-            </p>
           </div>
-        </Card>
 
-        {/* -------------------------------------------------------- Family access */}
-        {isStudent ? (
-          <Card>
-            <CardHeader
-              icon={<Link2 className="h-4 w-4" aria-hidden />}
-              title="Family access"
-              description="A parent can only see a summary if you give them this code — they cannot attach by guessing. You can revoke it any time."
-            />
-            <div className="mt-4 space-y-4">
+          {isStudent ? (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line p-4">
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-ink">Delete my conversation history</p>
+                <p className="mt-0.5 text-xs leading-relaxed text-muted">
+                  {conversations.state === "loading"
+                    ? "Checking your stored conversations…"
+                    : conversations.state === "error"
+                      ? conversations.error
+                      : sessionCount === 0
+                        ? "No conversations are stored right now."
+                        : `${sessionCount} conversation${sessionCount === 1 ? "" : "s"} stored. Deleting ends each one and removes its messages.`}
+                </p>
+              </div>
+              <Button
+                variant="danger"
+                size="sm"
+                disabled={conversations.state !== "ready" || sessionCount === 0}
+                onClick={() => {
+                  closeSection();
+                  setHistoryModal(true);
+                }}
+              >
+                <Trash2 className="h-4 w-4" aria-hidden />
+                Delete history
+              </Button>
+            </div>
+          ) : (
+            <p className="rounded-2xl border border-line p-4 text-xs leading-relaxed text-muted">
+              Your parent account does not store conversations. Conversation history belongs to each
+              child&apos;s own account, and only they can view or delete it.
+            </p>
+          )}
+
+          <div className="space-y-3">
+            <SubHeading>Consent records</SubHeading>
+            <p className="text-xs text-muted">
+              Exactly what you have agreed to, with the date. You can withdraw any of these here at any
+              time — that is what this screen is for.
+            </p>
+            {consent.state === "loading" ? (
+              <LoadingPanel label="Loading your consent records…" />
+            ) : consent.state === "error" ? (
+              <ErrorState description={consent.error ?? undefined} onRetry={loadConsent} />
+            ) : (
+              CONSENT_SCOPES.map((entry) => {
+                const record = consentByScope.get(entry.scope);
+                const granted = record?.granted ?? false;
+                return (
+                  <div key={entry.scope} className="rounded-2xl border border-line p-4">
+                    <Toggle
+                      checked={granted}
+                      disabled={busyToggle === `consent:${entry.scope}`}
+                      onChange={(next) => void setConsentScope(entry.scope, next)}
+                      label={entry.label}
+                      description={entry.grant}
+                    />
+                    <p className="mt-2 text-[11px] text-muted">
+                      {record
+                        ? `Last updated ${relativeTime(record.created_at)} · consent version ${record.version}`
+                        : "No decision recorded yet — treating this as not granted."}
+                      {" · "}
+                      {entry.withdraw}
+                    </p>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          <p className="rounded-xl bg-brand-mist/50 px-3.5 py-2.5 text-xs leading-relaxed text-brand-dark">
+            What this app protects: your conversations are not shared with parents by default, links
+            only exist because a student chose them, and there are no ads or payments. What it does not
+            protect: this is a demo build without a legal/compliance certification — do not enter real
+            personal documents, and get qualified review before using it with actual children.
+          </p>
+        </div>
+      </Modal>
+
+      {/* -------------------------------------------------------- Family access */}
+      <Modal
+        open={section === "family"}
+        onClose={closeSection}
+        title="Family access"
+        description="A parent can only see a summary if you give them this code — they cannot attach by guessing. You can revoke it any time."
+        footer={<Button variant="outline" onClick={closeSection}>Done</Button>}
+      >
+        <div className="space-y-5">
+          <div>
+            <SubHeading>Sharing code</SubHeading>
+            <div className="mt-2">
               {shareCode.state === "loading" ? (
                 <Skeleton className="h-24" />
               ) : shareCode.state === "error" ? (
@@ -756,14 +1026,28 @@ export default function SettingsScreen() {
               ) : (
                 <div className="rounded-2xl bg-canvas p-4">
                   {shareCode.data?.code ? (
-                    <>
-                      <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-                        Your sharing code
-                      </p>
-                      <p className="mt-1 font-mono text-3xl font-bold tracking-[0.3em] text-ink sm:text-4xl">
-                        {shareCode.data.code}
-                      </p>
-                    </>
+                    <div className="flex flex-wrap items-end justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+                          Give this to a parent
+                        </p>
+                        <p className="mt-1 font-mono text-2xl font-bold tracking-[0.28em] text-ink sm:text-3xl">
+                          {shareCode.data.code}
+                        </p>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => void copyValue(shareCode.data?.code ?? "", "share")}
+                      >
+                        {copied === "share" ? (
+                          <Check className="h-4 w-4 text-success" aria-hidden />
+                        ) : (
+                          <Copy className="h-4 w-4" aria-hidden />
+                        )}
+                        {copied === "share" ? "Copied" : "Copy"}
+                      </Button>
+                    </div>
                   ) : (
                     <p className="text-sm font-medium text-ink">Sharing is currently switched off</p>
                   )}
@@ -796,122 +1080,174 @@ export default function SettingsScreen() {
                   </div>
                 </div>
               )}
+            </div>
+          </div>
 
-              <div>
-                <p className="text-sm font-semibold text-ink">Adults who can see your summary</p>
-                <div className="mt-2">
-                  {guardians.state === "loading" ? (
-                    <LoadingPanel label="Checking linked adults…" />
-                  ) : guardians.state === "error" ? (
-                    <ErrorState description={guardians.error ?? undefined} onRetry={loadGuardians} />
-                  ) : (guardians.data ?? []).length === 0 ? (
-                    <EmptyState
-                      icon={Link2}
-                      title="No adults are linked"
-                      description="Nobody outside your account can see anything. If you later want a parent to see your exploration summary, share the code above with them."
-                    />
+          <div>
+            <SubHeading>Adults who can see your summary</SubHeading>
+            <div className="mt-2">
+              {guardians.state === "loading" ? (
+                <LoadingPanel label="Checking linked adults…" />
+              ) : guardians.state === "error" ? (
+                <ErrorState description={guardians.error ?? undefined} onRetry={loadGuardians} />
+              ) : guardianCount === 0 ? (
+                <EmptyState
+                  icon={Link2}
+                  title="No adults are linked"
+                  description="Nobody outside your account can see anything. If you later want a parent to see your exploration summary, share the code above with them."
+                />
+              ) : (
+                <ul className="space-y-2.5">
+                  {(guardians.data ?? []).map((link) => (
+                    <li key={link.guardianship_id} className="rounded-2xl border border-line p-4">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-ink">
+                            {link.name}
+                            {link.relationship ? (
+                              <span className="ml-2 text-xs font-normal text-muted">
+                                {link.relationship}
+                              </span>
+                            ) : null}
+                          </p>
+                          <p className="mt-0.5 text-xs text-muted">
+                            Linked {relativeTime(link.linked_at)} · sees summary only
+                          </p>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            closeSection();
+                            setRemoveTarget(link);
+                          }}
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                      <div className="mt-3 border-t border-line pt-3">
+                        <Toggle
+                          checked={link.can_see_transcripts}
+                          disabled={busyToggle === `transcripts:${link.guardianship_id}`}
+                          onChange={(next) => void setTranscripts(link, next)}
+                          label={`Conversation text shared: ${link.can_see_transcripts ? "yes" : "no"}`}
+                          description={`Themes and progress are shared either way. Only turn this on if you want ${link.name} to read the actual messages.`}
+                        />
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        </div>
+      </Modal>
+
+      {/* -------------------------------------------------------- Sign-in code */}
+      <Modal
+        open={section === "code"}
+        onClose={closeSection}
+        title="Sign-in code"
+        description="The one thing that lets you open this account again from another device."
+        footer={<Button variant="outline" onClick={closeSection}>Done</Button>}
+      >
+        <div className="space-y-4">
+          {mintedCode ? (
+            <div className="rounded-2xl border border-brand/30 bg-brand-mist/40 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-brand-dark">
+                Copy this now — it will never be shown again
+              </p>
+              <p
+                className="mt-2 rounded-xl bg-navy px-4 py-4 text-center font-mono text-lg font-bold tracking-[0.18em] text-white sm:text-xl"
+                style={{ userSelect: "all" }}
+              >
+                {mintedCode}
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Button size="sm" onClick={() => void copyValue(mintedCode, "signin")}>
+                  {copied === "signin" ? (
+                    <Check className="h-4 w-4" aria-hidden />
                   ) : (
-                    <ul className="space-y-2.5">
-                      {(guardians.data ?? []).map((link) => (
-                        <li key={link.guardianship_id} className="rounded-2xl border border-line p-4">
-                          <div className="flex flex-wrap items-center justify-between gap-2">
-                            <div className="min-w-0">
-                              <p className="text-sm font-semibold text-ink">
-                                {link.name}
-                                {link.relationship ? (
-                                  <span className="ml-2 text-xs font-normal text-muted">
-                                    {link.relationship}
-                                  </span>
-                                ) : null}
-                              </p>
-                              <p className="mt-0.5 text-xs text-muted">
-                                Linked {relativeTime(link.linked_at)} · sees summary only
-                              </p>
-                            </div>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => setRemoveTarget(link)}
-                            >
-                              Remove
-                            </Button>
-                          </div>
-                          <div className="mt-3 border-t border-line pt-3">
-                            <Toggle
-                              checked={link.can_see_transcripts}
-                              disabled={busyToggle === `transcripts:${link.guardianship_id}`}
-                              onChange={(next) => void setTranscripts(link, next)}
-                              label={`Conversation text shared: ${link.can_see_transcripts ? "yes" : "no"}`}
-                              description={`Themes and progress are shared either way. Only turn this on if you want ${link.name} to read the actual messages.`}
-                            />
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
+                    <Copy className="h-4 w-4" aria-hidden />
                   )}
-                </div>
+                  {copied === "signin" ? "Copied" : "Copy code"}
+                </Button>
+                <LinkButton size="sm" variant="outline" href="/login">
+                  Try it on the sign-in page
+                </LinkButton>
               </div>
             </div>
-          </Card>
-        ) : null}
+          ) : null}
 
-        {/* ------------------------------------------------------ About this build */}
-        <Card>
-          <CardHeader
-            icon={<Info className="h-4 w-4" aria-hidden />}
-            title="About this build"
-            description="Honest limitations, in plain words."
-          />
-          <ul className="mt-3 space-y-2 text-sm leading-relaxed text-muted">
+          {comeback.state === "loading" ? (
+            <Skeleton className="h-20" />
+          ) : comeback.state === "error" ? (
+            <ErrorState description={comeback.error ?? undefined} onRetry={loadComeback} />
+          ) : (
+            <div className="rounded-2xl bg-canvas p-4">
+              <p className="flex items-center gap-2 text-sm font-semibold text-ink">
+                <span
+                  className={cn(
+                    "h-2 w-2 rounded-full",
+                    hasCode ? "bg-success" : "bg-warning",
+                  )}
+                  aria-hidden
+                />
+                {hasCode ? "A sign-in code is active" : "No sign-in code yet"}
+              </p>
+              <p className="mt-1.5 text-xs leading-relaxed text-muted">
+                {comeback.data?.note}
+              </p>
+              <Button
+                className="mt-3"
+                size="sm"
+                variant={hasCode ? "outline" : "primary"}
+                loading={minting}
+                onClick={() => void mintComebackCode()}
+              >
+                <KeyRound className="h-4 w-4" aria-hidden />
+                {hasCode ? "Create a new code" : "Create my code"}
+              </Button>
+            </div>
+          )}
+
+          <ul className="space-y-2 text-xs leading-relaxed text-muted">
             <li className="flex gap-2">
-              <Bookmark className="mt-0.5 h-4 w-4 shrink-0 text-teal" aria-hidden />
-              The AI guide is scripted demo content until an API key is configured on the server —
-              replies are sample conversations, not a live model.
+              <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-teal" aria-hidden />
+              This is not the sharing code you give a parent. It opens your own account, so keep it
+              private.
             </li>
             <li className="flex gap-2">
-              <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-teal" aria-hidden />
-              The career catalogue is seeded sample data. Fees, entrances and eligibility change
-              yearly — always verify against official sources before deciding anything.
+              <EyeOff className="mt-0.5 h-3.5 w-3.5 shrink-0 text-teal" aria-hidden />
+              The server stores a one-way digest of the code, not the code itself — a database leak
+              would not hand anyone a way in.
             </li>
             <li className="flex gap-2">
-              <Mic className="mt-0.5 h-4 w-4 shrink-0 text-teal" aria-hidden />
-              Speech recognition depends on your browser: it works best in recent Chrome and Edge on
-              desktop, and typing always remains available as a fallback.
-            </li>
-            <li className="flex gap-2">
-              <EyeOff className="mt-0.5 h-4 w-4 shrink-0 text-teal" aria-hidden />
-              There are no payments, courses or paid services anywhere in this app, and guidance is
-              never influenced by partners.
-            </li>
-            <li className="flex gap-2">
-              <Info className="mt-0.5 h-4 w-4 shrink-0 text-teal" aria-hidden />
-              Qualified legal review (including child-data rules like India's DPDP Act) is needed
-              before any real deployment with children. This build makes no compliance claim.
+              <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-teal" aria-hidden />
+              Creating a new code switches the old one off the moment it is made. If you lose a code,
+              sign in while still logged in and replace it here.
             </li>
           </ul>
-        </Card>
+        </div>
+      </Modal>
 
-        {/* ------------------------------------------------------------- Sign out */}
-        <Card className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="text-sm font-semibold text-ink">Sign out of CareerGuide AI</p>
-            <p className="mt-0.5 text-xs text-muted">
-              Your settings and consent choices stay on the account for next time.
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            {isStudent ? null : (
-              <LinkButton href="/parent" variant="outline" size="sm">
-                Parent dashboard
-              </LinkButton>
-            )}
-            <Button variant="secondary" loading={signingOut} onClick={() => void doSignOut()}>
-              <LogOut className="h-4 w-4" aria-hidden />
-              Sign out
-            </Button>
-          </div>
-        </Card>
-      </div>
+      {/* ------------------------------------------------------- About this build */}
+      <Modal
+        open={section === "about"}
+        onClose={closeSection}
+        title="About this build"
+        description="Honest limitations, in plain words."
+        footer={<Button variant="outline" onClick={closeSection}>Done</Button>}
+      >
+        <ul className="space-y-3 text-sm leading-relaxed text-muted">
+          {BUILD_NOTES.map((note) => (
+            <li key={note.text} className="flex gap-2.5">
+              <note.icon className="mt-0.5 h-4 w-4 shrink-0 text-teal" aria-hidden />
+              {note.text}
+            </li>
+          ))}
+        </ul>
+      </Modal>
 
       {/* Delete-history confirm */}
       <Modal

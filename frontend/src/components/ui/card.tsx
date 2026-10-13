@@ -44,17 +44,22 @@ export function SectionHeading({
   title,
   description,
   action,
+  id,
   className,
 }: {
   title: ReactNode;
   description?: ReactNode;
   action?: ReactNode;
+  /** Sections reference this with `aria-labelledby`, so the id must exist. */
+  id?: string;
   className?: string;
 }) {
   return (
     <div className={cn("flex flex-wrap items-end justify-between gap-3", className)}>
       <div className="min-w-0">
-        <h2 className="text-lg font-semibold tracking-tight text-ink sm:text-xl">{title}</h2>
+        <h2 id={id} className="text-lg font-semibold tracking-tight text-ink sm:text-xl">
+          {title}
+        </h2>
         {description ? <p className="mt-1 text-sm text-muted">{description}</p> : null}
       </div>
       {action}

@@ -155,8 +155,15 @@ export function useSpeechInput(options: {
   const textRef = useRef("");
   const finalHandlerRef = useRef(onFinal);
   const languageRef = useRef(language);
-  languageRef.current = language;
-  finalHandlerRef.current = onFinal;
+
+  // Latest-value refs, written after commit rather than during render: the
+  // recognition callbacks that read them only ever fire once this render exists.
+  useEffect(() => {
+    languageRef.current = language;
+  }, [language]);
+  useEffect(() => {
+    finalHandlerRef.current = onFinal;
+  }, [onFinal]);
 
   useEffect(() => {
     setSupported(getRecognitionClass() !== null);
@@ -265,9 +272,13 @@ export interface AudioPlayer {
 export function useAudioPlayer(handlers: { onEnded?: () => void } = {}): AudioPlayer {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const endedRef = useRef(handlers.onEnded);
-  endedRef.current = handlers.onEnded;
   const [status, setStatus] = useState<PlaybackStatus>("idle");
   const [url, setUrl] = useState<string | null>(null);
+
+  // Written after commit so the `ended` listener always calls the newest handler.
+  useEffect(() => {
+    endedRef.current = handlers.onEnded;
+  }, [handlers.onEnded]);
 
   const release = useCallback(() => {
     const node = audioRef.current;

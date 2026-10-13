@@ -1,23 +1,30 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import {
   ArrowRight,
+  BookOpen,
   Bookmark,
   Briefcase,
+  Building2,
   Compass,
+  FileText,
   GraduationCap,
   Info,
   Lightbulb,
   MessagesSquare,
   Mic,
+  Settings2,
+  ShieldCheck,
   Sparkles,
+  Wallet,
+  X,
 } from "lucide-react";
 import { GuideAvatar } from "@/components/brand";
 import { Screen } from "@/components/layout/app-shell";
 import { Card, SectionHeading } from "@/components/ui/card";
-import { LinkButton } from "@/components/ui/button";
+import { Button, LinkButton } from "@/components/ui/button";
 import { Badge, EvidenceBadge } from "@/components/ui/badge";
 import {
   EmptyState,
@@ -25,16 +32,33 @@ import {
   LoadingPanel,
   ProgressBar,
   Skeleton,
-  SkeletonCard,
   Stat,
 } from "@/components/ui/feedback";
+import { Modal } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
 import { api, ApiError } from "@/lib/api";
 import { useSession } from "@/lib/session";
 import type { Health, Journey, RecommendationSet, SavedCareer } from "@/lib/types";
 import { classLabel } from "@/lib/utils";
 
-/** Every data card owns its own load state so one failure never blanks the page. */
+/**
+ * The dashboard is an instrument panel, not an article: a number, an icon, and
+ * nothing else until the student asks. Every explanation lives in `Detail`
+ * behind the control it describes, so the screen stays scannable while the full
+ * honest wording remains one tap away. Disclosures that a person must not miss
+ * (demo mode, the note under a suggestion) stay printed on the page.
+ */
+
+/** What a tile says when it is opened: a short truth, then a way to act. */
+interface Detail {
+  title: string;
+  icon: ReactNode;
+  lines: string[];
+  href?: string;
+  cta?: string;
+}
+
+/** Each data card owns its own load state, so one failure never blanks the page. */
 type Resource<T> = {
   state: "loading" | "ready" | "error";
   data: T | null;
@@ -50,11 +74,178 @@ function messageFor(error: unknown): string {
   return "Something went wrong loading this part of your dashboard.";
 }
 
-/** Classes 3–8 get short, concrete wording; older students get full sentences. */
 function classNumber(classLevel: string | null | undefined): number {
   if (!classLevel) return 0;
   const digits = classLevel.replace(/\D/g, "");
   return digits ? Number.parseInt(digits, 10) : 0;
+}
+
+const TONE = {
+  brand: "bg-brand-mist text-brand-dark",
+  teal: "bg-teal-mist text-teal",
+  success: "bg-success-mist text-success",
+  warning: "bg-warning-mist text-amber-700",
+} as const;
+
+type Tone = keyof typeof TONE;
+
+/** The places a student can go, described once so the tile itself can stay quiet. */
+const PLACES: { href: string; label: string; icon: typeof Briefcase; tone: Tone; detail: Detail }[] = [
+  {
+    href: "/app/careers",
+    label: "Careers",
+    icon: Briefcase,
+    tone: "brand",
+    detail: {
+      title: "Career Explorer",
+      icon: <Briefcase className="h-5 w-5" aria-hidden />,
+      lines: [
+        "More than forty profiles: a working day, the skills, the real cost, and routes that work from smaller towns.",
+        "Nothing here is sorted by how much a career earns, and no career is ever marked out of reach.",
+      ],
+      href: "/app/careers",
+      cta: "Open Career Explorer",
+    },
+  },
+  {
+    href: "/app/interests",
+    label: "Interests",
+    icon: Lightbulb,
+    tone: "warning",
+    detail: {
+      title: "Discover My Interests",
+      icon: <Lightbulb className="h-5 w-5" aria-hidden />,
+      lines: [
+        "A few friendly questions. Answers are stored as short theme notes, not as a profile of you.",
+        "This is not a test. There is no score, and no wrong answer changes what you are told later.",
+      ],
+      href: "/app/interests",
+      cta: "Answer the questions",
+    },
+  },
+  {
+    href: "/app/plans",
+    label: "Plans",
+    icon: GraduationCap,
+    tone: "teal",
+    detail: {
+      title: "Study & Skill Plans",
+      icon: <GraduationCap className="h-5 w-5" aria-hidden />,
+      lines: [
+        "Turn a direction into small steps you can actually do this week, and tick them off.",
+        "Steps lean on free material first. A plan never turns into a sales pitch for a course.",
+      ],
+      href: "/app/plans",
+      cta: "Build a plan",
+    },
+  },
+  {
+    href: "/app/resources",
+    label: "Resources",
+    icon: BookOpen,
+    tone: "brand",
+    detail: {
+      title: "Resources",
+      icon: <BookOpen className="h-5 w-5" aria-hidden />,
+      lines: [
+        "Videos, books, practice and people to talk to, sorted by what a family can actually reach.",
+        "Every listing says what it costs. Verify the details on the source website before you count on them.",
+      ],
+      href: "/app/resources",
+      cta: "Browse resources",
+    },
+  },
+  {
+    href: "/app/scholarships",
+    label: "Money help",
+    icon: Wallet,
+    tone: "success",
+    detail: {
+      title: "Scholarships & Aid",
+      icon: <Wallet className="h-5 w-5" aria-hidden />,
+      lines: [
+        "Support that may exist for your class, state or subject, with what each one asks for.",
+        "Rules and deadlines change every year, so these are leads to check on the official site — never a promise.",
+      ],
+      href: "/app/scholarships",
+      cta: "Look at aid",
+    },
+  },
+  {
+    href: "/app/institutes",
+    label: "Institutes",
+    icon: Building2,
+    tone: "teal",
+    detail: {
+      title: "Institutes & Courses",
+      icon: <Building2 className="h-5 w-5" aria-hidden />,
+      lines: [
+        "Where a field can be studied, with fees and entry routes shown side by side.",
+        "If a listing was paid for, it says so. Payment has no effect on what the guide suggests.",
+      ],
+      href: "/app/institutes",
+      cta: "Compare institutes",
+    },
+  },
+  {
+    href: "/app/reports",
+    label: "Report",
+    icon: FileText,
+    tone: "brand",
+    detail: {
+      title: "Reports",
+      icon: <FileText className="h-5 w-5" aria-hidden />,
+      lines: [
+        "One page that gathers what you explored, meant for showing a parent or a teacher.",
+        "It lists what the guide actually heard from you, and what is still unverified.",
+      ],
+      href: "/app/reports",
+      cta: "Make a report",
+    },
+  },
+  {
+    href: "/app/journey",
+    label: "Journey",
+    icon: Compass,
+    tone: "warning",
+    detail: {
+      title: "My Journey",
+      icon: <Compass className="h-5 w-5" aria-hidden />,
+      lines: [
+        "The record of conversations, saved careers and steps you finished, newest first.",
+        "You can delete any conversation from here. Nothing is kept to build a profile of you.",
+      ],
+      href: "/app/journey",
+      cta: "Open my journey",
+    },
+  },
+];
+
+function Tile({
+  icon: Icon,
+  label,
+  tone,
+  onClick,
+}: {
+  icon: typeof Briefcase;
+  label: string;
+  tone: Tone;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="group flex flex-col items-center gap-2 rounded-card border border-line bg-surface px-2 py-4 text-center transition-all hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-lift"
+    >
+      <span
+        className={`flex h-11 w-11 items-center justify-center rounded-2xl ${TONE[tone]} transition-transform group-hover:scale-105`}
+      >
+        <Icon className="h-5 w-5" aria-hidden />
+      </span>
+      <span className="text-xs font-medium leading-tight text-ink">{label}</span>
+    </button>
+  );
 }
 
 export default function StudentHome() {
@@ -66,43 +257,46 @@ export default function StudentHome() {
   const [journey, setJourney] = useState<Resource<Journey>>(initial);
   const [recs, setRecs] = useState<Resource<RecommendationSet>>(initial);
   const [saved, setSaved] = useState<Resource<SavedCareer[]>>(initial);
+  const [detail, setDetail] = useState<Detail | null>(null);
 
   // A parent should never land on the student home.
   useEffect(() => {
     if (status === "ready" && isParent) router.replace("/parent");
   }, [status, isParent, router]);
 
+  // Nothing here sets state before its first await: an effect may start a load,
+  // it may not render twice on the way in.
   const loadHealth = useCallback(async () => {
-    setHealth({ state: "loading", data: null, error: null });
     try {
-      setHealth({ state: "ready", data: await api.health(), error: null });
+      const data = await api.health();
+      setHealth({ state: "ready", data, error: null });
     } catch (error) {
       setHealth({ state: "error", data: null, error: messageFor(error) });
     }
   }, []);
 
   const loadJourney = useCallback(async () => {
-    setJourney({ state: "loading", data: null, error: null });
     try {
-      setJourney({ state: "ready", data: await api.journey(), error: null });
+      const data = await api.journey();
+      setJourney({ state: "ready", data, error: null });
     } catch (error) {
       setJourney({ state: "error", data: null, error: messageFor(error) });
     }
   }, []);
 
   const loadRecs = useCallback(async () => {
-    setRecs({ state: "loading", data: null, error: null });
     try {
-      setRecs({ state: "ready", data: await api.recommendations(), error: null });
+      const data = await api.recommendations();
+      setRecs({ state: "ready", data, error: null });
     } catch (error) {
       setRecs({ state: "error", data: null, error: messageFor(error) });
     }
   }, []);
 
   const loadSaved = useCallback(async () => {
-    setSaved({ state: "loading", data: null, error: null });
     try {
-      setSaved({ state: "ready", data: await api.savedCareers(), error: null });
+      const data = await api.savedCareers();
+      setSaved({ state: "ready", data, error: null });
     } catch (error) {
       setSaved({ state: "error", data: null, error: messageFor(error) });
     }
@@ -110,7 +304,9 @@ export default function StudentHome() {
 
   useEffect(() => {
     if (status !== "ready" || isParent) return;
-    // allSettled so a single failing endpoint only degrades its own card.
+    // Filling the dashboard is the whole point of this effect, and every setState
+    // inside those loaders happens after an await.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void Promise.allSettled([loadHealth(), loadJourney(), loadRecs(), loadSaved()]);
   }, [status, isParent, loadHealth, loadJourney, loadRecs, loadSaved]);
 
@@ -134,23 +330,68 @@ export default function StudentHome() {
   const name = user?.display_name?.trim() || "there";
   const cls = classNumber(profile?.class_level);
   const isYounger = cls >= 3 && cls <= 8;
-  const greeting = isYounger
-    ? `Hi ${name}! Ready to explore some cool jobs?`
-    : `Welcome back, ${name}`;
-  const greetingSub = isYounger
-    ? "Let's find out what kind of work you might enjoy."
-    : "Pick up where you left off, or start a fresh conversation with your guide.";
-
-  const recItems = (recs.data?.recommendations ?? []).slice(0, 3);
+  const recItems = recs.data?.recommendations ?? [];
   const savedItems = saved.data ?? [];
-  const activitiesTotal = journey.data?.activities_total ?? 0;
-  const activitiesDone = journey.data?.activities_completed ?? 0;
+  const done = journey.data?.activities_completed ?? 0;
+  const total = journey.data?.activities_total ?? 0;
+
+  const statDetails: (Detail & { value: ReactNode; tone: Tone })[] = [
+    {
+      title: "Sessions completed",
+      value: journey.data?.sessions_completed ?? 0,
+      tone: "brand",
+      icon: <MessagesSquare className="h-5 w-5" aria-hidden />,
+      lines: [
+        "Conversations you started and finished. The guide uses them to remember what you already said, so you are never asked the same thing twice.",
+        isYounger
+          ? "Talking again is how this number grows. Short chats are fine."
+          : "A short chat every few days gives the guide enough to work with.",
+      ],
+      href: "/app/chat",
+      cta: "Start a conversation",
+    },
+    {
+      title: "Careers saved",
+      value: savedItems.length,
+      tone: "teal",
+      icon: <Bookmark className="h-5 w-5" aria-hidden />,
+      lines: [
+        "Profiles you bookmarked to look at again. Saving says nothing about whether a career suits you — it is only a note to self.",
+        "You can remove any of them at any time, from the list below this one.",
+      ],
+      href: "/app/careers",
+      cta: "Browse careers",
+    },
+    {
+      title: "Themes explored",
+      value: journey.data?.themes_explored ?? 0,
+      tone: "success",
+      icon: <Sparkles className="h-5 w-5" aria-hidden />,
+      lines: [
+        "Broad interests the guide heard from you, such as building things, working with people, or patterns and numbers.",
+        "Themes come from what you said out loud. They are never inferred from your voice, your accent or how fast you speak.",
+      ],
+      href: "/app/interests",
+      cta: "Add more interests",
+    },
+    {
+      title: "Activities done",
+      value: `${done}/${total}`,
+      tone: "teal",
+      icon: <Compass className="h-5 w-5" aria-hidden />,
+      lines: [
+        `You have finished ${done} of ${total} suggested explorations — a video, a career read, a conversation with someone who does the work.`,
+        "They are ideas to try, not homework. Skipping one costs nothing and changes no suggestion.",
+      ],
+      href: "/app/journey",
+      cta: "See my journey",
+    },
+  ];
 
   return (
     <Screen
-      title={greeting}
-      description={greetingSub}
-      badge={<Badge tone="brand" icon={<Sparkles className="h-3.5 w-3.5" aria-hidden />}>Student dashboard</Badge>}
+      title={`Hi ${name}`}
+      badge={<Badge tone="brand" icon={<Sparkles className="h-3.5 w-3.5" aria-hidden />}>Student</Badge>}
       action={
         profile?.class_level ? (
           <span className="text-sm text-muted">{classLabel(profile.class_level)}</span>
@@ -163,90 +404,119 @@ export default function StudentHome() {
         )
       }
     >
-      <div className="space-y-6 sm:space-y-8">
-        {/* Hero — the guide, with the two real ways in. */}
-        <Card className="relative overflow-hidden bg-gradient-to-br from-brand-mist/70 via-surface to-teal-mist/40">
-          <div className="flex flex-col items-start gap-5 sm:flex-row sm:items-center">
-            <GuideAvatar state="idle" className="h-20 w-20 shrink-0 sm:h-24 sm:w-24" />
-            <div className="min-w-0 flex-1">
-              <h2 className="text-lg font-semibold tracking-tight text-ink sm:text-xl">
-                Your AI guide is ready
-              </h2>
-              <p className="mt-1 max-w-xl text-sm leading-relaxed text-muted">
-                {isYounger
-                  ? "Talk to the guide about what you like. There are no wrong answers."
-                  : "Ask questions, explore directions and turn ideas into a study plan. Talk out loud or type — your choice."}
-              </p>
-              <div className="mt-4 flex flex-wrap gap-2">
-                <LinkButton href="/app/call">
-                  <Mic className="h-4 w-4" aria-hidden />
-                  Start a voice call
-                </LinkButton>
-                <LinkButton href="/app/chat" variant="outline">
-                  <MessagesSquare className="h-4 w-4" aria-hidden />
-                  Chat instead
-                </LinkButton>
-              </div>
-              {health.state === "ready" && health.data?.demo_mode ? (
-                <p className="mt-3 flex items-start gap-1.5 text-xs text-muted">
-                  <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
-                  You're using the built-in demo guide right now, so replies come from a scripted
-                  sample until an AI key is configured. It still helps you explore.
-                </p>
-              ) : null}
+      <div className="space-y-6 sm:space-y-7">
+        {/* Guide + the two ways in. */}
+        <Card className="flex items-center gap-4 p-4 sm:gap-5 sm:p-5">
+          <GuideAvatar state="idle" className="h-16 w-16 shrink-0 sm:h-20 sm:w-20" />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm leading-relaxed text-muted">
+              {isYounger ? "Ready to explore some cool jobs?" : "Pick up where you left off."}
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <LinkButton href="/app/call" size="sm">
+                <Mic className="h-4 w-4" aria-hidden />
+                Voice call
+              </LinkButton>
+              <LinkButton href="/app/chat" variant="outline" size="sm">
+                <MessagesSquare className="h-4 w-4" aria-hidden />
+                Chat
+              </LinkButton>
+              <LinkButton href="/app/settings" variant="ghost" size="sm">
+                <Settings2 className="h-4 w-4" aria-hidden />
+                Settings
+              </LinkButton>
             </div>
           </div>
         </Card>
 
-        {/* Quick stats */}
+        {health.state === "ready" && health.data?.demo_mode ? (
+          <p className="flex items-start gap-1.5 px-1 text-xs leading-relaxed text-muted">
+            <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+            You are using the built-in demo guide, so replies come from a scripted sample until an AI
+            key is configured. It still helps you explore.
+          </p>
+        ) : null}
+
+        {/* Numbers, each one explained on tap. */}
         <section aria-labelledby="stats-heading">
-          <SectionHeading title="Your journey so far" className="mb-3" />
+          <SectionHeading id="stats-heading" title="Your journey so far" className="mb-3" />
           {journey.state === "loading" ? (
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-              <Skeleton className="h-[92px]" />
-              <Skeleton className="h-[92px]" />
-              <Skeleton className="h-[92px]" />
-              <Skeleton className="h-[92px]" />
+              <Skeleton className="h-[88px]" />
+              <Skeleton className="h-[88px]" />
+              <Skeleton className="h-[88px]" />
+              <Skeleton className="h-[88px]" />
             </div>
           ) : journey.state === "error" ? (
-            <ErrorState description={journey.error} onRetry={loadJourney} />
-          ) : journey.data ? (
+            <ErrorState
+              description={journey.error}
+              onRetry={() => {
+                setJourney(initial());
+                void loadJourney();
+              }}
+            />
+          ) : (
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-              <Stat label="Sessions completed" value={journey.data.sessions_completed} tone="brand" />
-              <Stat label="Careers saved" value={journey.data.careers_saved} tone="teal" />
-              <Stat label="Themes explored" value={journey.data.themes_explored} tone="success" />
-              <div className="cg-card p-4">
-                <p className="text-xs font-medium uppercase tracking-wide text-muted">Activities done</p>
-                <p className="mt-1.5 text-2xl font-semibold leading-none text-brand-dark">
-                  {activitiesDone}
-                  <span className="text-base font-medium text-muted">/{activitiesTotal}</span>
-                </p>
-                <ProgressBar
-                  className="mt-3"
-                  value={activitiesDone}
-                  total={activitiesTotal || 1}
-                  tone="teal"
+              {statDetails.map((item) => (
+                <Stat
+                  key={item.title}
+                  label={item.title}
+                  value={item.value}
+                  tone={item.tone}
+                  onClick={() => setDetail(item)}
+                  footer={
+                    item.title === "Activities done" ? (
+                      <ProgressBar className="mt-3" value={done} total={total || 1} tone="teal" />
+                    ) : null
+                  }
                 />
-              </div>
+              ))}
             </div>
-          ) : null}
+          )}
         </section>
 
-        {/* Directions worth exploring */}
+        {/* Where to go next: icons only, the explaining waits inside each one. */}
+        <section aria-labelledby="places-heading">
+          <SectionHeading id="places-heading" title="Explore" className="mb-3" />
+          <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4 lg:grid-cols-8">
+            {PLACES.map((place) => (
+              <Tile
+                key={place.href}
+                icon={place.icon}
+                label={place.label}
+                tone={place.tone}
+                onClick={() => setDetail(place.detail)}
+              />
+            ))}
+          </div>
+        </section>
+
+        {/* Directions */}
         <section aria-labelledby="recs-heading">
           <SectionHeading
+            id="recs-heading"
             title="Directions worth exploring"
-            description="These are starting points to look into, not a verdict on what you should do."
+            action={
+              <LinkButton href="/app/careers" variant="outline" size="sm">
+                Browse all
+              </LinkButton>
+            }
             className="mb-3"
           />
           {recs.state === "loading" ? (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              <SkeletonCard />
-              <SkeletonCard />
-              <SkeletonCard />
+            <div className="grid gap-3 sm:grid-cols-3">
+              <Skeleton className="h-[104px]" />
+              <Skeleton className="h-[104px]" />
+              <Skeleton className="h-[104px]" />
             </div>
           ) : recs.state === "error" ? (
-            <ErrorState description={recs.error} onRetry={loadRecs} />
+            <ErrorState
+              description={recs.error}
+              onRetry={() => {
+                setRecs(initial());
+                void loadRecs();
+              }}
+            />
           ) : recItems.length === 0 ? (
             <EmptyState
               icon={Compass}
@@ -254,7 +524,7 @@ export default function StudentHome() {
               description={
                 isYounger
                   ? "Chat with your guide or share what you like, and ideas will show up here."
-                  : "A short conversation or the interests questions give the guide enough to suggest directions worth a look."
+                  : "A short conversation or the interest questions give the guide enough to suggest directions."
               }
               action={
                 <div className="flex flex-wrap justify-center gap-2">
@@ -269,29 +539,38 @@ export default function StudentHome() {
             />
           ) : (
             <div className="space-y-3">
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {recItems.map((rec) => (
-                  <Card key={rec.career.id} className="flex flex-col">
+              <div className="grid gap-3 sm:grid-cols-3">
+                {recItems.slice(0, 3).map((rec) => (
+                  <Card key={rec.career.id} className="flex flex-col justify-between gap-3 p-4">
                     <div className="flex items-start justify-between gap-2">
-                      <h3 className="text-base font-semibold leading-tight text-ink">{rec.career.title}</h3>
+                      <h3 className="text-base font-semibold leading-tight text-ink">
+                        {rec.career.title}
+                      </h3>
                       <EvidenceBadge level={rec.evidence_level} />
                     </div>
-                    <p className="mt-2 flex-1 text-sm leading-relaxed text-muted">{rec.why}</p>
-                    {rec.open_questions[0] ? (
-                      <p className="mt-3 rounded-xl bg-canvas px-3 py-2 text-xs leading-relaxed text-ink">
-                        <span className="font-medium text-brand-dark">Worth asking: </span>
-                        {rec.open_questions[0]}
-                      </p>
-                    ) : null}
-                    <LinkButton
-                      href={`/app/careers/${rec.career.slug}`}
-                      variant="ghost"
+                    <Button
+                      variant="outline"
                       size="sm"
-                      className="mt-3 self-start px-0 text-brand-dark hover:bg-transparent"
+                      className="self-start"
+                      onClick={() =>
+                        setDetail({
+                          title: rec.career.title,
+                          icon: <Compass className="h-5 w-5" aria-hidden />,
+                          lines: [
+                            rec.why,
+                            ...(rec.open_questions ?? []).slice(0, 2).map(
+                              (question) => `Worth asking: ${question}`,
+                            ),
+                            "This is a starting point built from what you said. You are allowed to disagree with it.",
+                          ],
+                          href: `/app/careers/${rec.career.slug}`,
+                          cta: "Explore this career",
+                        })
+                      }
                     >
-                      Explore this career
-                      <ArrowRight className="h-4 w-4" aria-hidden />
-                    </LinkButton>
+                      <Info className="h-4 w-4" aria-hidden />
+                      Why this one
+                    </Button>
                   </Card>
                 ))}
               </div>
@@ -304,20 +583,17 @@ export default function StudentHome() {
 
         {/* Saved careers */}
         <section aria-labelledby="saved-heading">
-          <SectionHeading
-            title="Saved careers"
-            description="Careers you've kept to look at again."
-            action={
-              <LinkButton href="/app/careers" variant="outline" size="sm">
-                Browse more
-              </LinkButton>
-            }
-            className="mb-3"
-          />
+          <SectionHeading id="saved-heading" title="Saved careers" className="mb-3" />
           {saved.state === "loading" ? (
             <LoadingPanel label="Loading your saved careers…" />
           ) : saved.state === "error" ? (
-            <ErrorState description={saved.error} onRetry={loadSaved} />
+            <ErrorState
+              description={saved.error}
+              onRetry={() => {
+                setSaved(initial());
+                void loadSaved();
+              }}
+            />
           ) : savedItems.length === 0 ? (
             <EmptyState
               icon={Bookmark}
@@ -330,20 +606,23 @@ export default function StudentHome() {
               }
             />
           ) : (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {savedItems.map((item) => (
-                <Card key={item.career.id} className="flex items-start justify-between gap-3 p-4">
-                  <div className="min-w-0">
-                    <LinkButton
-                      href={`/app/careers/${item.career.slug}`}
-                      variant="ghost"
-                      size="sm"
-                      className="-ml-2 max-w-full justify-start px-0 text-left text-ink hover:bg-transparent"
-                    >
-                      <span className="truncate font-semibold">{item.career.title}</span>
-                    </LinkButton>
-                    <p className="mt-1 truncate text-xs text-muted">{item.career.category}</p>
-                  </div>
+            <Card className="divide-y divide-line p-0">
+              {savedItems.slice(0, 6).map((item) => (
+                <div key={item.career.id} className="flex items-center gap-3 p-3.5">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-mist text-brand-dark">
+                    <Briefcase className="h-4 w-4" aria-hidden />
+                  </span>
+                  <LinkButton
+                    href={`/app/careers/${item.career.slug}`}
+                    variant="ghost"
+                    size="sm"
+                    className="min-w-0 flex-1 justify-start px-0 text-left text-ink hover:bg-transparent"
+                  >
+                    <span className="truncate font-medium">{item.career.title}</span>
+                    <span className="ml-2 hidden truncate text-xs text-muted sm:inline">
+                      {item.career.category}
+                    </span>
+                  </LinkButton>
                   <button
                     type="button"
                     onClick={() => void unsave(item)}
@@ -352,67 +631,73 @@ export default function StudentHome() {
                   >
                     <Bookmark className="h-4 w-4 fill-current" aria-hidden />
                   </button>
-                </Card>
+                </div>
               ))}
-            </div>
+            </Card>
           )}
         </section>
 
-        {/* Next best step */}
-        <section aria-labelledby="next-heading">
-          <SectionHeading title="Next best step" className="mb-3" />
-          <div className="grid gap-3 sm:grid-cols-3">
+        {/* Parent door, only where it is real. */}
+        {isYounger ? null : (
+          <section aria-labelledby="family-heading">
+            <SectionHeading id="family-heading" title="Family" className="mb-3" />
             <LinkButton
-              href="/app/interests"
+              href="/app/settings"
               variant="outline"
               size="md"
-              className="h-auto flex-col items-start gap-2 p-5 text-left"
+              className="w-full justify-between p-4 text-left"
             >
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-mist text-brand-dark">
-                <Lightbulb className="h-5 w-5" aria-hidden />
-              </span>
-              <span className="text-ink">
-                <span className="block font-semibold">Discover your interests</span>
-                <span className="mt-0.5 block text-xs text-muted">
-                  A few friendly questions to guide suggestions.
+              <span className="flex items-center gap-3">
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-success-mist text-success">
+                  <ShieldCheck className="h-4 w-4" aria-hidden />
+                </span>
+                <span>
+                  <span className="block text-sm font-semibold text-ink">Privacy, consent and a parent link</span>
+                  <span className="mt-0.5 block text-xs text-muted">
+                    What is stored, who may see it, and your sign-in code.
+                  </span>
                 </span>
               </span>
+              <ArrowRight className="h-4 w-4 shrink-0 text-muted" aria-hidden />
             </LinkButton>
-            <LinkButton
-              href="/app/plans"
-              variant="outline"
-              size="md"
-              className="h-auto flex-col items-start gap-2 p-5 text-left"
-            >
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-mist text-teal">
-                <GraduationCap className="h-5 w-5" aria-hidden />
-              </span>
-              <span className="text-ink">
-                <span className="block font-semibold">Build a study plan</span>
-                <span className="mt-0.5 block text-xs text-muted">
-                  Turn a direction into small, doable steps.
-                </span>
-              </span>
-            </LinkButton>
-            <LinkButton
-              href="/app/careers"
-              variant="outline"
-              size="md"
-              className="h-auto flex-col items-start gap-2 p-5 text-left"
-            >
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-warning-mist text-amber-700">
-                <Briefcase className="h-5 w-5" aria-hidden />
-              </span>
-              <span className="text-ink">
-                <span className="block font-semibold">Explore careers</span>
-                <span className="mt-0.5 block text-xs text-muted">
-                  Browse every field and see what the work looks like.
-                </span>
-              </span>
-            </LinkButton>
-          </div>
-        </section>
+          </section>
+        )}
       </div>
+
+      {/* One dialog for every explanation on this screen. */}
+      <Modal
+        open={detail !== null}
+        onClose={() => setDetail(null)}
+        title={detail?.title ?? ""}
+        size="sm"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setDetail(null)}>
+              <X className="h-4 w-4" aria-hidden />
+              Close
+            </Button>
+            {detail?.href ? (
+              <LinkButton href={detail.href} onClick={() => setDetail(null)}>
+                {detail.cta ?? "Open"}
+                <ArrowRight className="h-4 w-4" aria-hidden />
+              </LinkButton>
+            ) : null}
+          </>
+        }
+      >
+        <div className="flex gap-3">
+          {detail ? (
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-brand-mist text-brand-dark">
+              {detail.icon}
+            </span>
+          ) : null}
+          <div className="space-y-3 text-sm leading-relaxed text-ink">
+            {detail?.lines.map((line) => (
+              <p key={line}>{line}</p>
+            ))}
+          </div>
+        </div>
+      </Modal>
     </Screen>
   );
 }

@@ -56,12 +56,14 @@ const GROUP_TITLES: Record<NavItem["group"], string> = {
   family: "Account",
 };
 
+// The header avatar already goes to Settings, so the bar would waste a slot on a
+// second route to the same page.
 const MOBILE_NAV = [
   { href: "/app", label: "Home", icon: Home },
   { href: "/app/careers", label: "Careers", icon: Briefcase },
   { href: "/app/call", label: "AI Call", icon: Mic },
+  { href: "/app/plans", label: "Plans", icon: GraduationCap },
   { href: "/app/journey", label: "Journey", icon: Compass },
-  { href: "/app/settings", label: "Profile", icon: Settings },
 ];
 
 function isActive(pathname: string, href: string) {

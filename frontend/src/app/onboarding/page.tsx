@@ -1,8 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { Mic, ShieldCheck, Sparkles, UserRound, Users } from "lucide-react";
+import { useEffect, useState, type ReactNode } from "react";
+import { Check, Copy, KeyRound, Mic, ShieldCheck, Sparkles, UserRound, Users } from "lucide-react";
 import { Wordmark } from "@/components/brand";
 import { Badge } from "@/components/ui/badge";
 import { Button, LinkButton } from "@/components/ui/button";
@@ -33,12 +33,15 @@ export default function OnboardingPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  // The account's sign-in code, held in memory only for this one screen.
+  const [issued, setIssued] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   // Someone already signed in should land on their own dashboard, not create a
   // second profile by accident.
   useEffect(() => {
-    if (status === "ready") router.replace(isParent ? "/parent" : "/app");
-  }, [status, isParent, router]);
+    if (status === "ready" && !issued) router.replace(isParent ? "/parent" : "/app");
+  }, [status, isParent, router, issued]);
 
   async function submit() {
     setSubmitError(null);
@@ -53,7 +56,7 @@ export default function OnboardingPage() {
 
     setSubmitting(true);
     try {
-      await completeOnboarding({
+      const next = await completeOnboarding({
         role,
         // A name is friendly, not required: the field is optional and defaults
         // to the role, so this screen still asks exactly one question.
@@ -70,7 +73,9 @@ export default function OnboardingPage() {
         // default. The guide learns the class during the conversation.
         consent_age: "6-8",
       });
-      router.replace(role === "parent" ? "/parent" : "/app");
+      // Show the code before the dashboard: it is never displayed again.
+      if (next.comeback_code) setIssued(next.comeback_code);
+      else router.replace(role === "parent" ? "/parent" : "/app");
     } catch (error) {
       setSubmitError(
         error instanceof Error
@@ -97,19 +102,71 @@ export default function OnboardingPage() {
     },
   ];
 
-  return (
-    <div className="min-h-dvh bg-canvas">
-      <header className="border-b border-line bg-surface/80 px-4 py-4 sm:px-6">
-        <div className="mx-auto flex max-w-3xl items-center justify-between gap-3">
-          <Wordmark />
-          <LinkButton href="/" variant="ghost" size="sm">
-            Back to the intro
-          </LinkButton>
-        </div>
-      </header>
+  if (issued) {
+    return (
+      <Frame step="code">
+        <Card className="p-6 sm:p-8">
+          <div className="flex items-start gap-4">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand-mist text-brand-dark">
+              <KeyRound className="h-5 w-5" aria-hidden />
+            </span>
+            <div className="min-w-0">
+              <h1 className="text-lg font-semibold tracking-tight text-ink">
+                Save your come-back code
+              </h1>
+              <p className="mt-1 text-sm leading-relaxed text-muted">
+                It signs you back in on any device. It is shown once and cannot be read out of the
+                server later.
+              </p>
+            </div>
+          </div>
 
-      <main className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6 sm:py-10">
-        <Card className="overflow-hidden p-0 sm:p-0">
+          <p
+            className="mt-5 rounded-card bg-navy px-4 py-5 text-center font-mono text-lg tracking-[0.18em] text-white sm:text-xl"
+            style={{ userSelect: "all" }}
+          >
+            {issued}
+          </p>
+
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button
+              variant={copied ? "success" : "outline"}
+              size="sm"
+              onClick={() => {
+                void navigator.clipboard
+                  ?.writeText(issued)
+                  .then(() => setCopied(true))
+                  .catch(() => setCopied(false));
+              }}
+            >
+              {copied ? <Check className="h-4 w-4" aria-hidden /> : <Copy className="h-4 w-4" aria-hidden />}
+              {copied ? "Copied" : "Copy code"}
+            </Button>
+          </div>
+
+          <ul className="mt-5 space-y-1.5 rounded-card bg-canvas p-4 text-xs leading-relaxed text-muted">
+            <li>Write it down, or keep a screenshot somewhere private.</li>
+            <li>
+              This is <span className="font-medium text-ink">not</span> the sharing code you give a
+              parent to link your profile.
+            </li>
+            <li>Anyone who has this code can open this account, so don&apos;t share it.</li>
+            <li>You can create a fresh code any time in Settings; the old one dies instantly.</li>
+          </ul>
+
+          <div className="mt-6 flex justify-end">
+            <Button onClick={() => router.replace(isParent ? "/parent" : "/app")}>
+              {role === "parent" ? "Open the parent dashboard" : "Start talking with the guide"}
+            </Button>
+          </div>
+        </Card>
+      </Frame>
+    );
+  }
+
+  return (
+    <Frame step="choose">
+      <Card className="overflow-hidden p-0 sm:p-0">
           <div className="border-b border-line bg-navy px-5 py-5 text-white sm:px-7">
             <p className="text-xs font-semibold uppercase tracking-wider text-white/60">
               One question before we start
@@ -161,7 +218,8 @@ export default function OnboardingPage() {
               {errors.role ? <p className="mt-2 text-sm text-danger">{errors.role}</p> : null}
               <p className="mt-2 text-xs leading-relaxed text-muted">
                 A parent account sees only what a child has agreed to share. To link your own child,
-                ask them for the code on their Settings page.
+                ask them for the <span className="font-medium text-ink">sharing code</span> on their
+                Settings page — that is different from the come-back code used to sign in.
               </p>
             </div>
 
@@ -234,8 +292,10 @@ export default function OnboardingPage() {
                 official sources, so always verify fees, exams and dates yourself.
               </p>
               <p className="mt-2">
-                There is no password and no email, so a child&apos;s sign-in lives only in this
-                browser. Please do not use a shared or public computer.
+                There is no email or password to collect. Instead your account gets a one-time
+                come-back code, which you will be asked to save. That code is the only way to sign
+                in again after you leave this browser, so keep it private and do not use a shared or
+                public computer.
               </p>
             </div>
 
@@ -247,13 +307,33 @@ export default function OnboardingPage() {
           </div>
 
           <div className="flex items-center justify-between gap-3 border-t border-line bg-canvas px-5 py-4 sm:px-7">
-            <Badge tone="neutral">No password needed</Badge>
+            <Badge tone="neutral">No email, no password</Badge>
             <Button onClick={() => void submit()} loading={submitting}>
               {role === "parent" ? "Open the parent dashboard" : "Start talking with the guide"}
             </Button>
           </div>
         </Card>
-      </main>
+    </Frame>
+  );
+}
+
+/** The frame both steps share: a quiet header and one centred column. */
+function Frame({ children, step }: { children: ReactNode; step: "choose" | "code" }) {
+  return (
+    <div className="min-h-dvh bg-canvas">
+      <header className="border-b border-line bg-surface/80 px-4 py-4 sm:px-6">
+        <div className="mx-auto flex max-w-3xl items-center justify-between gap-3">
+          <Wordmark />
+          {step === "choose" ? (
+            <LinkButton href="/login" variant="ghost" size="sm">
+              I already have an account
+            </LinkButton>
+          ) : (
+            <span className="text-xs font-medium text-muted">Step 2 of 2</span>
+          )}
+        </div>
+      </header>
+      <main className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6 sm:py-10">{children}</main>
     </div>
   );
 }

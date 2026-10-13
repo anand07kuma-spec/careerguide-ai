@@ -129,6 +129,18 @@ export interface Session {
   user: User;
   profile: StudentProfile | null;
   settings: Settings;
+  /** Only present in the single response that mints a new sign-in code. */
+  comeback_code?: string | null;
+}
+
+export interface ComebackStatus {
+  has_code: boolean;
+  note: string;
+}
+
+export interface ComebackCode {
+  code: string;
+  note: string;
 }
 
 export interface OnboardingPayload {

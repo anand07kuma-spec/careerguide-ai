@@ -752,7 +752,7 @@ export default function ParentDashboard() {
             </li>
             <li className="flex gap-2">
               <Compass className="mt-0.5 h-4 w-4 shrink-0 text-teal" aria-hidden />
-              Career interests change — most people's have, several times. Nothing on this screen is a decision being made today.
+              Career interests change — most people&apos;s have, several times. Nothing on this screen is a decision being made today.
             </li>
             <li className="flex gap-2">
               <Info className="mt-0.5 h-4 w-4 shrink-0 text-teal" aria-hidden />

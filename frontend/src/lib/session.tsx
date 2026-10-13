@@ -24,7 +24,8 @@ interface SessionValue {
   /** True for a student account; parents get the parent-only surfaces. */
   isStudent: boolean;
   isParent: boolean;
-  completeOnboarding: (payload: OnboardingPayload) => Promise<void>;
+  completeOnboarding: (payload: OnboardingPayload) => Promise<Session>;
+  signIn: (code: string) => Promise<Session>;
   signOut: () => Promise<void>;
   saveSettings: (patch: Partial<Settings>) => Promise<void>;
   saveProfile: (patch: Record<string, unknown>) => Promise<void>;
@@ -92,6 +93,20 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       const next = await api.onboarding(payload);
       api.rememberToken(next.token);
       apply(next);
+      // The caller has to show the come-back code, so it travels back out. It is
+      // never stored on this device — holding it in memory for one screen is the
+      // whole point of a code meant to be written down.
+      return next;
+    },
+    [apply],
+  );
+
+  const signIn = useCallback(
+    async (code: string) => {
+      const next = await api.login(code);
+      api.rememberToken(next.token);
+      apply(next);
+      return next;
     },
     [apply],
   );
@@ -135,6 +150,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       isStudent: user?.role === "student",
       isParent: user?.role === "parent",
       completeOnboarding,
+      signIn,
       signOut,
       saveSettings,
       saveProfile,
@@ -146,6 +162,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       profile,
       settings,
       completeOnboarding,
+      signIn,
       signOut,
       saveSettings,
       saveProfile,

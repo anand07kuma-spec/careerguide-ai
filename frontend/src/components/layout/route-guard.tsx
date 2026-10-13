@@ -28,7 +28,7 @@ export function RouteGuard({
     access === "any" || (access === "student" ? isStudent : isParent);
 
   const redirect =
-    status === "signed-out" ? "/onboarding" : status === "ready" && !roleOk
+    status === "signed-out" ? "/login" : status === "ready" && !roleOk
       ? OTHER_HOME[access === "student" ? "student" : "parent"]
       : null;
 

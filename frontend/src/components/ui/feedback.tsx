@@ -147,11 +147,17 @@ export function Stat({
   value,
   hint,
   tone = "brand",
+  footer,
+  onClick,
 }: {
   label: string;
   value: ReactNode;
   hint?: ReactNode;
   tone?: "brand" | "teal" | "success" | "warning";
+  /** Anything drawn under the number, such as a progress bar. */
+  footer?: ReactNode;
+  /** Makes the tile a question the student can ask about its own number. */
+  onClick?: () => void;
 }) {
   const accent = {
     brand: "text-brand-dark",
@@ -159,11 +165,20 @@ export function Stat({
     success: "text-success",
     warning: "text-amber-600",
   }[tone];
-  return (
-    <div className="cg-card p-4">
+  const body = (
+    <>
       <p className="text-xs font-medium uppercase tracking-wide text-muted">{label}</p>
       <p className={cn("mt-1.5 text-2xl font-semibold leading-none", accent)}>{value}</p>
       {hint ? <p className="mt-2 text-xs text-muted">{hint}</p> : null}
-    </div>
+      {footer}
+    </>
+  );
+  const shell = "cg-card p-4 text-left";
+  return onClick ? (
+    <button type="button" onClick={onClick} className={cn(shell, "transition-colors hover:border-brand/50")}>
+      {body}
+    </button>
+  ) : (
+    <div className={shell}>{body}</div>
   );
 }

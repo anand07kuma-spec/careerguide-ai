@@ -12,7 +12,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { Screen } from "@/components/layout/app-shell";
-import { Card, CardHeader } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button, LinkButton } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
@@ -20,7 +20,6 @@ import { Modal } from "@/components/ui/modal";
 import {
   EmptyState,
   ErrorState,
-  LoadingPanel,
   ProgressBar,
   SkeletonCard,
 } from "@/components/ui/feedback";
@@ -79,7 +78,6 @@ export default function PlansPage() {
   const [confirmBusy, setConfirmBusy] = useState(false);
 
   const load = useCallback(() => {
-    setState("loading");
     api
       .plans()
       .then((data) => {
@@ -558,18 +556,14 @@ function CreatePlanModal({
   onClose: () => void;
   onCreated: (plan: StudyPlan) => void;
 }) {
-  const { toast } = useToast();
   const [goal, setGoal] = useState("");
   const [title, setTitle] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (open) {
-      setError(null);
-      setBusy(false);
-    }
-  }, [open]);
+  // Mounting fresh is what clears the form between openings; a reset effect
+  // would fight with React over when the state is allowed to change.
+  if (!open) return null;
 
   async function submit() {
     if (goal.trim().length < 2) return;
@@ -630,7 +624,7 @@ function CreatePlanModal({
           </p>
         ) : null}
         <p className="text-xs leading-relaxed text-muted">
-          We'll suggest a few starter steps. They are suggestions only — delete, rewrite or
+          We&apos;ll suggest a few starter steps. They are suggestions only — delete, rewrite or
           reorder anything once the plan is made.
         </p>
       </div>

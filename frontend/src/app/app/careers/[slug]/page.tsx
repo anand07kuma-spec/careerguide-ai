@@ -374,7 +374,7 @@ export default function CareerDetail() {
             <div className="flex items-start gap-2.5">
               <Info className="mt-0.5 h-4 w-4 shrink-0 text-brand-dark" aria-hidden />
               <div className="text-sm leading-relaxed text-ink">
-                <p className="font-semibold text-brand-dark">What this page can and can't do</p>
+                <p className="font-semibold text-brand-dark">What this page can and can&apos;t do</p>
                 <p className="mt-1 text-muted">
                   This page does not guarantee admission, a salary or success. Costs, exams and entry
                   rules change over time, so please confirm anything important using the official

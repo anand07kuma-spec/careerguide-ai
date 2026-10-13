@@ -92,10 +92,15 @@ export default function LandingPage() {
               Safety and privacy
             </a>
           </nav>
-          <LinkButton size="sm" href="/onboarding">
-            Get started
-            <ArrowRight className="h-4 w-4" aria-hidden />
-          </LinkButton>
+          <div className="flex items-center gap-2">
+            <LinkButton size="sm" variant="ghost" href="/login">
+              Sign in
+            </LinkButton>
+            <LinkButton size="sm" href="/onboarding">
+              Get started
+              <ArrowRight className="h-4 w-4" aria-hidden />
+            </LinkButton>
+          </div>
         </div>
       </header>
 
@@ -335,10 +340,15 @@ export default function LandingPage() {
                 about what you like and what you are curious about.
               </p>
             </div>
-            <LinkButton size="lg" className="shrink-0" href="/onboarding">
-              Get started
-              <ArrowRight className="h-4 w-4" aria-hidden />
-            </LinkButton>
+            <div className="flex flex-wrap gap-2">
+              <LinkButton size="lg" className="shrink-0" href="/onboarding">
+                Get started
+                <ArrowRight className="h-4 w-4" aria-hidden />
+              </LinkButton>
+              <LinkButton size="lg" variant="outline" href="/login" className="shrink-0">
+                Sign in
+              </LinkButton>
+            </div>
           </Card>
         </section>
       </main>

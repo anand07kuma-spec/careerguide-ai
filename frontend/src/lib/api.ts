@@ -6,6 +6,8 @@ import type {
   Category,
   ChatMessage,
   ChatReply,
+  ComebackCode,
+  ComebackStatus,
   ConsentRecord,
   ConversationInfo,
   GuardianLink,
@@ -133,6 +135,10 @@ export const api = {
 
   onboarding: (payload: OnboardingPayload) =>
     request<Session>("/api/auth/onboarding", { method: "POST", body: JSON.stringify(payload) }),
+  login: (code: string) =>
+    request<Session>("/api/auth/login", { method: "POST", body: JSON.stringify({ code }) }),
+  comebackStatus: () => request<ComebackStatus>("/api/auth/comeback-code"),
+  newComebackCode: () => request<ComebackCode>("/api/auth/comeback-code", { method: "POST" }),
   me: () => request<Session>("/api/auth/me"),
   updateSettings: (patch: Partial<Settings>) =>
     request<Settings>("/api/auth/settings", { method: "PATCH", body: JSON.stringify(patch) }),
