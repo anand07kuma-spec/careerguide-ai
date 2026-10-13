@@ -41,10 +41,20 @@ class Settings(BaseSettings):
     ai_model: str = ""
     ai_base_url: str = "https://api.openai.com/v1"
 
-    # Edge TTS voices. Hindi and English.
+    # Text-to-speech voices. Hindi and English. The same Microsoft neural voice
+    # ids work on both transports below.
     tts_voice_hi: str = "hi-IN-SwaraNeural"
     tts_voice_en: str = "en-IN-NeerjaNeural"
     tts_timeout_seconds: int = 25
+
+    # auto = Azure when its key is present, otherwise the free Edge endpoint.
+    # Microsoft's Edge read-aloud service answers 403 to datacenter egress IPs, so
+    # a deployment on serverless hosting needs `azure` (or a key set) to speak.
+    # Forcing `azure` without a key fails loudly instead of silently downgrading.
+    tts_provider: str = "auto"
+    azure_speech_key: str = ""
+    # The Speech resource's own region, e.g. "eastus". The key only works there.
+    azure_speech_region: str = ""
 
     session_token_ttl_hours: int = 720
 

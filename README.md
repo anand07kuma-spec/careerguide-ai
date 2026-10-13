@@ -10,7 +10,7 @@ This repository holds both halves of the product:
 | Folder | What it is |
 | --- | --- |
 | `frontend/` | Next.js 16 (App Router, Turbopack, TypeScript, Tailwind CSS 4) web app |
-| `backend/` | FastAPI + SQLAlchemy service: catalogue, conversations, AI provider, Edge TTS, auth, consent |
+| `backend/` | FastAPI + SQLAlchemy service: catalogue, conversations, AI provider, Edge/Azure TTS, auth, consent |
 
 ---
 
@@ -89,10 +89,13 @@ cp frontend/.env.example frontend/.env.local
 | `AI_API_KEY` | backend | *(empty)* | **Server-side only.** Never put it in frontend code or commits |
 | `AI_MODEL` | backend | *(empty)* | Model name for the chosen provider |
 | `AI_BASE_URL` | backend | `https://api.openai.com/v1` | Swap for a compatible gateway |
-| `TTS_VOICE_EN` / `TTS_VOICE_HI` | backend | `en-IN-NeerjaNeural` / `hi-IN-SwaraNeural` | Microsoft Edge text-to-speech voices |
+| `TTS_VOICE_EN` / `TTS_VOICE_HI` | backend | `en-IN-NeerjaNeural` / `hi-IN-SwaraNeural` | Microsoft neural voices, the same ids on both speech services |
+| `TTS_PROVIDER` | backend | `auto` | `auto` / `edge` / `azure` — see [Server-side speech](#server-side-speech-azure) |
+| `AZURE_SPEECH_KEY` | backend | *(empty)* | **Server-side only.** No key means the free Edge endpoint is used |
+| `AZURE_SPEECH_REGION` | backend | *(empty)* | The Speech resource's region, e.g. `centralindia`; the key only works there |
 | `TTS_TIMEOUT_SECONDS` | backend | `25` | Speech synthesis timeout |
 | `SESSION_TOKEN_TTL_HOURS` | backend | `720` | Opaque device tokens stored in `auth_tokens` |
-| `NEXT_PUBLIC_BACKEND_URL` | frontend | `http://localhost:8000` | API origin the browser calls, and the origin that serves generated speech |
+| `NEXT_PUBLIC_BACKEND_URL` | frontend | `http://localhost:8000` | API origin the browser calls |
 
 ### Using a hosted database
 
@@ -261,8 +264,8 @@ What hosting on serverless functions changed in the code, and what to expect:
   home connection and returns `403` from Vercel's datacenter IPs, so on the deployed
   site the reply arrives with `audio_error` and the browser speaks it with its own
   `speechSynthesis` voice instead. That is a different sound, and the screen says so.
-  To get the recorded voices back, point the app at a text-to-speech service that
-  accepts server requests with a key (`AI_*` settings already cover the text side).
+  The recorded voices come back by adding an Azure Speech key — see
+  [Server-side speech (Azure)](#server-side-speech-azure).
 * **Still true after deploying:** replies are demo-generated until an AI key is
   configured, and are labelled as such; Edge TTS needs internet and is not an
   offline guarantee; there are no passwords, so a student's account lives in the
@@ -271,6 +274,68 @@ What hosting on serverless functions changed in the code, and what to expect:
   [Honest status](#4-honest-status) need a qualified legal review — a deployed
   app is exactly the situation that review is for. Vercel's Hobby plan is
   non-commercial, which fits a personal pilot but not a paid service.
+
+### Server-side speech (Azure)
+
+`TTS_PROVIDER` decides what speaks: `auto` (the default) uses Azure when a key **and** a
+region are present, otherwise the free Edge endpoint; `edge` and `azure` force one. Both
+transports return the same mp3, so nothing else changes — the spoken reply still arrives as
+a `data:audio/mpeg` URL inside the API's answer, the voice ids are the same Microsoft
+neural voices (`hi-IN-SwaraNeural`, `en-IN-NeerjaNeural`, …), and the chain stays server
+audio → browser `speechSynthesis` → text. There is no new dependency: the Azure call is a
+plain HTTPS request on the `httpx` already installed.
+
+Getting a key, and handing it to the server only:
+
+1. portal.azure.com → **Create a resource** → **Speech** (the resource called *Speech*, not
+   *Cognitive Services*), pricing tier **F0**, region e.g. **Central India**.
+2. In that resource: **Resource Management → Keys and Endpoint**. Copy **Key 1** and read
+   the **Location/region** string shown there, e.g. `centralindia`. The key only works in
+   the region it was created in — a mismatch answers `401`.
+3. Give it to the backend, never to the browser or a commit:
+
+```bash
+cd backend
+npx vercel env add AZURE_SPEECH_KEY production      # paste the key, Enter, then Ctrl-D
+npx vercel env add AZURE_SPEECH_REGION production   # e.g. centralindia
+git commit -am "…" && git push origin main          # a new deployment is required:
+                                                    # env changes do not apply to a
+                                                    # deployment that already exists
+npx vercel redeploy <deployment-url>                # or rebuild the current commit
+```
+
+Locally, the same two names go in `backend/.env` (gitignored) and the running uvicorn
+process has to be restarted to pick them up.
+
+Check it took:
+
+```bash
+curl https://careerguide-api-omega.vercel.app/api/health
+# "tts_provider": "microsoft-azure-tts", "tts_ready": true
+```
+
+Then send a chat message with *Speak replies* on: the audio should be one of the recorded
+voices and the "your browser's own voice is being used" notice should not appear.
+
+What this costs and what it means for privacy:
+
+* **F0 is free up to 500,000 characters per calendar month**, which is roughly 3,000 spoken
+  replies of 150 words. Above that the resource stops answering until the next month (or
+  moves to a paid tier).
+* **On the free tier Microsoft may use the submitted text to improve its service.** For a
+  paid tier it does not. The text being sent is the guide's reply — not the student's
+  microphone, and not raw conversation, since only the reply is spoken. If sending replies
+  to Microsoft at all is unacceptable for children, leave `TTS_PROVIDER=edge` off the
+  deployed site and let the browser speak; that path needs no key and sends nothing to a
+  speech vendor.
+* `TTS_PROVIDER=azure` with a missing key fails every spoken reply with a message naming
+  `AZURE_SPEECH_KEY`, instead of quietly trying Edge and returning `403` — a broken setup
+  should look broken.
+* `scripts/tts_provider_test.py` (37 checks) covers this without spending anything: SSML
+  escaping of conversation text, the key travelling as a header rather than in the URL or
+  the spoken body, `401`/empty-body/timeout messages that leak neither the credential nor
+  the reply, provider selection, and what `/api/health` reports. Its one live check is
+  skipped unless the shell running it holds a real key, and it says so when it skips.
 
 ### How the app learns the rest of a profile
 
@@ -392,6 +457,13 @@ Tested and working in this environment:
   It now arrives as a data URL rather than a saved file: in the chat screen the
   browser decoded a real 8.8-second clip from it (`loadedmetadata` fired at
   8.784 s, no media error) and the controls moved to the playing state.
+* **An Azure Speech transport is wired and verified offline** — `scripts/tts_provider_test.py`,
+  **37 checks**: provider selection, region normalisation, SSML escaping of conversation text,
+  the key as a header rather than in the URL or the spoken body, `401`/empty/timeout messages
+  that name neither the credential nor the reply, and what `/api/health` reports.
+  **It has never called Microsoft for real, because there is no key in this environment** — the
+  live check in that script prints `SKIP` rather than pretending. Until someone adds
+  `AZURE_SPEECH_KEY`, the deployed site still uses the browser's voice.
 
 Needs configuration, or cannot be verified from here — please test these yourself:
 

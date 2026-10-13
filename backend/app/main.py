@@ -23,6 +23,7 @@ from .database import Base, SessionLocal, engine
 from .routers import auth, catalogue, careers, conversations, interests
 from .routers import journey, recommendations, reports, study_plans, voice
 from .seed import seed_if_empty
+from .services import tts
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
 log = logging.getLogger("careerguide")
@@ -116,7 +117,10 @@ def health() -> dict:
         "storage": "unconfigured" if storage_unusable else "ready",
         "ai_provider": "configured" if settings.ai_configured else "demo",
         "ai_configured": settings.ai_configured,
-        "tts_provider": "microsoft-edge-tts",
+        # Which service will be called, and whether it can actually be called —
+        # the check a person runs after pasting a TTS key.
+        "tts_provider": tts.provider(),
+        "tts_ready": tts.provider() != tts.AZURE or tts.azure_ready(),
         "demo_mode": not settings.ai_configured,
     }
 
