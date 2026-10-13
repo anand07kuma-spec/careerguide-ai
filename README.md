@@ -195,11 +195,12 @@ npx vercel git connect --project careerguide-web
 ```
 
 A push to `main` then builds each project from its own directory. Feature branches and
-pull requests build *preview* deployments, and a preview currently gets the same
-`DATABASE_URL` as production, so it reads and writes the real database. Scope
-`DATABASE_URL` to Production only if you do not want that — without it, the guard in
-`app/main.py` makes a preview answer 503 for every data endpoint instead, which is the
-safer default for children's data.
+pull requests build *preview* deployments, and those are deliberately kept off the real
+data: `DATABASE_URL`, `CORS_ORIGINS` and `DB_AUTO_SETUP` are scoped to **Production**
+only, so a preview boots with no database and answers `503` on every data endpoint
+(`scripts/serverless_guard_test.py` covers that path). `vercel env rm DATABASE_URL
+preview` is how that scope was set; re-adding it to Preview would point a throwaway URL
+at real family conversations, which is not what you want.
 
 Order that works:
 
