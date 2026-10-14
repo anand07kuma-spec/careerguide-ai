@@ -45,6 +45,7 @@ import type {
 } from "@/lib/types";
 import { AGE_BANDS, CLASS_OPTIONS, INTEREST_OPTIONS, LANGUAGE_OPTIONS } from "@/lib/types";
 import { classLabel, cn, initials, relativeTime } from "@/lib/utils";
+import { useAudioPlayer } from "@/lib/voice";
 
 type Resource<T> = {
   state: "loading" | "ready" | "error";
@@ -203,6 +204,12 @@ export default function SettingsScreen() {
   const [removeTarget, setRemoveTarget] = useState<GuardianLink | null>(null);
   const [removing, setRemoving] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+  const [voiceTest, setVoiceTest] = useState<{ busy: boolean; ok: boolean; message: string }>({
+    busy: false,
+    ok: false,
+    message: "",
+  });
+  const player = useAudioPlayer();
 
   /* ------------------------------------------------------------------ loaders */
 
@@ -221,6 +228,25 @@ export default function SettingsScreen() {
       setHealth({ state: "error", data: null, error: messageFor(error) });
     }
   }, []);
+
+  /** Ask the server for a real clip. Nothing else proves which service speaks. */
+  const testVoice = useCallback(async () => {
+    setVoiceTest({ busy: true, ok: false, message: "" });
+    const spoken = settings?.language ?? "en";
+    const sample =
+      spoken === "hi"
+        ? "नमस्ते! मैं CareerGuide की आवाज़ हूँ।"
+        : "Hello! This is the CareerGuide voice, spoken by the server.";
+    try {
+      const result = await api.speak(sample, spoken, settings?.voice ?? null);
+      await player.play(result.audio_url);
+      setVoiceTest({ busy: false, ok: true, message: `${result.provider} made this audio.` });
+    } catch (error) {
+      setVoiceTest({ busy: false, ok: false, message: messageFor(error) });
+    }
+    // The server just answered (or refused), so the status line can be re-read.
+    void loadHealth();
+  }, [loadHealth, player, settings]);
 
   const loadConversations = useCallback(async () => {
     try {
@@ -512,6 +538,31 @@ export default function SettingsScreen() {
     LANGUAGE_OPTIONS.find((option) => option.value === language)?.label ?? language;
   const interestCount = (view.interest_areas ?? []).length;
 
+  // `tts_ready` only says the settings are complete. This verdict comes from the
+  // last time audio was really asked for, and one made against a different
+  // service — before a key was added, say — does not count for the current one.
+  const attempt = health.data?.tts_last_attempt ?? null;
+  const lastVoiceTry =
+    attempt && attempt.ok !== null && attempt.provider === health.data?.tts_provider
+      ? attempt
+      : null;
+  const voiceStatusLine =
+    health.state === "loading"
+      ? "Asking the server which speech service it uses…"
+      : health.state === "error"
+        ? "The server could not be reached, so its voice is unknown."
+        : lastVoiceTry?.ok === true
+          ? `${lastVoiceTry.provider} turned a reply into real audio${
+              lastVoiceTry.checked_at ? ` ${relativeTime(lastVoiceTry.checked_at)}` : ""
+            }.`
+          : lastVoiceTry?.ok === false
+            ? `${lastVoiceTry.provider} was asked and refused: ${
+                lastVoiceTry.reason ?? "no audio came back"
+              } Replies are read by your browser's own voice instead.`
+            : `Nothing has been spoken by ${
+                health.data?.tts_provider ?? "the server"
+              } yet. Run the test below to ask it for audio.`;
+
   const classOptions = [...CLASS_OPTIONS].map((option) => ({ ...option }));
   const ageOptions = AGE_BANDS.map((band) => ({ value: band.value as string, label: band.label }));
 
@@ -775,6 +826,36 @@ export default function SettingsScreen() {
               }
               description="Keeps listening during an open call so you do not tap each turn. It never listens between calls, and nothing is recorded."
             />
+          </div>
+
+          <div className="space-y-2.5 rounded-2xl bg-canvas p-4">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm font-semibold text-ink">The server&apos;s voice</p>
+              <Button
+                variant="outline"
+                size="sm"
+                loading={voiceTest.busy}
+                onClick={() => void testVoice()}
+              >
+                <Volume2 className="h-4 w-4" aria-hidden />
+                Test the voice
+              </Button>
+            </div>
+            <p className="text-xs leading-relaxed text-muted">{voiceStatusLine}</p>
+            {voiceTest.message ? (
+              <p
+                role="status"
+                className={cn(
+                  "rounded-xl px-3 py-2 text-xs leading-relaxed",
+                  voiceTest.ok ? "bg-success-mist text-green-900" : "bg-warning-mist/60 text-ink",
+                )}
+              >
+                {voiceTest.message}
+                {voiceTest.ok
+                  ? " If you heard it, replies are spoken by the server in this browser."
+                  : " Your browser's own voice still reads replies aloud, and it sounds different."}
+              </p>
+            ) : null}
           </div>
 
           {health.state === "ready" && health.data?.demo_mode ? (

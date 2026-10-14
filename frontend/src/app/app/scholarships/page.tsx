@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   BadgeCheck,
   ExternalLink,
@@ -20,17 +20,11 @@ import { LinkButton } from "@/components/ui/button";
 import { Badge, VerificationBadge } from "@/components/ui/badge";
 import { EmptyState, ErrorState, SkeletonCard } from "@/components/ui/feedback";
 import { Input, Select } from "@/components/ui/field";
-import { api, ApiError } from "@/lib/api";
+import { api } from "@/lib/api";
 import { useSession } from "@/lib/session";
+import { useResource } from "@/lib/use-resource";
 import type { Scholarship } from "@/lib/types";
 import { classLabel } from "@/lib/utils";
-
-type Status = "loading" | "ready" | "error";
-
-function messageFor(error: unknown): string {
-  if (error instanceof ApiError) return error.message;
-  return "We couldn't reach the scholarship list.";
-}
 
 /** Display-only prettifiers for values the API already returned. */
 const SCOPE_LABELS: Record<string, string> = {
@@ -78,14 +72,15 @@ export default function ScholarshipsScreen() {
   const [state, setState] = useState("");
   const [scope, setScope] = useState("");
 
-  const [items, setItems] = useState<Scholarship[]>([]);
-  const [status, setStatus] = useState<Status>("loading");
-  const [error, setError] = useState<string | null>(null);
+  const loadScholarships = useCallback(
+    () => api.scholarships({ search: debounced, state, level, scope }),
+    [debounced, state, level, scope],
+  );
+  const list = useResource(loadScholarships, sessionStatus === "ready");
+  const items = list.data ?? [];
 
   // One-time unfiltered snapshot to derive the filter options.
   const [facets, setFacets] = useState<Scholarship[]>([]);
-
-  const requestRef = useRef(0);
 
   useEffect(() => {
     const id = setTimeout(() => setDebounced(search.trim()), 250);
@@ -106,27 +101,6 @@ export default function ScholarshipsScreen() {
       active = false;
     };
   }, []);
-
-  const fetchScholarships = useCallback(async () => {
-    const token = ++requestRef.current;
-    setStatus("loading");
-    setError(null);
-    try {
-      const data = await api.scholarships({ search: debounced, state, level, scope });
-      if (token !== requestRef.current) return;
-      setItems(data);
-      setStatus("ready");
-    } catch (err) {
-      if (token !== requestRef.current) return;
-      setError(messageFor(err));
-      setStatus("error");
-    }
-  }, [debounced, state, level, scope]);
-
-  useEffect(() => {
-    if (sessionStatus !== "ready") return;
-    void fetchScholarships();
-  }, [sessionStatus, fetchScholarships]);
 
   const levelOptions = useMemo(() => {
     const seen = Array.from(new Set(facets.flatMap((s) => s.education_levels))).sort();
@@ -254,14 +228,14 @@ export default function ScholarshipsScreen() {
         </Card>
 
         {/* Results */}
-        {status === "loading" ? (
+        {list.state === "loading" ? (
           <div className="grid gap-4 lg:grid-cols-2">
             {Array.from({ length: 4 }).map((_, i) => (
               <SkeletonCard key={i} />
             ))}
           </div>
-        ) : status === "error" ? (
-          <ErrorState description={error} onRetry={fetchScholarships} />
+        ) : list.state === "error" ? (
+          <ErrorState description={list.error} onRetry={list.reload} />
         ) : items.length === 0 ? (
           <EmptyState
             icon={Search}

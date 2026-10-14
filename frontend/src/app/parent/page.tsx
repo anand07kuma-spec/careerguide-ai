@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   Bookmark,
   Compass,
@@ -35,28 +35,15 @@ import { Modal } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
 import { api, ApiError } from "@/lib/api";
 import { useSession } from "@/lib/session";
+import { useResource } from "@/lib/use-resource";
 import type {
   GuardianLink,
-  Health,
   Observation,
-  ParentChild,
   ParentGuidance,
-  ParentSummary,
   ThemeKey,
 } from "@/lib/types";
 import { THEME_LABELS } from "@/lib/types";
 import { classLabel, relativeTime } from "@/lib/utils";
-
-/** Each data block owns its load state so one failure never blanks the page. */
-type Resource<T> = {
-  state: "loading" | "ready" | "error";
-  data: T | null;
-  error: string | null;
-};
-
-function initial<T>(): Resource<T> {
-  return { state: "loading", data: null, error: null };
-}
 
 function messageFor(error: unknown): string {
   if (error instanceof ApiError) return error.message;
@@ -83,11 +70,28 @@ export default function ParentDashboard() {
   const { status, user, isParent } = useSession();
   const { toast } = useToast();
 
-  const [childrenRes, setChildrenRes] = useState<Resource<ParentChild[]>>(initial);
-  const [guardiansRes, setGuardiansRes] = useState<Resource<GuardianLink[]>>(initial);
-  const [health, setHealth] = useState<Resource<Health>>(initial);
-  const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [summary, setSummary] = useState<Resource<ParentSummary>>(initial);
+  const enabled = status === "ready" && isParent;
+  const loadChildren = useCallback(() => api.parentChildren(), []);
+  const loadGuardians = useCallback(() => api.guardians(), []);
+  const loadHealth = useCallback(() => api.health(), []);
+  const childrenRes = useResource(loadChildren, enabled);
+  const guardiansRes = useResource(loadGuardians, enabled);
+  const health = useResource(loadHealth, enabled);
+  const { reload: reloadChildren } = childrenRes;
+  const { reload: reloadGuardians } = guardiansRes;
+
+  const kids = useMemo(() => childrenRes.data ?? [], [childrenRes.data]);
+  // Clicking a child pins the choice; until then the first child is shown, so a
+  // list that arrives (or reloads) needs no effect to agree with the selection.
+  const [pickedId, setPickedId] = useState<number | null>(null);
+  const selectedId = pickedId ?? kids[0]?.student_id ?? null;
+
+  const loadSummary = useCallback(
+    () => (selectedId === null ? Promise.resolve(null) : api.parentSummary(selectedId)),
+    [selectedId],
+  );
+  const summary = useResource(loadSummary, selectedId !== null);
+  const { reload: reloadSummary } = summary;
 
   const [code, setCode] = useState("");
   const [linking, setLinking] = useState(false);
@@ -101,62 +105,9 @@ export default function ParentDashboard() {
   const [removing, setRemoving] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
 
-  const loadChildren = useCallback(async () => {
-    setChildrenRes({ state: "loading", data: null, error: null });
-    try {
-      const rows = await api.parentChildren();
-      setChildrenRes({ state: "ready", data: rows, error: null });
-      setSelectedId((current) =>
-        current && rows.some((row) => row.student_id === current)
-          ? current
-          : rows[0]?.student_id ?? null,
-      );
-    } catch (error) {
-      setChildrenRes({ state: "error", data: null, error: messageFor(error) });
-    }
-  }, []);
-
-  const loadGuardians = useCallback(async () => {
-    setGuardiansRes({ state: "loading", data: null, error: null });
-    try {
-      setGuardiansRes({ state: "ready", data: await api.guardians(), error: null });
-    } catch (error) {
-      setGuardiansRes({ state: "error", data: null, error: messageFor(error) });
-    }
-  }, []);
-
-  const loadHealth = useCallback(async () => {
-    setHealth({ state: "loading", data: null, error: null });
-    try {
-      setHealth({ state: "ready", data: await api.health(), error: null });
-    } catch (error) {
-      setHealth({ state: "error", data: null, error: messageFor(error) });
-    }
-  }, []);
-
-  useEffect(() => {
-    if (status !== "ready" || !isParent) return;
-    void loadChildren();
-    void loadGuardians();
-    void loadHealth();
-  }, [status, isParent, loadChildren, loadGuardians, loadHealth]);
-
-  const loadSummary = useCallback(async (studentId: number) => {
-    setSummary({ state: "loading", data: null, error: null });
-    try {
-      setSummary({ state: "ready", data: await api.parentSummary(studentId), error: null });
-    } catch (error) {
-      setSummary({ state: "error", data: null, error: messageFor(error) });
-    }
-  }, []);
-
-  useEffect(() => {
-    if (selectedId != null) void loadSummary(selectedId);
-  }, [selectedId, loadSummary]);
-
   const selectedChild = useMemo(
-    () => (childrenRes.data ?? []).find((row) => row.student_id === selectedId) ?? null,
-    [childrenRes.data, selectedId],
+    () => kids.find((row) => row.student_id === selectedId) ?? null,
+    [kids, selectedId],
   );
 
   const linkChild = useCallback(async () => {
@@ -171,15 +122,15 @@ export default function ParentDashboard() {
       await api.linkChild(trimmed);
       setCode("");
       toast("Your child is now linked. You can see their exploration summary.", "success");
-      void loadChildren();
-      void loadGuardians();
+      reloadChildren();
+      reloadGuardians();
     } catch (error) {
       // Show the server's wording verbatim — it is written to be kind and clear.
       setLinkError(messageFor(error));
     } finally {
       setLinking(false);
     }
-  }, [code, toast, loadChildren, loadGuardians]);
+  }, [code, reloadChildren, reloadGuardians, toast]);
 
   const askGuidance = useCallback(async () => {
     if (selectedId == null || concern.trim().length < 3) return;
@@ -201,17 +152,16 @@ export default function ParentDashboard() {
       await api.removeGuardian(removeTarget.guardianship_id);
       toast("Access removed. Your child can share a new code any time they choose.", "success");
       setRemoveTarget(null);
-      void loadChildren();
-      void loadGuardians();
+      reloadChildren();
+      reloadGuardians();
     } catch (error) {
       toast(messageFor(error), "error");
     } finally {
       setRemoving(false);
     }
-  }, [removeTarget, toast, loadChildren, loadGuardians]);
+  }, [removeTarget, toast, reloadChildren, reloadGuardians]);
 
   const name = user?.display_name?.trim() || "there";
-  const kids = childrenRes.data ?? [];
   const sum = summary.data;
 
   /* ---------------------------------------------------------- link onboarding */
@@ -231,7 +181,7 @@ export default function ParentDashboard() {
               ? "You appear to be signed in as a student, so this page is not for you. Everything here is also visible to you on your own screens — and your conversations stay private unless you choose to share them."
               : childrenRes.error ?? undefined
           }
-          onRetry={loadChildren}
+          onRetry={reloadChildren}
           extra={
             <LinkButton href="/app" variant="outline" size="sm">
               Go to my home
@@ -358,7 +308,7 @@ export default function ParentDashboard() {
                     key={kid.student_id}
                     type="button"
                     aria-pressed={active}
-                    onClick={() => setSelectedId(kid.student_id)}
+                    onClick={() => setPickedId(kid.student_id)}
                     className={
                       active
                         ? "flex shrink-0 items-center gap-1.5 rounded-full border border-brand bg-brand px-3.5 py-1.5 text-sm font-medium text-white"
@@ -388,7 +338,7 @@ export default function ParentDashboard() {
           <ErrorState
             title="The summary could not load"
             description={summary.error ?? undefined}
-            onRetry={() => selectedId != null && void loadSummary(selectedId)}
+            onRetry={reloadSummary}
           />
         ) : sum ? (
           <>
@@ -696,7 +646,7 @@ export default function ParentDashboard() {
             {guardiansRes.state === "loading" ? (
               <LoadingPanel label="Loading linked profiles…" />
             ) : guardiansRes.state === "error" ? (
-              <ErrorState description={guardiansRes.error ?? undefined} onRetry={loadGuardians} />
+              <ErrorState description={guardiansRes.error ?? undefined} onRetry={reloadGuardians} />
             ) : (guardiansRes.data ?? []).length === 0 ? (
               <EmptyState
                 icon={Link2}

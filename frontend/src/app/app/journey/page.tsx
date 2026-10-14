@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   Bookmark,
   CheckCircle2,
@@ -27,7 +27,8 @@ import {
   Stat,
 } from "@/components/ui/feedback";
 import { api } from "@/lib/api";
-import type { Journey, JourneyEvent } from "@/lib/types";
+import { useResource } from "@/lib/use-resource";
+import type { JourneyEvent } from "@/lib/types";
 import { cn, relativeTime } from "@/lib/utils";
 
 /** How each known event kind reads and looks; unknown kinds get a neutral dot. */
@@ -74,50 +75,24 @@ function dayLabel(iso: string) {
 }
 
 export default function JourneyPage() {
-  const [journey, setJourney] = useState<Journey | null>(null);
-  const [journeyState, setJourneyState] = useState<"loading" | "error" | "ready">("loading");
-  const [journeyError, setJourneyError] = useState<string | null>(null);
-
-  const [events, setEvents] = useState<JourneyEvent[] | null>(null);
-  const [eventsState, setEventsState] = useState<"loading" | "error" | "ready">("loading");
-  const [eventsError, setEventsError] = useState<string | null>(null);
+  const loadJourney = useCallback(() => api.journey(), []);
+  const loadEvents = useCallback(() => api.journeyEvents(60), []);
+  const {
+    state: journeyState,
+    data: journey,
+    error: journeyError,
+    reload: reloadJourney,
+  } = useResource(loadJourney);
+  const {
+    state: eventsState,
+    data: events,
+    error: eventsError,
+    reload: reloadEvents,
+  } = useResource(loadEvents);
 
   const [kindFilter, setKindFilter] = useState("all");
 
-  const loadJourney = useCallback(() => {
-    setJourneyState("loading");
-    api
-      .journey()
-      .then((data) => {
-        setJourney(data);
-        setJourneyState("ready");
-      })
-      .catch((error: unknown) => {
-        setJourneyError(error instanceof Error ? error.message : "Something went wrong.");
-        setJourneyState("error");
-      });
-  }, []);
-
-  const loadEvents = useCallback(() => {
-    setEventsState("loading");
-    api
-      .journeyEvents(60)
-      .then((data) => {
-        setEvents(data);
-        setEventsState("ready");
-      })
-      .catch((error: unknown) => {
-        setEventsError(error instanceof Error ? error.message : "Something went wrong.");
-        setEventsState("error");
-      });
-  }, []);
-
-  useEffect(() => {
-    loadJourney();
-    loadEvents();
-  }, [loadJourney, loadEvents]);
-
-  const visibleEvents = events ?? [];
+  const visibleEvents = useMemo(() => events ?? [], [events]);
   const tabs = useMemo(() => {
     if (!events) return [];
     const counts = new Map<string, number>();
@@ -178,7 +153,7 @@ export default function JourneyPage() {
               <ErrorState
                 title="We couldn't load your journey stats"
                 description={journeyError}
-                onRetry={loadJourney}
+                onRetry={reloadJourney}
               />
             ) : journey ? (
               <div className="space-y-4">
@@ -231,7 +206,7 @@ export default function JourneyPage() {
               eventsState === "ready" ? (
                 <button
                   type="button"
-                  onClick={loadEvents}
+                  onClick={reloadEvents}
                   className="rounded-full border border-line bg-surface px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:border-brand-light hover:text-ink"
                 >
                   Refresh
@@ -247,7 +222,7 @@ export default function JourneyPage() {
               <ErrorState
                 title="We couldn't load your timeline"
                 description={eventsError}
-                onRetry={loadEvents}
+                onRetry={reloadEvents}
               />
             ) : visibleEvents.length === 0 ? (
               <EmptyState

@@ -181,17 +181,21 @@ export function Toggle({
   description?: ReactNode;
   disabled?: boolean;
 }) {
+  const labelId = useId();
+
   return (
     <div className="flex items-start justify-between gap-4 py-1">
       <div className="min-w-0">
-        <p className="text-sm font-medium text-ink">{label}</p>
+        <p id={labelId} className="text-sm font-medium text-ink">
+          {label}
+        </p>
         {description ? <p className="mt-0.5 text-xs leading-relaxed text-muted">{description}</p> : null}
       </div>
       <button
         type="button"
         role="switch"
         aria-checked={checked}
-        aria-label={typeof label === "string" ? label : undefined}
+        aria-labelledby={labelId}
         disabled={disabled}
         onClick={() => onChange(!checked)}
         className={cn(

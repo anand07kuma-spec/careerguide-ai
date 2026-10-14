@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Building2,
   ExternalLink,
@@ -20,16 +20,10 @@ import { Badge, VerificationBadge } from "@/components/ui/badge";
 import { EmptyState, ErrorState, SkeletonCard } from "@/components/ui/feedback";
 import { Input, Select } from "@/components/ui/field";
 import { PillGroup } from "@/components/ui/tabs";
-import { api, ApiError } from "@/lib/api";
+import { api } from "@/lib/api";
 import type { Institution } from "@/lib/types";
 import { useSession } from "@/lib/session";
-
-type Status = "loading" | "ready" | "error";
-
-function messageFor(error: unknown): string {
-  if (error instanceof ApiError) return error.message;
-  return "We couldn't reach the institute list.";
-}
+import { useResource } from "@/lib/use-resource";
 
 /** Display-only prettifiers for values the API already returned. */
 const TYPE_LABELS: Record<string, string> = {
@@ -73,12 +67,21 @@ export default function InstitutesScreen() {
   const [state, setState] = useState("");
   const [careerArea, setCareerArea] = useState("");
 
-  const [items, setItems] = useState<Institution[]>([]);
-  const [status, setStatus] = useState<Status>("loading");
-  const [error, setError] = useState<string | null>(null);
+  const loadInstitutions = useCallback(
+    () =>
+      api.institutions({
+        search: debounced,
+        state,
+        career_area: careerArea,
+        institution_type: type,
+        mode,
+      }),
+    [debounced, state, careerArea, type, mode],
+  );
+  const list = useResource(loadInstitutions, sessionStatus === "ready");
+  const items = list.data ?? [];
 
   const [facets, setFacets] = useState<Institution[]>([]);
-  const requestRef = useRef(0);
 
   useEffect(() => {
     const id = setTimeout(() => setDebounced(search.trim()), 250);
@@ -99,33 +102,6 @@ export default function InstitutesScreen() {
       active = false;
     };
   }, []);
-
-  const fetchInstitutions = useCallback(async () => {
-    const token = ++requestRef.current;
-    setStatus("loading");
-    setError(null);
-    try {
-      const data = await api.institutions({
-        search: debounced,
-        state,
-        career_area: careerArea,
-        institution_type: type,
-        mode,
-      });
-      if (token !== requestRef.current) return;
-      setItems(data);
-      setStatus("ready");
-    } catch (err) {
-      if (token !== requestRef.current) return;
-      setError(messageFor(err));
-      setStatus("error");
-    }
-  }, [debounced, state, careerArea, type, mode]);
-
-  useEffect(() => {
-    if (sessionStatus !== "ready") return;
-    void fetchInstitutions();
-  }, [sessionStatus, fetchInstitutions]);
 
   const typeOptions = useMemo(() => {
     const seen = Array.from(new Set(facets.map((i) => i.institution_type))).sort();
@@ -255,14 +231,14 @@ export default function InstitutesScreen() {
         </Card>
 
         {/* Results */}
-        {status === "loading" ? (
+        {list.state === "loading" ? (
           <div className="grid gap-4 lg:grid-cols-2">
             {Array.from({ length: 4 }).map((_, i) => (
               <SkeletonCard key={i} />
             ))}
           </div>
-        ) : status === "error" ? (
-          <ErrorState description={error} onRetry={fetchInstitutions} />
+        ) : list.state === "error" ? (
+          <ErrorState description={list.error} onRetry={list.reload} />
         ) : items.length === 0 ? (
           <EmptyState
             icon={Search}

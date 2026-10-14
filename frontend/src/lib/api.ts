@@ -206,9 +206,6 @@ export const api = {
     return { ...reply, audio_url: mediaUrl(reply.audio_url) };
   },
   messages: (sessionId: number) => request<ChatMessage[]>(`/api/conversations/${sessionId}/messages`),
-  /** Local-only check: it stores nothing, it just says whether to show help contacts. */
-  safetyCheck: (text: string) =>
-    request<{ needs_support: boolean }>(`/api/conversations/safety-check?text=${encodeURIComponent(text)}`),
   endConversation: (sessionId: number) =>
     request<ConversationInfo>(`/api/conversations/${sessionId}/end`, { method: "POST" }),
   clearConversation: (sessionId: number) =>
@@ -294,10 +291,3 @@ export const api = {
       `/api/parent/guidance?student_id=${studentId}&concern=${encodeURIComponent(concern)}`,
     ),
 };
-
-/** Turns a backend media path into an absolute URL for an <audio> element. */
-export function absoluteUrl(path: string | null | undefined): string | null {
-  if (!path) return null;
-  if (path.startsWith("http")) return path;
-  return `${BACKEND_URL}${path}`;
-}

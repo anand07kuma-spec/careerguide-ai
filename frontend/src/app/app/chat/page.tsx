@@ -73,7 +73,16 @@ export default function ChatPage() {
   // The guide replies in whatever language the student last used, so spoken
   // playback and dictation follow that instead of the account default.
   const [spoken, setSpoken] = useState(language);
-  const dictation = useSpeechInput({ language: spoken });
+  const dictation = useSpeechInput({
+    language: spoken,
+    // Each finished phrase lands in the composer, appended to whatever is already
+    // typed, so a message can be half spoken and half typed.
+    onFinal: (words) =>
+      setDraft((current) => {
+        const base = current.trim();
+        return base ? `${base} ${words}` : words;
+      }),
+  });
 
   const scrollToEnd = useCallback(() => {
     requestAnimationFrame(() => {
@@ -92,30 +101,33 @@ export default function ChatPage() {
     [scrollToEnd],
   );
 
-  const boot = useCallback(async () => {
-    setBooting(true);
-    setBootError(null);
-    setBootOffline(false);
-    try {
-      const sessions = await api.listConversations();
-      const active = sessions.find(
-        (item) => item.status === "active" && item.kind === "chat",
-      );
-      if (active) {
-        const history = await api.messages(active.id);
-        await openSession(active, history);
-      } else {
-        const fresh = await api.startConversation("chat", spoken);
-        await openSession(fresh, []);
-      }
-    } catch (error) {
-      if (isOffline(error)) setBootOffline(true);
-      setBootError(error instanceof Error ? error.message : "Could not open the conversation.");
-    } finally {
-      setBooting(false);
-    }
-  }, [openSession, spoken]);
+  // One promise chain, and state only changes inside its callbacks. Opening the
+  // thread therefore never writes state synchronously, which is what lets the
+  // mount effect below stay simple.
+  const boot = useCallback(
+    () =>
+      api
+        .listConversations()
+        .then(async (sessions) => {
+          const active = sessions.find((item) => item.status === "active" && item.kind === "chat");
+          if (active) {
+            await openSession(active, await api.messages(active.id));
+            return;
+          }
+          await openSession(await api.startConversation("chat", spoken), []);
+        })
+        .catch((error: unknown) => {
+          if (isOffline(error)) setBootOffline(true);
+          setBootError(
+            error instanceof Error ? error.message : "Could not open the conversation.",
+          );
+        })
+        .finally(() => setBooting(false)),
+    [openSession, spoken],
+  );
 
+  // The screen already renders as "booting", so mounting only fires the request;
+  // rewinding the flags belongs to `retryBoot`, which the Try again button calls.
   useEffect(() => {
     void boot();
     // Booting once per mount: restarting on every language change would drop
@@ -123,18 +135,27 @@ export default function ChatPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const retryBoot = useCallback(() => {
+    setBooting(true);
+    setBootError(null);
+    setBootOffline(false);
+    void boot();
+  }, [boot]);
+
   useEffect(() => {
     scrollToEnd();
   }, [messages, sending, scrollToEnd]);
 
-  // Only on unmount — the returned player object changes identity every render,
-  // so depending on `player` itself would cut the voice off mid-sentence.
+  // The player object is a new literal every render, so depending on `player`
+  // itself would stop the voice mid-sentence. `stop` is stable, so this only
+  // ever fires when the screen unmounts.
+  const stopVoice = player.stop;
   useEffect(
     () => () => {
-      player.stop();
+      stopVoice();
       cancelBrowserTts();
     },
-    [player.stop],
+    [stopVoice],
   );
 
   const replyTo = useCallback(
@@ -149,10 +170,11 @@ export default function ChatPage() {
       dictation.reset();
 
       try {
-        const check = await api.safetyCheck(trimmed).catch(() => null);
-        setSafety(Boolean(check?.needs_support));
-
         const answer = await api.sendMessage(session.id, trimmed, speakOn);
+        // The reply carries the guide's own judgement about whether this sounds
+        // like a child asking for help, so a second request that fails cannot
+        // decide whether the helpline card appears.
+        setSafety(answer.needs_support);
         // Follow the guide's language for the next dictation and any fallback voice.
         setSpoken(answer.language || language);
         // Anything this turn revealed about the student is already saved on the
@@ -184,7 +206,7 @@ export default function ChatPage() {
           // The server's text-to-speech failed; the browser's own voice is a
           // different sound, so the reply still says it is labelled as such.
           if (answer.audio_error) {
-            setNotice(answer.audio_error);
+            setNotice(`${answer.audio_error} Your browser's own voice is reading this reply.`);
             speakWithBrowser(answer.reply.content, answer.language || language);
           }
         }
@@ -201,17 +223,20 @@ export default function ChatPage() {
 
   const canSend = Boolean(session) && draft.trim().length > 0 && !sending;
 
-  const dictated = dictation.text || dictation.interim;
-  useEffect(() => {
-    if (dictation.listening && dictated) setDraft(dictated);
-  }, [dictated, dictation.listening]);
-
   const startNewConversation = useCallback(async () => {
     player.stop();
     setSafety(false);
     setBooting(true);
     try {
-      if (session) await api.endConversation(session.id).catch(() => undefined);
+      if (session) {
+        try {
+          await api.endConversation(session.id);
+        } catch {
+          // The new chat still opens; only the old thread's status is unsure, and
+          // that much is worth saying rather than swallowing.
+          toast("The previous chat may still be listed as open on the Journey page.", "info");
+        }
+      }
       const fresh = await api.startConversation("chat", spoken);
       await openSession(fresh, []);
       setNotice(null);
@@ -220,7 +245,7 @@ export default function ChatPage() {
     } finally {
       setBooting(false);
     }
-  }, [openSession, player, session, spoken]);
+  }, [openSession, player, session, spoken, toast]);
 
   const endConversation = useCallback(async () => {
     if (!session) return;
@@ -270,7 +295,7 @@ export default function ChatPage() {
         <ErrorState
           title="The chat could not start"
           description={bootError}
-          onRetry={() => void boot()}
+          onRetry={retryBoot}
           retryLabel="Try again"
           extra={
             bootOffline ? (
@@ -468,7 +493,13 @@ export default function ChatPage() {
                   <Mic className="h-4 w-4" aria-hidden />
                 )}
               </Button>
-              <Button size="icon" disabled={!canSend} onClick={() => void replyTo(draft)}>
+              <Button
+                size="icon"
+                aria-label="Send your message"
+                title="Send (Enter)"
+                disabled={!canSend}
+                onClick={() => void replyTo(draft)}
+              >
                 {sending ? <Square className="h-4 w-4" aria-hidden /> : <Send className="h-4 w-4" aria-hidden />}
               </Button>
             </div>
@@ -505,9 +536,11 @@ export default function ChatPage() {
             </div>
 
             {dictation.listening ? (
-              <p className="mt-2 flex items-center gap-2 text-xs text-teal" role="status">
-                <Volume2 className="h-3.5 w-3.5" aria-hidden />
-                Listening… speak normally, your words appear above.
+              <p className="mt-2 flex items-start gap-2 text-xs text-teal" role="status">
+                <Volume2 className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+                {dictation.interim
+                  ? `Still hearing: ${dictation.interim}`
+                  : "Listening… your finished words appear in the box above."}
               </p>
             ) : null}
           </div>

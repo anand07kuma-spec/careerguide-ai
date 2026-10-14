@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import {
   AlertTriangle,
@@ -27,15 +27,9 @@ import { EmptyState, ErrorState, LoadingPanel } from "@/components/ui/feedback";
 import { useToast } from "@/components/ui/toast";
 import { api, ApiError } from "@/lib/api";
 import { useSession } from "@/lib/session";
+import { messageFor, useResource } from "@/lib/use-resource";
 import { THEME_LABELS, type Career, type ThemeKey } from "@/lib/types";
 import { categoryTint, cn } from "@/lib/utils";
-
-type Status = "loading" | "ready" | "error";
-
-function messageFor(error: unknown): string {
-  if (error instanceof ApiError) return error.message;
-  return "We couldn't load this career.";
-}
 
 /** A titled block that only renders when it actually has something to show. */
 function Section({
@@ -85,83 +79,46 @@ export default function CareerDetail() {
   const { status: sessionStatus } = useSession();
   const { toast } = useToast();
 
-  const [career, setCareer] = useState<Career | null>(null);
-  const [status, setStatus] = useState<Status>("loading");
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [notFound, setNotFound] = useState(false);
-
-  const [savedIds, setSavedIds] = useState<Set<number>>(new Set());
+  // A bookmark made on this screen, kept separate from the server's saved list
+  // so the button can show it before that list is read again.
+  const [savedHere, setSavedHere] = useState<boolean | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const [related, setRelated] = useState<Career[]>([]);
-
-  const load = useCallback(async () => {
-    if (!slug) return;
-    setStatus("loading");
-    setNotFound(false);
-    setErrorMessage(null);
+  const load = useCallback(async (): Promise<Career | "not-found"> => {
+    if (!slug) return "not-found";
     try {
-      const data = await api.career(slug);
-      setCareer(data);
-      setStatus("ready");
+      return await api.career(slug);
     } catch (error) {
-      if (error instanceof ApiError && error.status === 404) {
-        setNotFound(true);
-      } else {
-        setErrorMessage(messageFor(error));
-      }
-      setStatus("error");
+      // A career that does not exist is a different answer from a career the
+      // server failed to send, and the screen says so in different words.
+      if (error instanceof ApiError && error.status === 404) return "not-found";
+      throw error;
     }
   }, [slug]);
+  const detail = useResource(load, sessionStatus === "ready");
 
-  useEffect(() => {
-    if (sessionStatus !== "ready") return;
-    void load();
-  }, [sessionStatus, load]);
+  const notFound = detail.data === "not-found";
+  const career = detail.state === "ready" && !notFound ? (detail.data as Career) : null;
 
   // Saved state comes from the saved list so the button reflects the server.
-  useEffect(() => {
-    if (sessionStatus !== "ready") return;
-    let active = true;
-    void api
-      .savedCareers()
-      .then((data) => {
-        if (active) setSavedIds(new Set(data.map((s) => s.career.id)));
-      })
-      .catch(() => {
-        /* bookmarking still works; the button just starts optimistic */
-      });
-    return () => {
-      active = false;
-    };
-  }, [sessionStatus]);
+  const loadSaved = useCallback(() => api.savedCareers(), []);
+  const saved = useResource(loadSaved, sessionStatus === "ready");
 
   // Related careers: fetch each, ignore individual failures.
-  useEffect(() => {
-    const slugs = career?.related_slugs ?? [];
-    if (slugs.length === 0) {
-      setRelated([]);
-      return;
-    }
-    let active = true;
-    void Promise.all(slugs.map((s) => api.career(s).catch(() => null))).then((results) => {
-      if (!active) return;
-      setRelated(results.filter((r): r is Career => r !== null));
-    });
-    return () => {
-      active = false;
-    };
-  }, [career]);
+  const relatedSlugs = useMemo(() => career?.related_slugs ?? [], [career]);
+  const loadRelated = useCallback(
+    () =>
+      Promise.all(relatedSlugs.map((s) => api.career(s).catch(() => null))).then((results) =>
+        results.filter((r): r is Career => r !== null),
+      ),
+    [relatedSlugs],
+  );
+  const related = useResource(loadRelated, career !== null);
 
   const toggleSave = useCallback(async () => {
     if (!career) return;
-    const wasSaved = savedIds.has(career.id);
-    setSavedIds((prev) => {
-      const next = new Set(prev);
-      if (wasSaved) next.delete(career.id);
-      else next.add(career.id);
-      return next;
-    });
+    const wasSaved = savedHere ?? (saved.data ?? []).some((entry) => entry.career.id === career.id);
+    setSavedHere(!wasSaved);
     setSaving(true);
     try {
       if (wasSaved) {
@@ -172,19 +129,15 @@ export default function CareerDetail() {
         toast(`Saved ${career.title} to explore later.`, "success");
       }
     } catch (error) {
-      setSavedIds((prev) => {
-        const next = new Set(prev);
-        if (wasSaved) next.add(career.id);
-        else next.delete(career.id);
-        return next;
-      });
+      // Forget the flip; the server's list is the truth again.
+      setSavedHere(null);
       toast(messageFor(error), "error");
     } finally {
       setSaving(false);
     }
-  }, [career, savedIds, toast]);
+  }, [career, saved.data, savedHere, toast]);
 
-  if (status === "loading") {
+  if (detail.state === "loading") {
     return (
       <Screen title="Loading career…">
         <LoadingPanel label="Fetching the details…" />
@@ -192,7 +145,7 @@ export default function CareerDetail() {
     );
   }
 
-  if (status === "error") {
+  if (notFound || detail.state === "error") {
     return (
       <Screen
         title={notFound ? "Career not found" : "This career didn't load"}
@@ -205,8 +158,8 @@ export default function CareerDetail() {
       >
         <ErrorState
           title={notFound ? "We couldn't find that career" : "That did not load"}
-          description={notFound ? "The link may be old or the career may have moved." : errorMessage ?? undefined}
-          onRetry={notFound ? undefined : load}
+          description={notFound ? "The link may be old or the career may have moved." : detail.error ?? undefined}
+          onRetry={notFound ? undefined : detail.reload}
           extra={
             <LinkButton href="/app/careers" size="sm">
               Browse all careers
@@ -225,7 +178,8 @@ export default function CareerDetail() {
     );
   }
 
-  const isSaved = savedIds.has(career.id);
+  const isSaved = savedHere ?? (saved.data ?? []).some((entry) => entry.career.id === career.id);
+  const relatedCareers = related.data ?? [];
   const hasList = (arr: string[]) => Array.isArray(arr) && arr.length > 0;
   const themes = career.interest_themes.filter((t): t is ThemeKey => t in THEME_LABELS);
 
@@ -429,11 +383,11 @@ export default function CareerDetail() {
             </div>
           </Section>
 
-          {related.length > 0 ? (
+          {relatedCareers.length > 0 ? (
             <Card>
               <p className="mb-3 text-sm font-semibold text-ink">Related careers</p>
               <div className="space-y-2">
-                {related.map((r) => (
+                {relatedCareers.map((r) => (
                   <LinkButton
                     key={r.id}
                     href={`/app/careers/${r.slug}`}

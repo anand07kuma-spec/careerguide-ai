@@ -145,6 +145,7 @@ export default function VoiceCallPage() {
   const prePauseRef = useRef<CallState>("speaking");
   const silenceTimer = useRef<number | null>(null);
   const onFinalRef = useRef<(text: string) => void>(() => {});
+  const onMicErrorRef = useRef<(kind: MicErrorKind) => void>(() => {});
   const onEndedRef = useRef<() => void>(() => {});
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
@@ -162,7 +163,11 @@ export default function VoiceCallPage() {
   }, []);
 
   const player = useAudioPlayer({ onEnded: () => onEndedRef.current() });
-  const stt = useSpeechInput({ language: spoken, onFinal: (text) => onFinalRef.current(text) });
+  const stt = useSpeechInput({
+    language: spoken,
+    onFinal: (text) => onFinalRef.current(text),
+    onError: (kind) => onMicErrorRef.current(kind),
+  });
   const sttRef = useRef(stt);
 
   const clearSilenceTimer = useCallback(() => {
@@ -204,12 +209,19 @@ export default function VoiceCallPage() {
       try {
         const result = await api.speak(text, used, settings.voice);
         await player.play(result.audio_url);
-      } catch {
-        // Edge text-to-speech needs the internet. The browser's own voice is a
-        // different sound, so the caption says which one is speaking.
+      } catch (failure) {
+        // The server's speech service answers from some networks and not others.
+        // Saying which reason stopped it keeps a blocked service from looking
+        // like a broken microphone to the student.
+        const reason =
+          failure instanceof ApiError
+            ? failure.message
+            : "The guide's voice service did not answer.";
         const handled = speakWithBrowser(text, used, () => onEndedRef.current());
-        if (!handled) {
-          setNotice("Spoken replies are not available right now. Captions still work.");
+        if (handled) {
+          setNotice(`${reason} Your browser's own voice is reading this one.`);
+        } else {
+          setNotice(`${reason} Spoken replies are off right now; captions still work.`);
           if (settings.continuous_conversation) beginListening();
           else go("ready");
         }
@@ -235,10 +247,10 @@ export default function VoiceCallPage() {
       ]);
 
       try {
-        const support = await api.safetyCheck(text).catch(() => null);
-        if (support?.needs_support) setSafety(true);
-
         const answer = await api.sendMessage(active.id, text, !mutedRef.current);
+        // The guide's verdict on whether this sounds like a child asking for help
+        // travels with the reply, so no extra request decides whether help shows.
+        if (answer.needs_support) setSafety(true);
         setSession({ ...active, stage: answer.stage });
         setSpoken(answer.language || spoken);
         setCaptions((current) => [
@@ -303,21 +315,19 @@ export default function VoiceCallPage() {
       if (settings.continuous_conversation) beginListening();
       else go("ready");
     };
-  }, [beginListening, go, sendTurn, settings.continuous_conversation, stt]);
+    // A microphone problem is a state the student must see, not a silent failure.
+    onMicErrorRef.current = (kind) => {
+      clearSilenceTimer();
+      setMicProblem(kind);
+      if (kind === "no-speech") go("silence");
+      else if (kind === "aborted") go("ready");
+      else go("blocked");
+    };
+  }, [beginListening, clearSilenceTimer, go, sendTurn, settings.continuous_conversation, stt]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [captions]);
-
-  useEffect(() => {
-    if (!stt.error) return;
-    // A microphone error is a state the student must see, not a silent failure.
-    clearSilenceTimer();
-    setMicProblem(stt.error);
-    if (stt.error === "no-speech") go("silence");
-    else if (stt.error === "aborted") go("ready");
-    else go("blocked");
-  }, [stt.error, clearSilenceTimer, go]);
 
   useEffect(
     () => () => {
@@ -696,7 +706,7 @@ export default function VoiceCallPage() {
             aria-label="Type your answer"
             className="min-h-[46px] flex-1 rounded-card border border-white/15 bg-white/10 px-4 py-2.5 text-sm text-white outline-none placeholder:text-white/40 focus:border-brand-light"
           />
-          <Button type="submit" size="icon" disabled={!typed.trim() || busy}>
+          <Button type="submit" size="icon" aria-label="Send your message" disabled={!typed.trim() || busy}>
             <Send className="h-4 w-4" aria-hidden />
           </Button>
         </form>

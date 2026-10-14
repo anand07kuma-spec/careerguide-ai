@@ -233,6 +233,8 @@ export interface ChatReply {
   language: string;
   /** Profile facts this turn taught the app, already saved to the student's profile. */
   profile_updates?: Record<string, unknown>;
+  /** The guide judged this message as a child possibly asking for help. */
+  needs_support: boolean;
 }
 
 export interface InterestPrompt {
@@ -461,12 +463,23 @@ export interface ConsentRecord {
   created_at: string;
 }
 
+/** What the last real synthesis on the server did. `ok: null` means nobody has
+ * asked it for audio since that server started, which is not the same as working. */
+export interface VoiceAttempt {
+  checked_at: string | null;
+  ok: boolean | null;
+  provider: string | null;
+  reason: string | null;
+}
+
 export interface Health {
   status: string;
   storage: string;
   ai_provider: string;
   ai_configured: boolean;
   tts_provider: string;
+  tts_ready: boolean;
+  tts_last_attempt: VoiceAttempt;
   demo_mode: boolean;
 }
 

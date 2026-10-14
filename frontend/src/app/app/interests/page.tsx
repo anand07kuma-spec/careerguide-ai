@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   ArrowRight,
   Check,
@@ -18,6 +18,7 @@ import { EmptyState, ErrorState, LoadingPanel, SkeletonCard } from "@/components
 import { useToast } from "@/components/ui/toast";
 import { useSession } from "@/lib/session";
 import { api } from "@/lib/api";
+import { useResource } from "@/lib/use-resource";
 import {
   INTEREST_OPTIONS,
   THEME_LABELS,
@@ -28,38 +29,6 @@ import {
   type ThemeKey,
 } from "@/lib/types";
 import { cn, relativeTime } from "@/lib/utils";
-
-/** One fetch, with the four states every panel must handle. */
-interface Panel<T> {
-  state: "loading" | "error" | "ready";
-  data: T | null;
-  error: string | null;
-}
-
-function usePanel<T>(load: () => Promise<T>): Panel<T> & { reload: () => void } {
-  const [panel, setPanel] = useState<Panel<T>>({ state: "loading", data: null, error: null });
-  const reload = useCallback(() => {
-    let cancelled = false;
-    setPanel({ state: "loading", data: null, error: null });
-    load()
-      .then((data) => {
-        if (!cancelled) setPanel({ state: "ready", data, error: null });
-      })
-      .catch((error: unknown) => {
-        if (!cancelled)
-          setPanel({
-            state: "error",
-            data: null,
-            error: error instanceof Error ? error.message : "Something went wrong.",
-          });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [load]);
-  useEffect(() => reload(), [reload]);
-  return { ...panel, reload };
-}
 
 interface AnswerResult {
   saved_themes: { theme: ThemeKey; label: string }[];
@@ -86,13 +55,13 @@ export default function InterestsPage() {
     return ["3-5", "6-8", "9-10"].includes(profile?.age_range ?? "");
   }, [profile?.class_level, profile?.age_range]);
 
-  const promptsPanel = usePanel(
+  const promptsPanel = useResource(
     useCallback(() => api.interestPrompts(settings.language || "hinglish"), [settings.language]),
   );
-  const observationsPanel = usePanel(useCallback(() => api.observations(), []));
-  const summaryPanel = usePanel(useCallback(() => api.interestSummary(), []));
+  const observationsPanel = useResource(useCallback(() => api.observations(), []));
+  const summaryPanel = useResource(useCallback(() => api.interestSummary(), []));
   // Optional context for answers; if it fails we simply hide the checkbox.
-  const conversationsPanel = usePanel(useCallback(() => api.listConversations(), []));
+  const conversationsPanel = useResource(useCallback(() => api.listConversations(), []));
 
   const prompts = promptsPanel.data?.prompts ?? [];
   const [index, setIndex] = useState(0);
@@ -156,27 +125,27 @@ export default function InterestsPage() {
   }
 
   // ---- "Your own interests" chip editor, optimistic with rollback ----------
-  const savedInterests = profile?.interest_areas ?? [];
-  const [interests, setInterests] = useState<string[]>(savedInterests);
+  const savedInterests = useMemo(() => profile?.interest_areas ?? [], [profile?.interest_areas]);
+  // The chips follow the profile, except while a save is in flight: this holds
+  // the click the student just made, and dropping it is the rollback.
+  const [draftInterests, setDraftInterests] = useState<string[] | null>(null);
   const [interestsSaving, setInterestsSaving] = useState(false);
-  useEffect(() => {
-    setInterests(savedInterests);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profile?.interest_areas?.join("|")]);
+  const interests = draftInterests ?? savedInterests;
 
   async function toggleInterest(option: string) {
-    const previous = interests;
-    const next = previous.includes(option)
-      ? previous.filter((item) => item !== option)
-      : [...previous, option];
-    setInterests(next);
+    const next = interests.includes(option)
+      ? interests.filter((item) => item !== option)
+      : [...interests, option];
+    setDraftInterests(next);
     setInterestsSaving(true);
     try {
       await saveProfile({ interest_areas: next });
     } catch (error) {
-      setInterests(previous);
       toast(errorMessage(error), "error");
     } finally {
+      // A saved profile has already replaced `savedInterests`, so falling back
+      // to it shows the truth in both directions.
+      setDraftInterests(null);
       setInterestsSaving(false);
     }
   }

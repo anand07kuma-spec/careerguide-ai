@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Bookmark, Info, Search, SlidersHorizontal, X } from "lucide-react";
 import { Screen } from "@/components/layout/app-shell";
 import { Card } from "@/components/ui/card";
@@ -10,52 +10,43 @@ import { EmptyState, ErrorState, SkeletonCard } from "@/components/ui/feedback";
 import { Input, Select } from "@/components/ui/field";
 import { PillGroup } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/toast";
-import { api, ApiError } from "@/lib/api";
+import { api } from "@/lib/api";
 import { useSession } from "@/lib/session";
+import { messageFor, useResource } from "@/lib/use-resource";
 import { THEME_LABELS, type CareerSummary, type Category, type ThemeKey } from "@/lib/types";
 import { categoryTint, cn } from "@/lib/utils";
-
-type Status = "loading" | "ready" | "error";
-
-function messageFor(error: unknown): string {
-  if (error instanceof ApiError) return error.message;
-  return "We couldn't reach the career library.";
-}
 
 const THEME_OPTIONS = (Object.keys(THEME_LABELS) as ThemeKey[]).map((key) => ({
   value: key,
   label: THEME_LABELS[key],
 }));
 
+/**
+ * Deep links (`/app/careers?category=…&theme=…`) seed the filters. This screen
+ * only mounts on the client, so the query string is already there — reading it
+ * as the initial state means no effect has to overwrite what the user sees.
+ */
+function linkedFilters(): { category: string; theme: string } {
+  if (typeof window === "undefined") return { category: "", theme: "" };
+  const params = new URLSearchParams(window.location.search);
+  return { category: params.get("category") ?? "", theme: params.get("theme") ?? "" };
+}
+
 export default function CareerExplorer() {
   const { status: sessionStatus } = useSession();
   const { toast } = useToast();
 
+  const [link] = useState(linkedFilters);
   const [search, setSearch] = useState("");
   const [debounced, setDebounced] = useState("");
-  const [category, setCategory] = useState("");
-  const [theme, setTheme] = useState("");
+  const [category, setCategory] = useState(link.category);
+  const [theme, setTheme] = useState(link.theme);
   const [savedOnly, setSavedOnly] = useState(false);
 
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [careers, setCareers] = useState<CareerSummary[]>([]);
-  const [listStatus, setListStatus] = useState<Status>("loading");
-  const [listError, setListError] = useState<string | null>(null);
-
-  const [savedIds, setSavedIds] = useState<Set<number>>(new Set());
+  // Bookmarks the user has just confirmed on this screen, by career id. They sit
+  // on top of the server's saved list, which is a snapshot from when it loaded.
+  const [savedHere, setSavedHere] = useState<Map<number, boolean>>(new Map());
   const [pending, setPending] = useState<Set<number>>(new Set());
-
-  const requestRef = useRef(0);
-
-  // Deep links: /app/careers?category=...&theme=... seed the filters once.
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const params = new URLSearchParams(window.location.search);
-    const c = params.get("category");
-    const t = params.get("theme");
-    if (c) setCategory(c);
-    if (t) setTheme(t);
-  }, []);
 
   // Debounce the search box (~250ms) so typing doesn't hammer the API.
   useEffect(() => {
@@ -64,69 +55,39 @@ export default function CareerExplorer() {
   }, [search]);
 
   // Categories power the chips; a failure here only hides the chips.
-  useEffect(() => {
-    if (sessionStatus !== "ready") return;
-    let active = true;
-    void api
-      .categories()
-      .then((data) => {
-        if (active) setCategories(data);
-      })
-      .catch(() => {
-        if (active) setCategories([]);
-      });
-    return () => {
-      active = false;
-    };
-  }, [sessionStatus]);
+  const loadCategories = useCallback(
+    () => api.categories().catch(() => [] as Category[]),
+    [],
+  );
+  const categories = useResource(loadCategories, sessionStatus === "ready");
 
-  // Saved set drives the bookmark buttons and the "Saved only" filter.
-  const loadSaved = useCallback(async () => {
-    try {
-      const data = await api.savedCareers();
-      setSavedIds(new Set(data.map((s) => s.career.id)));
-    } catch {
-      /* the explorer still works without knowing what's saved */
+  // The "Saved only" filter and the bookmark buttons read this.
+  const loadSaved = useCallback(() => api.savedCareers(), []);
+  const saved = useResource(loadSaved, sessionStatus === "ready");
+
+  const savedIds = useMemo(() => {
+    const ids = new Set((saved.data ?? []).map((entry) => entry.career.id));
+    for (const [id, isSaved] of savedHere) {
+      if (isSaved) ids.add(id);
+      else ids.delete(id);
     }
-  }, []);
+    return ids;
+  }, [saved.data, savedHere]);
 
-  useEffect(() => {
-    if (sessionStatus !== "ready") return;
-    void loadSaved();
-  }, [sessionStatus, loadSaved]);
-
-  const fetchCareers = useCallback(async () => {
-    const token = ++requestRef.current;
-    setListStatus("loading");
-    setListError(null);
-    try {
-      const data = await api.careers({ search: debounced, category, theme });
-      if (token !== requestRef.current) return;
-      setCareers(data);
-      setListStatus("ready");
-    } catch (error) {
-      if (token !== requestRef.current) return;
-      setListError(messageFor(error));
-      setListStatus("error");
-    }
-  }, [debounced, category, theme]);
-
-  useEffect(() => {
-    if (sessionStatus !== "ready") return;
-    void fetchCareers();
-  }, [sessionStatus, fetchCareers]);
+  const loadCareers = useCallback(
+    () => api.careers({ search: debounced, category, theme }),
+    [debounced, category, theme],
+  );
+  const list = useResource(loadCareers, sessionStatus === "ready");
+  const careers = useMemo(() => list.data ?? [], [list.data]);
 
   const toggleSave = useCallback(
     async (career: CareerSummary) => {
       const wasSaved = savedIds.has(career.id);
-      // Optimistic flip, with a per-id pending guard for the spinner.
-      setSavedIds((prev) => {
-        const next = new Set(prev);
-        if (wasSaved) next.delete(career.id);
-        else next.add(career.id);
-        return next;
-      });
       setPending((prev) => new Set(prev).add(career.id));
+      // Optimistic flip, kept in `savedHere` so it survives a re-read of the
+      // server's list and is dropped only if the request itself failed.
+      setSavedHere((prev) => new Map(prev).set(career.id, !wasSaved));
       try {
         if (wasSaved) {
           await api.unsaveCareer(career.id);
@@ -137,10 +98,9 @@ export default function CareerExplorer() {
         }
       } catch (error) {
         // Roll the single flip back so the button never lies about its state.
-        setSavedIds((prev) => {
-          const next = new Set(prev);
-          if (wasSaved) next.add(career.id);
-          else next.delete(career.id);
+        setSavedHere((prev) => {
+          const next = new Map(prev);
+          next.delete(career.id);
           return next;
         });
         toast(messageFor(error), "error");
@@ -170,8 +130,8 @@ export default function CareerExplorer() {
   };
 
   const chips = useMemo(
-    () => [{ value: "", label: "All fields" }, ...categories.map((c) => ({ value: c.name, label: `${c.name} (${c.count})` }))],
-    [categories],
+    () => [{ value: "", label: "All fields" }, ...(categories.data ?? []).map((c) => ({ value: c.name, label: `${c.name} (${c.count})` }))],
+    [categories.data],
   );
 
   return (
@@ -222,7 +182,7 @@ export default function CareerExplorer() {
             />
           </div>
 
-          {categories.length > 0 ? (
+          {(categories.data ?? []).length > 0 ? (
             <div>
               <p className="mb-1.5 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted">
                 <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden />
@@ -263,14 +223,14 @@ export default function CareerExplorer() {
         </p>
 
         {/* Results */}
-        {listStatus === "loading" ? (
+        {list.state === "loading" ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {Array.from({ length: 6 }).map((_, i) => (
               <SkeletonCard key={i} />
             ))}
           </div>
-        ) : listStatus === "error" ? (
-          <ErrorState description={listError} onRetry={fetchCareers} />
+        ) : list.state === "error" ? (
+          <ErrorState description={list.error} onRetry={list.reload} />
         ) : visible.length === 0 ? (
           <EmptyState
             icon={Search}

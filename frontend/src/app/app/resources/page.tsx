@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { BookOpen, Clock, ExternalLink, Globe, Info, Layers, Search, X } from "lucide-react";
 import { Screen } from "@/components/layout/app-shell";
 import { Card } from "@/components/ui/card";
@@ -9,17 +9,11 @@ import { Badge, VerificationBadge } from "@/components/ui/badge";
 import { EmptyState, ErrorState, SkeletonCard } from "@/components/ui/feedback";
 import { Input, Select } from "@/components/ui/field";
 import { PillGroup } from "@/components/ui/tabs";
-import { api, ApiError } from "@/lib/api";
+import { api } from "@/lib/api";
 import { useSession } from "@/lib/session";
+import { useResource } from "@/lib/use-resource";
 import type { Resource } from "@/lib/types";
 import { categoryTint, classLabel } from "@/lib/utils";
-
-type Status = "loading" | "ready" | "error";
-
-function messageFor(error: unknown): string {
-  if (error instanceof ApiError) return error.message;
-  return "We couldn't reach the resource library.";
-}
 
 /** Display-only prettifiers. They never add data the backend didn't return. */
 function titleCase(value: string): string {
@@ -48,16 +42,17 @@ export default function ResourcesScreen() {
   const [language, setLanguage] = useState("");
   const [category, setCategory] = useState("");
 
-  const [items, setItems] = useState<Resource[]>([]);
-  const [status, setStatus] = useState<Status>("loading");
-  const [error, setError] = useState<string | null>(null);
+  const loadResources = useCallback(
+    () => api.resources({ search: debounced, category, kind, language }),
+    [debounced, category, kind, language],
+  );
+  const list = useResource(loadResources, sessionStatus === "ready");
+  const items = list.data ?? [];
 
   // One-time unfiltered snapshot used only to derive the filter options, so the
   // chips never disappear as the visible list narrows.
   const [facets, setFacets] = useState<Resource[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
-
-  const requestRef = useRef(0);
 
   const younger = useMemo(() => {
     const cls = profile?.class_level ? Number(classLabel(profile.class_level)?.replace(/\D/g, "")) : NaN;
@@ -89,27 +84,6 @@ export default function ResourcesScreen() {
       active = false;
     };
   }, []);
-
-  const fetchResources = useCallback(async () => {
-    const token = ++requestRef.current;
-    setStatus("loading");
-    setError(null);
-    try {
-      const data = await api.resources({ search: debounced, category, kind, language });
-      if (token !== requestRef.current) return;
-      setItems(data);
-      setStatus("ready");
-    } catch (err) {
-      if (token !== requestRef.current) return;
-      setError(messageFor(err));
-      setStatus("error");
-    }
-  }, [debounced, category, kind, language]);
-
-  useEffect(() => {
-    if (sessionStatus !== "ready") return;
-    void fetchResources();
-  }, [sessionStatus, fetchResources]);
 
   const kindOptions = useMemo(() => {
     const seen = Array.from(new Set(facets.map((r) => r.kind))).sort();
@@ -221,14 +195,14 @@ export default function ResourcesScreen() {
         </p>
 
         {/* Results */}
-        {status === "loading" ? (
+        {list.state === "loading" ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {Array.from({ length: 6 }).map((_, i) => (
               <SkeletonCard key={i} />
             ))}
           </div>
-        ) : status === "error" ? (
-          <ErrorState description={error} onRetry={fetchResources} />
+        ) : list.state === "error" ? (
+          <ErrorState description={list.error} onRetry={list.reload} />
         ) : items.length === 0 ? (
           <EmptyState
             icon={Search}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import {
   AlertTriangle,
   Bookmark,
@@ -23,17 +23,11 @@ import { Badge, EvidenceBadge } from "@/components/ui/badge";
 import { EmptyState, ErrorState, LoadingPanel } from "@/components/ui/feedback";
 import { Modal } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
-import { api, ApiError } from "@/lib/api";
+import { api } from "@/lib/api";
 import { useSession } from "@/lib/session";
-import type { CareerReport, ReportRecommendation } from "@/lib/types";
+import { messageFor, useResource } from "@/lib/use-resource";
+import type { ReportRecommendation } from "@/lib/types";
 import { categoryTint, classLabel } from "@/lib/utils";
-
-type Status = "loading" | "ready" | "error";
-
-function messageFor(error: unknown): string {
-  if (error instanceof ApiError) return error.message;
-  return "We couldn't reach the report service.";
-}
 
 const LANGUAGE_LABELS: Record<string, string> = {
   en: "English",
@@ -161,42 +155,21 @@ function RecommendationBlock({ item }: { item: ReportRecommendation }) {
 }
 
 export default function ReportsScreen() {
-  const { status: sessionStatus, profile } = useSession();
+  const { status: sessionStatus } = useSession();
   const { toast } = useToast();
 
-  const [status, setStatus] = useState<Status>("loading");
-  const [error, setError] = useState<string | null>(null);
-  const [report, setReport] = useState<CareerReport | null>(null);
+  const load = useCallback(() => api.latestReport(), []);
+  const { state, data: report, error, reload } = useResource(load, sessionStatus === "ready");
 
   const [generating, setGenerating] = useState(false);
   const [confirmGenerate, setConfirmGenerate] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  const load = useCallback(async () => {
-    setStatus("loading");
-    setError(null);
-    try {
-      const data = await api.latestReport();
-      setReport(data);
-      setStatus("ready");
-    } catch (err) {
-      setError(messageFor(err));
-      setStatus("error");
-    }
-  }, []);
-
-  useEffect(() => {
-    if (sessionStatus !== "ready") return;
-    void load();
-  }, [sessionStatus, load]);
-
   const runGenerate = useCallback(async () => {
     setGenerating(true);
     try {
-      const fresh = await api.generateReport();
-      setReport(fresh);
-      setStatus("ready");
+      await api.generateReport();
       setConfirmGenerate(false);
       toast("Your report has been refreshed.", "success");
     } catch (err) {
@@ -204,14 +177,16 @@ export default function ReportsScreen() {
     } finally {
       setGenerating(false);
     }
-  }, [toast]);
+    // The report is the server's answer, so the screen reads it back rather than
+    // holding a copy of what it hoped the answer would be.
+    reload();
+  }, [reload, toast]);
 
   const runDelete = useCallback(async () => {
     if (!report) return;
     setDeleting(true);
     try {
       await api.deleteReport(report.id);
-      setReport(null);
       setConfirmDelete(false);
       toast("This report has been deleted.", "success");
     } catch (err) {
@@ -219,7 +194,8 @@ export default function ReportsScreen() {
     } finally {
       setDeleting(false);
     }
-  }, [report, toast]);
+    reload();
+  }, [reload, report, toast]);
 
   const content = report?.content;
 
@@ -248,10 +224,10 @@ export default function ReportsScreen() {
       }
     >
       <div className="space-y-5">
-        {status === "loading" ? (
+        {state === "loading" ? (
           <LoadingPanel label="Loading your report…" />
-        ) : status === "error" ? (
-          <ErrorState description={error} onRetry={load} />
+        ) : state === "error" ? (
+          <ErrorState description={error} onRetry={reload} />
         ) : !report || !content ? (
           <EmptyState
             icon={Compass}

@@ -121,7 +121,7 @@ function classifyMicError(raw: string): MicErrorKind {
 }
 
 export interface SpeechInput {
-  /** Computed after mount so server and client markup agree. */
+  /** Whether this browser can do speech-to-text at all. */
   supported: boolean;
   listening: boolean;
   /** Words recognised so far in this turn. */
@@ -139,13 +139,19 @@ export interface SpeechInput {
  * Push-to-talk recognition. `continuous` is left on so a longer answer is not
  * cut off, but the session only ever runs between an explicit start and stop —
  * the microphone is never monitored in the background.
+ *
+ * `onError` lets a screen react the moment the microphone reports a problem,
+ * instead of the page having to watch `error` and translate it afterwards.
  */
 export function useSpeechInput(options: {
   language: LanguageCode;
   onFinal?: (text: string) => void;
+  onError?: (error: MicErrorKind) => void;
 }): SpeechInput {
-  const { language, onFinal } = options;
-  const [supported, setSupported] = useState(false);
+  const { language, onFinal, onError } = options;
+  // Every screen that dictates lives behind the client-only route guard, so this
+  // is read on the real browser's first render and never needs a correction.
+  const [supported] = useState(() => getRecognitionClass() !== null);
   const [listening, setListening] = useState(false);
   const [text, setText] = useState("");
   const [interim, setInterim] = useState("");
@@ -154,6 +160,7 @@ export function useSpeechInput(options: {
   const recognitionRef = useRef<RecognitionInstance | null>(null);
   const textRef = useRef("");
   const finalHandlerRef = useRef(onFinal);
+  const errorHandlerRef = useRef(onError);
   const languageRef = useRef(language);
 
   // Latest-value refs, written after commit rather than during render: the
@@ -163,15 +170,17 @@ export function useSpeechInput(options: {
   }, [language]);
   useEffect(() => {
     finalHandlerRef.current = onFinal;
-  }, [onFinal]);
+    errorHandlerRef.current = onError;
+  }, [onFinal, onError]);
 
-  useEffect(() => {
-    setSupported(getRecognitionClass() !== null);
-    return () => {
+  // Release the recognition session if the screen goes away mid-turn.
+  useEffect(
+    () => () => {
       recognitionRef.current?.abort();
       recognitionRef.current = null;
-    };
-  }, []);
+    },
+    [],
+  );
 
   const stop = useCallback(() => {
     setListening(false);
@@ -185,9 +194,17 @@ export function useSpeechInput(options: {
   }, []);
 
   const start = useCallback(() => {
+    // Every failure leaves the same trail: the hook keeps the wording available
+    // for a screen that merely displays it, and tells the screen that owns a
+    // conversation flow so it can move on straight away.
+    const fail = (kind: MicErrorKind) => {
+      setError(kind);
+      errorHandlerRef.current?.(kind);
+    };
+
     const Ctor = getRecognitionClass();
     if (!Ctor) {
-      setError("unsupported");
+      fail("unsupported");
       return;
     }
 
@@ -225,7 +242,7 @@ export function useSpeechInput(options: {
     recognition.onerror = (event) => {
       setListening(false);
       setInterim("");
-      setError(classifyMicError(event.error));
+      fail(classifyMicError(event.error));
     };
 
     recognition.onend = () => {

@@ -9,10 +9,30 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { api, setAuthToken } from "./api";
+import { api, ApiError, isOffline, setAuthToken } from "./api";
 import type { OnboardingPayload, Session, Settings, StudentProfile, User } from "./types";
 
-type Status = "loading" | "signed-out" | "ready";
+type Status = "loading" | "signed-out" | "ready" | "offline";
+
+/** A server that accepts the connection and then says nothing would otherwise
+ * leave the student under "Checking your account…" with no way out. */
+const CHECK_TIMEOUT_MS = 12000;
+
+function withDeadline<T>(work: Promise<T>, ms: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(
+      () =>
+        reject(
+          new ApiError(
+            `The server did not answer within ${Math.round(ms / 1000)} seconds.`,
+            0,
+          ),
+        ),
+      ms,
+    );
+    work.then(resolve, reject).finally(() => clearTimeout(timer));
+  });
+}
 
 interface SessionValue {
   status: Status;
@@ -68,15 +88,25 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
     setAuthToken(stored);
     try {
-      apply(await api.me());
-    } catch {
-      // A stale token should return the user to onboarding, not a dead screen.
+      apply(await withDeadline(api.me(), CHECK_TIMEOUT_MS));
+    } catch (error) {
+      if (isOffline(error)) {
+        // The stored token *is* the account: there is no password to type again.
+        // A network that is merely down or slow must not throw the only copy away.
+        setStatus("offline");
+        return;
+      }
+      // A token the server refuses is genuinely stale — back to signing in.
       api.rememberToken(null);
       setStatus("signed-out");
     }
   }, [apply]);
 
+  // On mount, reconcile this device's stored token with the server. This cannot
+  // be derived during render: localStorage only exists in the browser, so the
+  // server's first paint has to show the same "checking your account" state.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void reload();
   }, [reload]);
 
