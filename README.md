@@ -127,13 +127,21 @@ marketplace options work the same way (`npx vercel integration discover postgres
 
 **Supabase** works identically, with the connection string typed into `backend/.env`:
 
-1. Supabase dashboard: **Connect → Client libraries → Connection string → URI**,
-   with **Direct connection** or **Session pooler** selected. Both pooler modes
+1. Supabase dashboard: **Project Settings → Database → Connection string → URI**, with
+   **Connection pooling** selected — that endpoint is the one a hosted backend can reach;
+   the "Direct connection" host is firewalled to allowed IPv4 addresses. Both pooler modes
    work here (port `5432` session, `6543` transaction); the engine recycles
    connections and avoids prepared statements for that reason.
 2. A password containing `@ : /` or `%` has to be URL-encoded, or the URL will not
    parse. Append `?sslmode=require` if the server insists on TLS.
-3. Confirm what the app actually sees:
+3. Create the schema and seed the catalogue with `scripts/db_init.py`, which is the
+   route above and needs the app to hold the password. To create the tables without
+   ever giving the password to your machine, paste `scripts/supabase_schema.sql` into
+   **Dashboard → SQL Editor** instead — it is generated from `app/models.py` by
+   `scripts/make_supabase_schema.py`, so it matches the declared columns exactly. The
+   catalogue still needs `db_init.py`, because those rows carry Python-side defaults
+   and JSON lists.
+4. Confirm what the app actually sees:
 
    ```bash
    .venv/Scripts/python.exe scripts/db_check.py     # backend/, driver installed
@@ -142,6 +150,14 @@ marketplace options work the same way (`npx vercel integration discover postgres
    It prints the dialect, the server version, the tables and a row count per table,
    with the password masked. `pip install -r requirements.txt` first if the
    PostgreSQL driver is missing.
+
+Supabase republishes **every table in the `public` schema over its REST API**, which the
+`anon` key can call without any other credential. This app never uses that door — it talks
+to PostgreSQL directly through `psycopg` — so `supabase_schema.sql` ends by enabling row
+level security with no policies on every table. The `anon` and `authenticated` roles then
+read zero rows, while the app keeps working because it logs in as `postgres`, which owns
+the tables and is exempt from RLS. `service_role` bypasses all of it and belongs on a
+server only; treat it as a secret and rotate it if it has ever been pasted somewhere public.
 
 One thing to know before trusting any hosted setup: **SQLite silently accepts a string
 longer than a column's declared length and PostgreSQL rejects it.** The catalogue was
@@ -262,12 +278,22 @@ What hosting on serverless functions changed in the code, and what to expect:
   the whole API. Connection pools are small (2 + 3 overflow) because each warm
   instance opens its own — which is also why a pooled endpoint (Supabase's
   transaction pooler on port 6543, for instance) is the right shape.
-* **Microsoft's free voice does not answer for cloud servers.** Edge TTS works on a
-  home connection and returns `403` from Vercel's datacenter IPs, so on the deployed
-  site the reply arrives with `audio_error` and the browser speaks it with its own
+* **Microsoft's free voice does not answer for every cloud server.** Edge TTS works on a
+  home connection and returned `403` from Vercel's `iad1` datacenter IPs, so on the deployed
+  site the reply arrived with `audio_error` and the browser spoke it with its own
   `speechSynthesis` voice instead. That is a different sound, and the screen says so.
-  The recorded voices come back by adding an Azure Speech key — see
-  [Server-side speech (Azure)](#server-side-speech-azure).
+  The API now says which of the two is true rather than guessing: `/api/health` carries
+  `tts_last_attempt`, the outcome of the last real synthesis (`ok: null` means nobody has
+  asked for audio on that server yet — which is *not* the same as working). The recorded
+  voices come back either by moving the function to a region Microsoft does not refuse
+  (`backend/vercel.json` currently asks for `bom1`, Mumbai — the same region the students are
+  in, and unverified until a deployment reports `tts_last_attempt.ok: true`), or by adding an
+  Azure Speech key — see [Server-side speech (Azure)](#server-side-speech-azure).
+* **A long reply is shortened, never rejected.** What gets spoken is the first
+  `MAX_SPOKEN_CHARS` (1200) characters after markup is stripped, while the endpoint accepts
+  replies up to 8000 characters. Rejecting the whole request instead made every long guide
+  answer fall back to the browser voice, which read as a broken voice rather than a long
+  reply.
 * **Still true after deploying:** replies are demo-generated until an AI key is
   configured, and are labelled as such; Edge TTS needs internet and is not an
   offline guarantee; there are no passwords, so a student's account lives in the
@@ -316,8 +342,16 @@ curl https://careerguide-api-omega.vercel.app/api/health
 # "tts_provider": "microsoft-azure-tts", "tts_ready": true
 ```
 
-Then send a chat message with *Speak replies* on: the audio should be one of the recorded
-voices and the "your browser's own voice is being used" notice should not appear.
+`tts_ready` only says the key and region are present. Ask for proof: send one message with
+*Speak replies* on and read the same endpoint again —
+
+```bash
+# "tts_last_attempt": { "checked_at": "…", "ok": true, "provider": "microsoft-azure-tts", … }
+```
+
+If `ok` is `false`, `reason` holds the readable failure and the browser voice is what the
+student is hearing. Settings → Language and voice has the same answer plus a **Test the
+voice** button that asks the server for a real clip.
 
 What this costs and what it means for privacy:
 
@@ -561,7 +595,10 @@ Known limits of the product itself:
 * Reset local data by deleting `backend/careerguide.db` and restarting uvicorn (the catalogue re-seeds,
   accounts are dropped). `backend/careerguide.testdata.db.bak` is a saved copy of an earlier state.
 * The dev database currently holds test accounts created while verifying the flows —
-  "Asha Test", "Ravi" and parent "Mrs. Kumar". Sign out from Settings to clear the browser session.
-* Generated speech lands in `backend/media/tts/` (gitignored).
+  "Asha Test", "Ravi", parent "Mrs. Kumar", and on 2026-10-14 "E2e Voice" plus parent
+  "E2e Parent". Sign out from Settings to clear the browser session.
+* Generated speech is no longer written to disk: it comes back inside the API reply as a
+  `data:audio/mpeg;base64,…` URL (see the serverless notes above), so there is no
+  `backend/media/` folder to clean up.
 * `frontend/AGENTS.md` and `frontend/README.md` came with the Next.js scaffold and describe that
   framework's conventions.

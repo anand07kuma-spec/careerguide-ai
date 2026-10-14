@@ -30,7 +30,6 @@ from ..security import ensure_settings, get_current_user, require_student
 from ..services import ai_provider, profile_facts, tts
 from ..services.language import detect as detect_language
 from ..services.recommender import build_recommendations
-from ..services.themes import possible_distress
 from .auth import CLASS_TO_AGE
 
 router = APIRouter(prefix="/api/conversations", tags=["conversations"])
@@ -216,6 +215,7 @@ async def send_message(
         audio_url=audio_url,
         audio_error=audio_error,
         detected_themes=new_themes,
+        needs_support=reply.safety_flag,
         provider=reply.provider,
         language=session.language,
         profile_updates=learned,
@@ -337,9 +337,3 @@ def list_sessions(
         )
     )
     return [SessionOutInfo.model_validate(r) for r in rows]
-
-
-@router.get("/safety-check")
-def safety_check(text: str = Query(min_length=1, max_length=2000)) -> dict:
-    """Used by the client to surface help resources without storing anything."""
-    return {"needs_support": possible_distress(text)}

@@ -217,19 +217,32 @@ check("Edge's note names the service it uses", "Edge TTS" in tts.provider_note()
 
 print("\n--- what /api/health reports ---")
 from app import main as app_main  # noqa: E402
+from app.schemas import TTSIn  # noqa: E402
 
 configure(azure_speech_key=KEY, azure_speech_region="eastus")
 body = app_main.health()
 check("health reports the service that will be called",
-      body["tts_provider"] == tts.AZURE, body)
-check("health says the voice is ready once a key exists", body["tts_ready"] is True, body)
+      body.tts_provider == tts.AZURE, body)
+check("health says the voice is ready once a key exists", body.tts_ready is True, body)
 configure(tts_provider="azure")
 body = app_main.health()
-check("health does not call a keyless Azure ready", body["tts_ready"] is False, body)
+check("health does not call a keyless Azure ready", body.tts_ready is False, body)
 configure()
 body = app_main.health()
 check("health reports Edge when there is no key",
-      body["tts_provider"] == tts.EDGE and body["tts_ready"] is True, body)
+      body.tts_provider == tts.EDGE and body.tts_ready is True, body)
+
+print("\n--- a long guide reply is shortened, not rejected ---")
+long_reply = "karim " * 900  # longer than anything that is comfortable to listen to
+try:
+    accepted = TTSIn(text=long_reply, language="en")
+    check("a long reply is accepted by the endpoint", len(accepted.text) > 4000,
+          len(accepted.text))
+except Exception as exc:  # noqa: BLE001
+    check("a long reply is accepted by the endpoint", False, repr(exc))
+check("only the first part of it is spoken",
+      len(tts.plain_text(long_reply)) == tts.MAX_SPOKEN_CHARS,
+      tts.MAX_SPOKEN_CHARS)
 
 print("\n--- the Edge path still works ---")
 
@@ -246,6 +259,42 @@ class FakeCommunicate:
 tts.edge_tts.Communicate = FakeCommunicate
 audio = run(tts.synthesize_bytes("hello", "en"))
 check("Edge audio still returns bytes", audio == b"EDGE", audio)
+
+print("\n--- what the last real call actually said ---")
+attempt = tts.last_attempt()
+check("a call that produced audio is remembered as working",
+      attempt["ok"] is True and attempt["provider"] == tts.EDGE, attempt)
+check("health carries that verdict next to the config flag",
+      app_main.health().tts_last_attempt.ok is True, app_main.health().tts_last_attempt)
+
+
+class SilentCommunicate:
+    """The shape Edge TTS returns when its endpoint refuses this server."""
+
+    def __init__(self, text: str, voice: str) -> None:
+        self.text, self.voice = text, voice
+
+    async def stream(self):
+        for _ in ():
+            yield _
+
+
+tts.edge_tts.Communicate = SilentCommunicate
+try:
+    run(tts.synthesize_bytes("hello", "en"))
+    check("a call that returns no audio fails", False, "returned audio")
+except tts.TTSError:
+    pass
+attempt = tts.last_attempt()
+check("a failed call is remembered as failed", attempt["ok"] is False, attempt)
+check("and the verdict names the provider that failed",
+      attempt["provider"] == tts.EDGE, attempt)
+check("the spoken text is not kept in the verdict", "hello" not in str(attempt["reason"]),
+      attempt["reason"])
+check("health still reports the configuration as ready",
+      app_main.health().tts_ready is True and app_main.health().tts_last_attempt.ok is False)
+
+tts.edge_tts.Communicate = FakeCommunicate
 
 print("\n--- live call ---")
 if os.environ.get("AZURE_SPEECH_KEY", "").strip() and os.environ.get("AZURE_SPEECH_REGION", "").strip():

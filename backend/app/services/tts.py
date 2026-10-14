@@ -19,6 +19,7 @@ import asyncio
 import base64
 import logging
 import re
+from datetime import datetime, timezone
 from xml.sax.saxutils import escape as xml_escape
 
 import edge_tts
@@ -30,6 +31,11 @@ log = logging.getLogger(__name__)
 
 AZURE = "microsoft-azure-tts"
 EDGE = "microsoft-edge-tts"
+
+# What is actually sent to the speech service. A guide reply can run longer than
+# a comfortable sentence to listen to, so the tail is dropped rather than
+# rejected — see `plain_text`.
+MAX_SPOKEN_CHARS = 1200
 
 # A plain mp3 at the bitrate Edge already used, so the audio the student hears
 # does not change size or shape when a key is added.
@@ -59,6 +65,32 @@ UNAVAILABLE = (
     "and you can try again."
 )
 TOO_SLOW = "The speech service took too long to respond. You can read the reply, or try again."
+
+# Only the outcome of a real call is kept, never the text that was spoken: a
+# configuration flag cannot tell a student whether the service answers this
+# server, and `/api/health` claiming otherwise is what made a blocked service
+# look working.
+_attempt: dict = {
+    "checked_at": None,
+    "ok": None,
+    "provider": None,
+    "reason": None,
+}
+
+
+def record_attempt(ok: bool, used_provider: str, reason: str | None = None) -> None:
+    _attempt.update(
+        checked_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        ok=ok,
+        provider=used_provider,
+        reason=None if ok else (reason or UNAVAILABLE),
+    )
+
+
+def last_attempt() -> dict:
+    """Carries the provider it was made against, so a verdict recorded for Edge
+    is not read as a verdict about Azure after a key is added."""
+    return dict(_attempt)
 
 
 def voice_for(language: str, override: str | None = None) -> str:
@@ -101,8 +133,13 @@ def provider_note() -> str:
 
 def plain_text(text: str) -> str:
     """Markup the guide may have produced is read out as noise, and long
-    paragraphs are exhausting to listen to."""
-    return re.sub(r"[#*_`]", "", text).strip()[:1200]
+    paragraphs are exhausting to listen to.
+
+    The cut happens here rather than as a request limit: a request validator
+    would reject a full guide reply with a 422, which reads as "the voice is
+    broken" when the intended behaviour is "listen to the first part".
+    """
+    return re.sub(r"[#*_`]", "", text).strip()[:MAX_SPOKEN_CHARS]
 
 
 def build_ssml(text: str, voice: str) -> str:
@@ -179,14 +216,21 @@ async def _edge_bytes(text: str, voice: str) -> bytes:
 
 
 async def synthesize_bytes(text: str, language: str, override_voice: str | None = None) -> bytes:
-    """Speak `text` and return the mp3 bytes."""
+    """Speak `text` and return the mp3 bytes.
+
+    Every outcome is recorded (`record_attempt`) because the two services fail
+    in opposite directions: Edge answers from a home connection and returns 403
+    from a datacenter IP, while Azure answers wherever it is called from as long
+    as the key is valid. Only a real call can say which one this server is on.
+    """
     if not text or not text.strip():
         raise TTSError("There was nothing to read out.")
 
     clean = plain_text(text)
     voice = voice_for(language, override_voice)
+    used = provider()
 
-    if provider() == AZURE:
+    if used == AZURE:
         if not azure_ready():
             # A forced choice that is not configured should say so, not quietly
             # fall back to a service that will 403 from this host.
@@ -194,8 +238,21 @@ async def synthesize_bytes(text: str, language: str, override_voice: str | None 
                 "Speech is set to Azure but AZURE_SPEECH_KEY or AZURE_SPEECH_REGION "
                 "is not set on the server, so nothing can be spoken."
             )
-        return await _azure_bytes(clean, voice)
-    return await _edge_bytes(clean, voice)
+        try:
+            audio = await _azure_bytes(clean, voice)
+        except TTSError as exc:
+            record_attempt(False, used, str(exc))
+            raise
+        record_attempt(True, used)
+        return audio
+
+    try:
+        audio = await _edge_bytes(clean, voice)
+    except TTSError as exc:
+        record_attempt(False, used, str(exc))
+        raise
+    record_attempt(True, used)
+    return audio
 
 
 async def synthesize(text: str, language: str, override_voice: str | None = None) -> str:

@@ -187,14 +187,24 @@ with client:
         json={"message": "Please do not tell anyone, my uncle hits me at home", "speak": False},
         headers=auth(student_token),
     )
-    safety_text = r.json()["reply"]["content"].lower() if r.status_code == 200 else ""
+    safety_body = r.json() if r.status_code == 200 else {}
+    safety_text = (safety_body.get("reply") or {}).get("content", "").lower()
     check(
         "a distress disclosure gets a safety reply",
         "1098" in safety_text or "trusted adult" in safety_text,
         safety_text[:220],
     )
-    r = client.get("/api/conversations/safety-check", params={"text": "I am scared at home"}, headers=auth(student_token))
-    check("client-side safety flag works", r.status_code == 200 and r.json()["needs_support"] is True, r.text[:200])
+    # The verdict the chat screen draws the helpline card from, in the same reply
+    # so no second request can decide whether help appears.
+    check("the reply itself carries the support flag", safety_body.get("needs_support") is True,
+          str(safety_body)[:200])
+    r = client.post(
+        f"/api/conversations/{session_id}/messages",
+        json={"message": "I like building things with blocks", "speak": False},
+        headers=auth(student_token),
+    )
+    check("an ordinary message does not raise the support flag",
+          r.status_code == 200 and r.json()["needs_support"] is False, r.text[:200])
 
     r = client.get("/api/recommendations", headers=auth(student_token))
     recs = r.json()

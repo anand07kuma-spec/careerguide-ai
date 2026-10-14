@@ -23,6 +23,7 @@ from .database import Base, SessionLocal, engine
 from .routers import auth, catalogue, careers, conversations, interests
 from .routers import journey, recommendations, reports, study_plans, voice
 from .schema_sync import add_missing_columns
+from .schemas import HealthOut
 from .seed import seed_if_empty
 from .services import tts
 
@@ -114,19 +115,23 @@ for module in (
     app.include_router(module.router)
 
 
-@app.get("/api/health", tags=["meta"])
-def health() -> dict:
-    return {
-        "status": "ok",
-        "storage": "unconfigured" if storage_unusable else "ready",
-        "ai_provider": "configured" if settings.ai_configured else "demo",
-        "ai_configured": settings.ai_configured,
-        # Which service will be called, and whether it can actually be called —
-        # the check a person runs after pasting a TTS key.
-        "tts_provider": tts.provider(),
-        "tts_ready": tts.provider() != tts.AZURE or tts.azure_ready(),
-        "demo_mode": not settings.ai_configured,
-    }
+@app.get("/api/health", response_model=HealthOut, tags=["meta"])
+def health() -> HealthOut:
+    return HealthOut(
+        status="ok",
+        storage="unconfigured" if storage_unusable else "ready",
+        ai_provider="configured" if settings.ai_configured else "demo",
+        ai_configured=settings.ai_configured,
+        # Which service will be called, and whether it can be reached with the
+        # current configuration — the check a person runs after pasting a TTS key.
+        tts_provider=tts.provider(),
+        tts_ready=tts.provider() != tts.AZURE or tts.azure_ready(),
+        # `tts_ready` only proves the settings are complete. This is the answer
+        # from the last time the service was actually asked for audio, which is
+        # how a datacenter-blocked Edge endpoint stops being reported as working.
+        tts_last_attempt=tts.last_attempt(),
+        demo_mode=not settings.ai_configured,
+    )
 
 
 @app.exception_handler(Exception)

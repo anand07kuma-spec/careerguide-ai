@@ -224,6 +224,10 @@ class ChatOut(BaseModel):
     audio_error: str | None = None
     detected_themes: list[str] = Field(default_factory=list)
     provider: str
+    # The guide already decided whether this message sounds like a child asking for
+    # help, so the reply carries that verdict: a second request that fails would
+    # otherwise decide whether the helpline card appears.
+    needs_support: bool = False
     # The language the reply was written in, so playback and dictation can follow it.
     language: str = "en"
     # What this turn taught the app about the student, already saved to their
@@ -427,7 +431,9 @@ class ParentSummaryOut(BaseModel):
 
 
 class TTSIn(BaseModel):
-    text: str = Field(min_length=1, max_length=1200)
+    # Generous on purpose: `tts.plain_text` decides what is actually spoken, so a
+    # full guide reply is accepted and shortened instead of rejected with a 422.
+    text: str = Field(min_length=1, max_length=8000)
     language: Language = "en"
     voice: str | None = Field(default=None, max_length=48)
 
@@ -439,11 +445,23 @@ class VoiceInfoOut(BaseModel):
     default_voice: str
 
 
+class TTSAttemptOut(BaseModel):
+    """The result of the most recent real synthesis on this server."""
+
+    checked_at: str | None
+    ok: bool | None
+    provider: str | None
+    reason: str | None
+
+
 class HealthOut(BaseModel):
     status: str
+    storage: str
     ai_provider: str
     ai_configured: bool
     tts_provider: str
+    tts_ready: bool
+    tts_last_attempt: TTSAttemptOut
     demo_mode: bool
 
 
