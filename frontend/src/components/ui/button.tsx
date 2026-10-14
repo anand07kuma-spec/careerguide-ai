@@ -57,7 +57,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       disabled={disabled || loading}
       aria-busy={loading || undefined}
       className={cn(
-        "inline-flex select-none items-center justify-center font-medium transition-colors",
+        "inline-flex select-none items-center justify-center whitespace-nowrap font-medium transition-colors",
         "disabled:cursor-not-allowed disabled:opacity-55",
         VARIANTS[variant],
         SIZES[size],
@@ -73,7 +73,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
 
 export function buttonClasses(variant: Variant = "primary", size: Size = "md", className?: string) {
   return cn(
-    "inline-flex select-none items-center justify-center font-medium transition-colors",
+    "inline-flex select-none items-center justify-center whitespace-nowrap font-medium transition-colors",
     VARIANTS[variant],
     SIZES[size],
     className,

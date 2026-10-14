@@ -46,7 +46,15 @@ export function Wordmark({
           CareerGuide AI
         </p>
         {!compact ? (
-          <p className={cn("truncate text-[11px]", tone === "white" ? "text-white/60" : "text-muted")}>
+          // The tagline is decoration, so it yields before a header has to
+          // overflow: at 320px it is the difference between a clipped
+          // "Get started" and one that fits.
+          <p
+            className={cn(
+              "hidden truncate text-[11px] sm:block",
+              tone === "white" ? "text-white/60" : "text-muted",
+            )}
+          >
             Your Future, Our Guidance
           </p>
         ) : null}

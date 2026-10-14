@@ -93,7 +93,10 @@ export default function LandingPage() {
             </a>
           </nav>
           <div className="flex items-center gap-2">
-            <LinkButton size="sm" variant="ghost" href="/login">
+            {/* Below `sm` the header has room for one action only, and that is the
+                one that matters. The hero's own "Sign in" is a scroll below, so
+                nothing becomes unreachable by hiding the duplicate. */}
+            <LinkButton size="sm" variant="ghost" href="/login" className="hidden sm:inline-flex">
               Sign in
             </LinkButton>
             <LinkButton size="sm" href="/onboarding">
