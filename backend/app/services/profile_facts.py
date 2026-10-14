@@ -49,9 +49,18 @@ _CLASS_PATTERNS = (
     re.compile(r"\b(?:class|kl|cl)\.?\s*(?:no\.?\s*)?(\d{1,2})\b", re.I),
     re.compile(r"\b(\d{1,2})(?:st|nd|rd|th)\s+(?:class|standard)\b", re.I),
     re.compile(r"\b(?:class|standard)\s+(" + "|".join(_NUM_WORDS) + r")\b", re.I),
+    re.compile(r"\b(?:class|कक्षा)\s+(?:is|है)\s*(\d{1,2})\b", re.I),
     re.compile(r"कक्षा\s*[-:]?\s*(\d{1,2}|[०-९]{1,2})"),
     re.compile(r"(" + "|".join(_HINDI_CLASS_WORDS) + r")(?:वीं|थी)?\s*(?:कक्षा|class)"),
     re.compile(r"\b(\d{1,2}|[०-९]{1,2})\s*(?:वीं|वां|वाँ)\s*(?:class|कक्षा)\b"),
+)
+
+# "class 3 hours of study" states a duration, not a grade. A number followed by a
+# unit of time is never a class, whichever turn it arrives in.
+_CLASS_MEASURE = re.compile(
+    r"\s*(?:and|for)?\s*(?:hours?|hrs?|minutes?|mins?|days?|weeks?|months?|"
+    r"ghante?|ghanTe| minute|din| hafta|mahine?|baar|baar|times?)\b",
+    re.I,
 )
 
 _AGE_PATTERNS = (
@@ -107,17 +116,17 @@ def _class_from_number(value: str) -> str | None:
 
 def detect_class_level(text: str) -> str | None:
     for pattern in _CLASS_PATTERNS:
-        match = pattern.search(text)
-        if not match:
-            continue
-        word = match.group(1).lower().strip()
-        if word in _NUM_WORDS:
-            return f"class-{_NUM_WORDS[word]}"
-        if word in _HINDI_CLASS_WORDS:
-            return f"class-{_HINDI_CLASS_WORDS[word]}"
-        found = _class_from_number(word)
-        if found:
-            return found
+        for match in pattern.finditer(text):
+            if _CLASS_MEASURE.match(text[match.end() : match.end() + 16]):
+                continue
+            word = match.group(1).lower().strip()
+            if word in _NUM_WORDS:
+                return f"class-{_NUM_WORDS[word]}"
+            if word in _HINDI_CLASS_WORDS:
+                return f"class-{_HINDI_CLASS_WORDS[word]}"
+            found = _class_from_number(word)
+            if found:
+                return found
     return None
 
 
@@ -168,37 +177,56 @@ def detect_facts(text: str) -> dict[str, object]:
 
 
 # A class or age number sitting next to the word "class" is easy to misread in
-# free text — "class 3 hours of study" is not a student in class 3. So a class or
-# age is only stored when the guide has just asked for it, or when the whole
-# message is short enough that it reads as an answer.
+# free text, so it becomes a stored fact on one of two paths: the whole message is
+# short enough to read as an answer, or a sentence inside a longer message clearly
+# states it about the student.
 _SHORT_ANSWER_WORDS = 7
 _CONTEXTUAL_KEYS = ("class_level", "age_range")
 
+# The third path needs the number to sit in a sentence that also says who it is
+# about, so "mere papa class 12 mein the" cannot become the student's class.
+_SELF_SUBJECT = re.compile(
+    r"\b(?:i'?m|i am|i study|my|main|mai|mujhe|mera|meri|hamara|hamari)\b|मैं|मेरा|मेरी|मुझे",
+    re.I,
+)
+_SELF_COPULA = re.compile(
+    r"\b(?:is|are|am|in|study|studies|studying|study|hoon|hun|hai|hain|jaata|jaati|rehata|rehati|"
+    r"karta|karti|khaata|khaati|padhta|padhti)\b|हूँ|हुं|है|पढ़",
+    re.I,
+)
 
-def applicable_facts(text: str, asked_key: str | None, current: dict[str, object]) -> dict[str, object]:
-    """What this message proves, given what the guide asked and what is already known."""
+
+def self_stated(key: str, text: str) -> str | None:
+    """The class or age this message states about the student themselves."""
+    detect = detect_class_level if key == "class_level" else detect_age_range
+    for sentence in re.split(r"[.!?\n;,]+", text):
+        if not _SELF_SUBJECT.search(sentence) or not _SELF_COPULA.search(sentence):
+            continue
+        if found := detect(sentence):
+            return found
+    return None
+
+
+def applicable_facts(text: str, current: dict[str, object]) -> dict[str, object]:
+    """What this message proves, given what is already known.
+
+    A class or age is trusted when the message is short enough to read as an
+    answer to the guide's question, or when a sentence inside a longer message
+    states it about the student. Being asked is not enough: an answer of any
+    length can carry somebody else's class, and a wrong one would steer the
+    recommendations quietly.
+    """
     selected: dict[str, object] = {}
     for key, value in detect_facts(text).items():
         if current.get(key):
             # Never overwrite something the student already told us.
             continue
-        if key in _CONTEXTUAL_KEYS and asked_key != key:
-            if len(text.split()) > _SHORT_ANSWER_WORDS:
+        if key in _CONTEXTUAL_KEYS and len(text.split()) > _SHORT_ANSWER_WORDS:
+            value = self_stated(key, text)
+            if value is None:
                 continue
         selected[key] = value
     return selected
-
-
-def last_asked_key(messages) -> str | None:
-    """The fact the guide's most recent reply asked for, if it asked for one."""
-    for message in reversed(list(messages)):
-        if message.role != "assistant":
-            continue
-        for key, per_language in FACT_QUESTION.items():
-            if any(question in message.content for question in per_language.values()):
-                return key
-        return None
-    return None
 
 
 # What the guide still needs, in the order it should ask. `interests` is absent

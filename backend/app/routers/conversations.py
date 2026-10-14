@@ -130,14 +130,15 @@ async def send_message(
     # Onboarding asks a single question, so a fact the student states here fills
     # the gap in its place. Only empty fields are written, the values are normal
     # fixed descriptions rather than the student's own words, and a class or age
-    # is trusted only when the guide has just asked for it — see profile_facts.
+    # is trusted only when the message reads as an answer or clearly says who it
+    # is about — see profile_facts.
     current_profile = {
         "class_level": profile.class_level if profile else None,
         "age_range": profile.age_range if profile else None,
         "education_context": profile.education_context if profile else None,
         "financial_context": profile.financial_context if profile else None,
     }
-    learned = profile_facts.applicable_facts(text, profile_facts.last_asked_key(history), current_profile)
+    learned = profile_facts.applicable_facts(text, current_profile)
     if profile and learned:
         for key, value in learned.items():
             setattr(profile, key, value)

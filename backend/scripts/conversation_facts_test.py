@@ -137,6 +137,71 @@ with TestClient(app) as client:
     )
     print(f"      fact questions asked: {len(fact_questions)}")
 
+    # A child who volunteers a fact inside a longer sentence should not have to
+    # say it twice — and a number that is not about them must still teach nothing.
+    from app.services import profile_facts  # noqa: E402
+
+    second = client.post(
+        "/api/auth/onboarding",
+        json={
+            "role": "student",
+            "display_name": "Arav",
+            "preferred_language": "hinglish",
+            "consent_profile": True,
+            "consent_age": "11-12",
+        },
+    )
+    arav = {"Authorization": f"Bearer {second.json()['token']}"}
+    second_session = client.post("/api/conversations", json={"mode": "chat"}, headers=arav).json()["id"]
+
+    def say2(message: str) -> dict:
+        response = client.post(
+            f"/api/conversations/{second_session}/messages",
+            json={"message": message},
+            headers=arav,
+        )
+        assert response.status_code == 200, response.text[:300]
+        return response.json()
+
+    def arav_profile() -> dict:
+        return client.get("/api/auth/me", headers=arav).json()["profile"]
+
+    check(
+        "a duration is never read as a class, even in a first-person sentence",
+        say2("Main roz class 3 hours padhai karta hoon, mujhe cricket pasand hai")["profile_updates"] == {},
+        arav_profile(),
+    )
+    check(
+        "and a family member's class is not the student's",
+        say2("mere papa class 12 mein the, isliye mujhe engineering thodi pata hai")["profile_updates"] == {},
+        arav_profile(),
+    )
+    volunteered = say2("Mujhe design pasand hai, main class 8 mein hoon")
+    check(
+        "a class volunteered mid-sentence is stored without being asked twice",
+        volunteered["profile_updates"].get("class_level") == "class-8",
+        volunteered["profile_updates"],
+    )
+    check("and it lands on the profile", arav_profile()["class_level"] == "class-8", arav_profile())
+    check(
+        "the guide moves on instead of re-asking the class",
+        "kaunsi class" not in volunteered["reply"]["content"].lower(),
+        volunteered["reply"]["content"],
+    )
+
+    stated = profile_facts.self_stated
+    check("Devanagari self-statement counts", stated("class_level", "मैं कक्षा ८ में हूँ और मुझे चित्रकारी पसंद है") == "class-8")
+    check(
+        "an age volunteered mid-sentence sets the band",
+        profile_facts.applicable_facts("Mujhe football pasand hai, meri age 13 hai", {}) == {"age_range": "adult"},
+    )
+    check("class 3 hours never becomes a class", profile_facts.detect_class_level("class 3 hours of study") is None)
+    check("'My class is 8' is read", profile_facts.detect_class_level("My class is 8 and I like drawing") == "class-8")
+    check(
+        "a third-person sentence states nothing",
+        stated("class_level", "mere papa class 12 mein the aur mere bhai ne bhi wahi liya tha") is None,
+    )
+
 print(f"\n{len(PASS)} passed, {len(FAIL)} failed")
 if FAIL:
     print("failed: " + ", ".join(FAIL))

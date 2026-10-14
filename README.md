@@ -260,8 +260,10 @@ Cost and privacy:
 factual question at all.
 
 * One missing fact at a time, where it matters: class and age early, where the student studies once a
-  theme exists, cost only at practical next steps. A class or age is accepted only on the turn the
-  guide asked, or in a reply of ≤7 words, so a misread cannot silently steer a recommendation.
+  theme exists, cost only at practical next steps — and no fact is asked twice in a conversation. A
+  class or age is stored only when the whole reply reads as an answer (≤7 words) or a sentence inside
+  a longer reply states it about the student, so "mere papa class 12 mein the" and "class 3 hours of
+  study" teach the profile nothing and a misread cannot silently steer a recommendation.
 * Facts are stored as short fixed descriptions, not the child's sentences, and never overwrite a field
   that already has a value. The reply returns them as `profile_updates`; the bubble shows
   "Saved: Class 8". Unknown age is treated as the youngest band (6–8).
@@ -307,7 +309,7 @@ Last full run (2026-10-14), on this machine:
 | --- | --- |
 | `smoke_test.py` — consent gates, server-side ownership, conversations, recommendations, plans, reports, transcript deletion, logout | **97 passed, 0 failed** |
 | `login_test.py` — come-back codes | **59 passed, 0 failed** |
-| `conversation_facts_test.py` — the guide asking for facts inside the chat | **14 passed, 0 failed** |
+| `conversation_facts_test.py` — the guide asking for facts inside the chat | **24 passed, 0 failed** |
 | `tts_provider_test.py` — SSML escaping, key as header, error messages, provider choice, `/api/health` | **45 passed, 0 failed, 1 skipped** (its live call needs a real Azure key; it prints `SKIP` rather than pretending) |
 | `serverless_guard_test.py` — the no-database shape | **10 passed, 0 failed** |
 | `schema_fit_check.py` | 182 seeded values measured, **0 columns too short** |
