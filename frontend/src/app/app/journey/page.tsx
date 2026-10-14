@@ -184,7 +184,11 @@ export default function JourneyPage() {
                 <ProgressBar
                   value={journey.activities_completed}
                   total={journey.activities_total}
-                  label={`Plan steps you chose to do: ${journey.activities_completed} of ${journey.activities_total}`}
+                  label={
+                    journey.activities_total
+                      ? `Plan steps you chose to do: ${journey.activities_completed} of ${journey.activities_total}`
+                      : "Plan steps you chose to do: none yet, they come with a study plan"
+                  }
                   tone="teal"
                 />
                 <p className="text-xs leading-relaxed text-muted">

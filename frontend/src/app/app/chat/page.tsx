@@ -93,8 +93,24 @@ export default function ChatPage() {
   const openSession = useCallback(
     async (info: ConversationInfo, history: Turn[]) => {
       setSession(info);
-      setMessages(history);
-      setNotice(info.greeting ?? null);
+      // The server stores the greeting as the thread's first assistant message, so a
+      // brand new chat is not empty. Seeding it here keeps that bubble identical whether
+      // the conversation was just started or reopened, instead of printing it above a
+      // list that claims there are no messages.
+      setMessages(
+        history.length === 0 && info.greeting
+          ? [
+              {
+                id: -1,
+                role: "assistant",
+                content: info.greeting,
+                demo_generated: true,
+                created_at: new Date().toISOString(),
+              },
+            ]
+          : history
+      );
+      setNotice(null);
       setSpoken(info.language || "hinglish");
       scrollToEnd();
     },
@@ -239,7 +255,6 @@ export default function ChatPage() {
       }
       const fresh = await api.startConversation("chat", spoken);
       await openSession(fresh, []);
-      setNotice(null);
     } catch (error) {
       setBootError(error instanceof Error ? error.message : "Could not start a new chat.");
     } finally {

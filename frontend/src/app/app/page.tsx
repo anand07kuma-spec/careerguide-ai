@@ -376,15 +376,19 @@ export default function StudentHome() {
     },
     {
       title: "Activities done",
-      value: `${done}/${total}`,
+      // "0/0" reads as a score of zero out of zero. With no plan there is
+      // nothing to be out of, so the denominator only appears once there is one.
+      value: total ? `${done}/${total}` : "0",
       tone: "teal",
       icon: <Compass className="h-5 w-5" aria-hidden />,
       lines: [
-        `You have finished ${done} of ${total} suggested explorations — a video, a career read, a conversation with someone who does the work.`,
+        total
+          ? `You have finished ${done} of ${total} suggested explorations — a video, a career read, a conversation with someone who does the work.`
+          : "No activities yet, because no study plan has been made for you. The guide suggests them inside a plan, so this count starts once you have one.",
         "They are ideas to try, not homework. Skipping one costs nothing and changes no suggestion.",
       ],
-      href: "/app/journey",
-      cta: "See my journey",
+      href: total ? "/app/journey" : "/app/plans",
+      cta: total ? "See my journey" : "Look at study plans",
     },
   ];
 
