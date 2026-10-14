@@ -476,7 +476,11 @@ async def respond(
     """Generate one age-appropriate guide reply, falling back to demo mode."""
     settings = get_settings()
     reply: GuideReply
-    if not settings.ai_configured:
+    # A disclosure of harm gets the one answer this project has reviewed word for
+    # word, whichever provider is configured. Leaving it to a model would let an
+    # unvetted sentence be the only thing a frightened child reads back, and would
+    # quietly skip the `safety_flag` the router records a support note against.
+    if not settings.ai_configured or possible_distress(user_text):
         reply = demo_respond(user_text, ctx)
     else:
         try:

@@ -206,6 +206,126 @@ with client:
     check("an ordinary message does not raise the support flag",
           r.status_code == 200 and r.json()["needs_support"] is False, r.text[:200])
 
+    section("the configured AI provider path, against a stand-in service")
+    # The app ships in demo mode, so nothing here had ever exercised the real
+    # provider call, and "just add a key and it works" was a guess. A local stub
+    # answers as the provider instead, which also proves a distress disclosure is
+    # still routed to the reviewed safety reply rather than to the model.
+    import json
+    import threading
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+    from app.config import get_settings  # noqa: PLC0415
+
+    provider_calls: list[dict] = []
+
+    class StubProvider(BaseHTTPRequestHandler):
+        def do_POST(self):  # noqa: N802
+            length = int(self.headers.get("Content-Length", 0))
+            provider_calls.append(
+                {
+                    "body": json.loads(self.rfile.read(length)),
+                    "auth": self.headers.get("Authorization", ""),
+                }
+            )
+            payload = json.dumps(
+                {"choices": [{"message": {"role": "assistant", "content": "Tell me more about that."}}]}
+            ).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(payload)))
+            self.end_headers()
+            self.wfile.write(payload)
+
+        def log_message(self, *args):
+            pass
+
+    stub = ThreadingHTTPServer(("127.0.0.1", 0), StubProvider)
+    threading.Thread(target=stub.serve_forever, daemon=True).start()
+    settings = get_settings()
+
+    def use_demo_provider() -> None:
+        settings.ai_provider = "demo"
+        settings.ai_api_key = ""
+        settings.ai_model = ""
+        settings.ai_base_url = "https://api.openai.com/v1"
+
+    try:
+        settings.ai_provider = "openai"
+        settings.ai_api_key = "stub-key-never-a-real-one"
+        settings.ai_model = "stub-model"
+        settings.ai_base_url = f"http://127.0.0.1:{stub.server_address[1]}/v1"
+
+        r = client.post(
+            f"/api/conversations/{session_id}/messages",
+            json={"message": "I like sketching maps of imaginary places", "speak": False},
+            headers=auth(student_token),
+        )
+        body = r.json() if r.status_code == 200 else {}
+        check(
+            "an ordinary message reaches the configured provider",
+            len(provider_calls) == 1 and body.get("provider") == "openai",
+            f"{len(provider_calls)} calls, {str(body)[:160]}",
+        )
+        check(
+            "and the model's own words come back, unlabelled as demo",
+            body.get("reply", {}).get("content") == "Tell me more about that."
+            and body.get("reply", {}).get("demo_generated") is False,
+            str(body.get("reply"))[:160],
+        )
+        sent = provider_calls[0]["body"] if provider_calls else {}
+        check(
+            "the request carries the model and a system prompt",
+            sent.get("model") == "stub-model"
+            and bool(sent.get("messages"))
+            and sent["messages"][0]["role"] == "system",
+            str(sent)[:200],
+        )
+        check(
+            "the key travels only as a header, never in the URL",
+            provider_calls[0]["auth"] == "Bearer stub-key-never-a-real-one",
+            provider_calls[0]["auth"] if provider_calls else "no call",
+        )
+
+        calls_before = len(provider_calls)
+        r = client.post(
+            f"/api/conversations/{session_id}/messages",
+            json={"message": "Please do not tell anyone, my uncle hits me at home", "speak": False},
+            headers=auth(student_token),
+        )
+        guarded = r.json() if r.status_code == 200 else {}
+        guarded_text = (guarded.get("reply") or {}).get("content", "").lower()
+        check(
+            "a disclosure is answered by the reviewed reply, not the model",
+            ("1098" in guarded_text or "trusted adult" in guarded_text)
+            and guarded.get("needs_support") is True,
+            guarded_text[:200],
+        )
+        check(
+            "and nothing about it is sent to the provider",
+            len(provider_calls) == calls_before,
+            f"{len(provider_calls) - calls_before} extra calls",
+        )
+
+        # A provider that is configured but unreachable must degrade to the
+        # labelled demo guide rather than fail the student's turn.
+        settings.ai_base_url = "http://127.0.0.1:1/v1"
+        r = client.post(
+            f"/api/conversations/{session_id}/messages",
+            json={"message": "I enjoy teaching my younger sister maths", "speak": False},
+            headers=auth(student_token),
+        )
+        fell_back = r.json() if r.status_code == 200 else {}
+        check(
+            "an unreachable provider falls back, and says so",
+            r.status_code == 200
+            and fell_back.get("reply", {}).get("demo_generated") is True,
+            str(fell_back)[:200],
+        )
+    finally:
+        stub.shutdown()
+        use_demo_provider()
+
     r = client.get("/api/recommendations", headers=auth(student_token))
     recs = r.json()
     check("recommendations returned", r.status_code == 200 and len(recs["recommendations"]) >= 1)
