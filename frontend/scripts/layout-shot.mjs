@@ -164,11 +164,31 @@ try {
   });
   writeFileSync(out, Buffer.from(shot.data, "base64"), "binary");
 
+  // A clipped button reads as a design choice in a screenshot and is invisible in
+  // a console, so the page is asked directly whether it is wider than its window.
+  const overflow = await call("Runtime.evaluate", {
+    expression: `(() => {
+      const w = window.innerWidth;
+      const wide = document.documentElement.scrollWidth;
+      const culprits = [...document.querySelectorAll('body *')]
+        .filter((el) => el.getBoundingClientRect().right > w + 1)
+        .slice(0, 3)
+        .map((el) => el.tagName.toLowerCase() + '.' + (el.className.toString().split(' ')[0] || '?'));
+      return JSON.stringify({ wide, w, culprits });
+    })()`,
+    returnByValue: true,
+  });
+  const { wide, w, culprits } = JSON.parse(overflow.result.value);
+  const overflowing = wide > w + 1;
+
   const failed = events.filter(
     (e) => e.method === "Network.loadingFailed" && e.params?.errorText && !/aborted/i.test(e.params.errorText),
   );
 
   console.log(`${route} @ ${width}x${height}${mobile ? " (mobile)" : ""} -> ${out}`);
+  console.log(
+    `horizontal overflow: ${overflowing ? `yes, scrollWidth ${wide} > ${w} (${culprits.join(", ")})` : "none"}`,
+  );
   console.log(`console errors: ${errors.length ? errors.join(" | ") : "none"}`);
   console.log(
     `failed requests: ${failed.length ? failed.map((f) => `${f.params.type} ${f.params.errorText}`).join(" | ") : "none"}`,

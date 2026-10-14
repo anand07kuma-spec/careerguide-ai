@@ -307,13 +307,14 @@ Last full run (2026-10-14), on this machine:
 
 | Suite | Result |
 | --- | --- |
-| `smoke_test.py` — consent gates, server-side ownership, conversations, recommendations, plans, reports, transcript deletion, logout | **97 passed, 0 failed** |
+| `smoke_test.py` — consent gates, server-side ownership, conversations, the AI provider call against a stand-in service, recommendations, plans, reports, transcript deletion, logout | **104 passed, 0 failed** |
 | `login_test.py` — come-back codes | **59 passed, 0 failed** |
 | `conversation_facts_test.py` — the guide asking for facts inside the chat | **24 passed, 0 failed** |
 | `tts_provider_test.py` — SSML escaping, key as header, error messages, provider choice, `/api/health` | **45 passed, 0 failed, 1 skipped** (its live call needs a real Azure key; it prints `SKIP` rather than pretending) |
 | `serverless_guard_test.py` — the no-database shape | **10 passed, 0 failed** |
 | `schema_fit_check.py` | 182 seeded values measured, **0 columns too short** |
 | `tsc --noEmit`, `eslint src` | clean |
+| `scripts/layout-shot.mjs` — every route screenshotted at 320, 390, 768 and 1440 px | 17 routes × 4 widths, **no horizontal overflow, no console errors** |
 
 Walked in a real browser with a signed-in session: onboarding → consent gate → dashboard, a Hinglish
 reply that learned a class and showed the badge, chat send → reply → spoken audio (an 8.8 s clip
@@ -327,9 +328,10 @@ Still needs your own testing:
   blocked-microphone browser cannot prove capture. Needs a visible window where you allow the mic;
   Chrome/Edge yes, Firefox/Safari inconsistently.
 * **Hearing the audio** and Hindi voice quality — no speakers here.
-* **Layouts at ≥1024 px** — the narrow layout and the ☰ drawer were measured at 510 px; desktop
-  sidebar was not visually confirmed. Keyboard activation of ☰ was not driven end-to-end (the
-  automated browser's key events do not trigger default button activation).
+* **Layouts** — every route was screenshotted at 320, 390, 768 and 1440 px by
+  `scripts/layout-shot.mjs`, which also asks the page whether it is wider than its window:
+  **68 sweeps, no horizontal overflow and no console errors**. What that tool cannot see is a
+  keyboard-only walkthrough of the ☰ drawer, and anything that needs a real microphone.
 * **Azure voice on the deployed site** (§3) and **real model replies** (needs a key).
 * **This is not full-duplex streaming audio** — one voice speaks at a time and the call screen says
   so. Edge TTS needs internet; it is not an offline guarantee.
@@ -350,7 +352,9 @@ Still needs your own testing:
   deadlines, placements and scheme rules must be checked on official sites. No guaranteed outcomes.
 * **Payments are not implemented at all**, by design, until a real provider is configured and tested.
 * Disclosures of danger or abuse get an age-appropriate, safety-focused reply pointing to a trusted
-  adult or a local service.
+  adult or a local service. That reply is the built-in one **even after a real AI model is
+  configured** — the sentence a frightened child reads back is never left to a model, and the
+  disclosure is not sent to the provider at all.
 
 These are features, not a legal opinion: **this build has not had qualified legal review**, and
 moving a child's conversations to a hosted database changes where that data lives, who can reach it
