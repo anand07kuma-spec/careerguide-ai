@@ -6,11 +6,10 @@ import type {
   Category,
   ChatMessage,
   ChatReply,
-  ComebackCode,
-  ComebackStatus,
   ConsentRecord,
   ConversationInfo,
   GuardianLink,
+  GuestResult,
   Health,
   Institution,
   InterestPrompt,
@@ -38,9 +37,10 @@ export const BACKEND_URL = (
 ).replace(/\/$/, "");
 
 /**
- * Speech comes back either as a `data:audio/mpeg` URL the reply already carries,
- * or as a path on the backend — which is a different origin from this app — so a
- * path must be made absolute before an <audio> element can load it.
+ * Speech comes back either as a `data:` URL the reply already carries (mp3 from
+ * Microsoft, WAV from Gemini), or as a path on the backend — which is a different
+ * origin from this app — so a path must be made absolute before an <audio>
+ * element can load it.
  */
 export function mediaUrl(url: string | null | undefined): string | null {
   if (!url) return null;
@@ -135,10 +135,10 @@ export const api = {
 
   onboarding: (payload: OnboardingPayload) =>
     request<Session>("/api/auth/onboarding", { method: "POST", body: JSON.stringify(payload) }),
-  login: (code: string) =>
-    request<Session>("/api/auth/login", { method: "POST", body: JSON.stringify({ code }) }),
-  comebackStatus: () => request<ComebackStatus>("/api/auth/comeback-code"),
-  newComebackCode: () => request<ComebackCode>("/api/auth/comeback-code", { method: "POST" }),
+  /** Ask whether this device has been here before. A new device is a normal
+   * answer, not an error, so the app can go straight to the one question. */
+  guest: (device_id: string) =>
+    request<GuestResult>("/api/auth/guest", { method: "POST", body: JSON.stringify({ device_id }) }),
   me: () => request<Session>("/api/auth/me"),
   updateSettings: (patch: Partial<Settings>) =>
     request<Settings>("/api/auth/settings", { method: "PATCH", body: JSON.stringify(patch) }),

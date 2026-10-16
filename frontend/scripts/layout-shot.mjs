@@ -32,7 +32,7 @@ const height = Number(flag("height", 900));
 const full = flag("full", "1") === "1";
 const settle = Number(flag("settle", 4000));
 
-if (!TOKEN) console.log("note: no CG_TOKEN, protected routes will show the sign-in screen");
+if (!TOKEN) console.log("note: no CG_TOKEN, protected routes will redirect to the one question");
 
 const profile = mkdtempSync(join(tmpdir(), "cg-shot-"));
 const chrome = spawn(
@@ -148,7 +148,7 @@ try {
   });
 
   // Give the page its origin first so localStorage lands on the right host.
-  await goto(`${BASE}/login`);
+  await goto(`${BASE}/onboarding`);
   await sleep(400);
   if (TOKEN) {
     await call("Runtime.evaluate", {

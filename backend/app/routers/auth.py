@@ -23,6 +23,8 @@ from ..schemas import (
     ConsentIn,
     ConsentOut,
     GuardianOut,
+    GuestIn,
+    GuestOut,
     LinkChildIn,
     LoginIn,
     OnboardingIn,
@@ -85,6 +87,47 @@ def _settings_payload(db: Session, user_id: int) -> SettingsOut:
     return SettingsOut.model_validate(ensure_settings(db, user_id))
 
 
+def _linked_student_id(db: Session, user: User) -> int:
+    """Whose profile this account acts on: a student's own, a parent's one child."""
+    if user.role != "parent":
+        return user.id
+    link = db.scalars(
+        select(Guardianship).where(Guardianship.parent_id == user.id).limit(1)
+    ).first()
+    return link.student_id if link else 0
+
+
+@router.post("/guest", response_model=GuestOut)
+def guest(payload: GuestIn, db: Session = Depends(get_db)) -> GuestOut:
+    """Hand this device back the account it used before, if there is one.
+
+    There is no password to type: the browser holds a random id it made for
+    itself, and the server answers with an ordinary bearer token for the account
+    that id created. Everything past this point is authorised by that token, not
+    by the device id, so a stolen token behaves like a stolen token and a guessed
+    id only reaches an account whose id the guesser already has.
+    """
+    user = db.scalars(
+        select(User)
+        .where(User.device_id == payload.device_id, User.is_active.is_(True))
+        .order_by(User.id)
+        .limit(1)
+    ).first()
+    if user is None:
+        return GuestOut(known=False)
+
+    student_id = _linked_student_id(db, user)
+    return GuestOut(
+        known=True,
+        session=SessionOut(
+            token=issue_token(db, user.id),
+            user=UserOut.model_validate(user),
+            profile=_profile_payload(db, student_id) if student_id else None,
+            settings=_settings_payload(db, user.id),
+        ),
+    )
+
+
 @router.post("/onboarding", response_model=SessionOut)
 def onboarding(payload: OnboardingIn, db: Session = Depends(get_db)) -> SessionOut:
     if not payload.consent_profile:
@@ -95,6 +138,22 @@ def onboarding(payload: OnboardingIn, db: Session = Depends(get_db)) -> SessionO
                 "profile. Please confirm the consent box to continue."
             ),
         )
+
+    # One device, one account. Without this a second onboarding on the same
+    # browser would leave two accounts sharing an id, and the device would quietly
+    # reopen the older one every time.
+    if payload.device_id:
+        claimed = db.scalars(
+            select(User).where(User.device_id == payload.device_id).limit(1)
+        ).first()
+        if claimed is not None:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    "This device already has an account. Open the app to continue it, "
+                    "or start a new one from Settings."
+                ),
+            )
 
     if payload.role == "student":
         user = User(
@@ -157,17 +216,17 @@ def onboarding(payload: OnboardingIn, db: Session = Depends(get_db)) -> SessionO
     if payload.consent_voice:
         db.add(ConsentRecord(user_id=user.id, scope="voice", granted=True))
     db.add(UserSettings(user_id=user.id, language=payload.preferred_language))
+    if payload.device_id:
+        user.device_id = payload.device_id
     db.commit()
 
-    token = issue_token(db, user.id)
-    # The new account is handed a come-back code at the same moment it gets its
-    # first token, because this is the only time the plaintext can be shown.
+    # No come-back code is minted here: this account is reached by the device that
+    # made it, which is the point of running without a password.
     return SessionOut(
-        token=token,
+        token=issue_token(db, user.id),
         user=UserOut.model_validate(user),
         profile=_profile_payload(db, student_id),
         settings=_settings_payload(db, user.id),
-        comeback_code=format_code(set_code_for(db, user)),
     )
 
 
@@ -180,12 +239,7 @@ def login(payload: LoginIn, db: Session = Depends(get_db)) -> SessionOut:
     """
     user = find_account_by_code(db, payload.code)
 
-    student_id = user.id
-    if user.role == "parent":
-        link = db.scalars(
-            select(Guardianship).where(Guardianship.parent_id == user.id).limit(1)
-        ).first()
-        student_id = link.student_id if link else 0
+    student_id = _linked_student_id(db, user)
 
     return SessionOut(
         token=issue_token(db, user.id),
@@ -197,12 +251,7 @@ def login(payload: LoginIn, db: Session = Depends(get_db)) -> SessionOut:
 
 @router.get("/me", response_model=SessionOut)
 def me(user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> SessionOut:
-    student_id = user.id
-    if user.role == "parent":
-        link = db.scalars(
-            select(Guardianship).where(Guardianship.parent_id == user.id).limit(1)
-        ).first()
-        student_id = link.student_id if link else 0
+    student_id = _linked_student_id(db, user)
 
     return SessionOut(
         token="",

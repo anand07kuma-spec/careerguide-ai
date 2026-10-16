@@ -1,23 +1,27 @@
-"""Test the text-to-speech layer without calling a paid service.
+"""Test the text-to-speech layer without sending a paid request for every check.
 
 A TTS key turns the app's voice replies from "browser's own voice" into real
 recorded speech, and a wrong setup here is invisible unless it is checked: a
-missing region, a key that does not match its region, markup leaking into the
-SSML, or a credential ending up in a log line all look like plain silence to a
-student. So every request below is intercepted and inspected instead of sent.
+missing region, a key that does not match its region, a voice id from one service
+handed to another, markup leaking into the SSML, or a credential ending up in a
+log line all look like plain silence to a student. So every request below is
+intercepted and inspected instead of sent.
 
 Run from `backend/`:
 
     .venv/Scripts/python.exe scripts/tts_provider_test.py
 
-One live check runs only when this shell really has AZURE_SPEECH_KEY and
-AZURE_SPEECH_REGION set; otherwise it reports itself as skipped.
+Two live checks break that rule on purpose, and only when this machine actually
+holds the key: Gemini speaks one sentence for real (a fake transport can never
+prove the service answers), and Azure does the same when AZURE_SPEECH_KEY and
+AZURE_SPEECH_REGION are in the shell. Without a key each reports itself skipped.
 """
 
 from __future__ import annotations
 
 import asyncio
 import base64
+import json
 import os
 import pathlib
 import sys
@@ -53,6 +57,11 @@ def configure(**values) -> None:
         "tts_provider": "auto",
         "azure_speech_key": "",
         "azure_speech_region": "",
+        # Pinned empty so a developer's own key in backend/.env cannot change what
+        # these checks assert. Constructor arguments beat both env and .env.
+        "gemini_api_key": "",
+        "gemini_tts_model": "gemini-3.8-flash-tts",
+        "gemini_voice": "Sulafat",
         "tts_voice_hi": "hi-IN-SwaraNeural",
         "tts_voice_en": "en-IN-NeerjaNeural",
         "tts_timeout_seconds": 25,
@@ -63,13 +72,19 @@ def configure(**values) -> None:
 
 
 class Response:
-    def __init__(self, status_code: int = 200, content: bytes = b"MP3DATA") -> None:
+    def __init__(self, status_code: int = 200, content: bytes = b"MP3DATA", payload=None) -> None:
         self.status_code = status_code
         self.content = content
+        self.payload = payload
 
     @property
     def text(self) -> str:
         return self.content.decode("utf-8", "replace")
+
+    def json(self):
+        if self.payload is None:
+            raise ValueError("body was not json")
+        return self.payload
 
 
 class Sent:
@@ -296,7 +311,135 @@ check("health still reports the configuration as ready",
 
 tts.edge_tts.Communicate = FakeCommunicate
 
-print("\n--- live call ---")
+print("\n--- Gemini, the voice the student hears now ---")
+GKEY = "gemini-key-that-must-never-be-logged"
+WAV = b"RIFF\x10\x00\x00\x00WAVEfakt-chunk-bytes"
+
+
+def gemini_reply(audio: bytes = WAV, *, block: str | None = None, parts=None) -> Response:
+    """A generateContent answer shaped like the real one."""
+    if parts is None:
+        parts = (
+            []
+            if block
+            else [{"inlineData": {"mimeType": "audio/wav", "data": base64.b64encode(audio).decode()}}]
+        )
+    payload: dict = {"candidates": [{"content": {"parts": parts}}]}
+    if block:
+        payload["promptFeedback"] = {"blockReason": block}
+    return Response(payload=payload)
+
+
+def audio_of(url: str) -> bytes:
+    return base64.b64decode(url.split(",", 1)[1])
+
+
+configure(gemini_api_key=GKEY)
+check("a Gemini key alone makes Gemini the voice", tts.provider() == tts.GEMINI, tts.provider())
+configure(gemini_api_key=GKEY, azure_speech_key=KEY, azure_speech_region="eastus")
+check("Gemini is preferred to Azure when both are configured",
+      tts.provider() == tts.GEMINI, tts.provider())
+configure(tts_provider="gemini")
+check("TTS_PROVIDER=gemini without a key stays visible", tts.provider() == tts.GEMINI)
+try:
+    run(tts.synthesize("hello", "en"))
+    check("a forced-but-keyless Gemini speaks loudly", False, "no error raised")
+except tts.TTSError as exc:
+    check("a forced-but-keyless Gemini names the missing variable",
+          "GEMINI_API_KEY" in str(exc), str(exc))
+
+configure(gemini_api_key=GKEY)
+install_transport(reply=gemini_reply())
+url = run(tts.synthesize("मुझे engineer बनना है", "hi"))
+body = json.loads(sent.body.decode("utf-8"))
+check("the request goes to the speech model, not a chat model",
+      "generativelanguage.googleapis.com" in sent.url and "gemini-3.8-flash-tts:generateContent" in sent.url,
+      sent.url)
+check("the key travels as a header, not in the URL",
+      sent.headers.get("x-goog-api-key") == GKEY and GKEY not in sent.url, sent.url)
+check("the key is not inside the spoken text", GKEY not in sent.body.decode("utf-8", "replace"))
+check("audio is the only thing asked for",
+      body["generationConfig"]["responseModalities"] == ["AUDIO"], body["generationConfig"])
+check("the voice is the one the server configured",
+      body["generationConfig"]["speechConfig"]["voiceConfig"]["prebuiltVoiceConfig"]["voiceName"]
+      == "Sulafat", body)
+check("the student's own sentence is what gets spoken",
+      "मुझे engineer" in json.dumps(body, ensure_ascii=False), body)
+check("a WAV answer is announced as WAV rather than mp3", url.startswith("data:audio/wav;base64,"), url[:40])
+check("the bytes the service sent are the bytes the browser gets", audio_of(url) == WAV)
+
+install_transport(reply=gemini_reply(audio=b"MP3DATA"))
+url = run(tts.synthesize("hello", "en"))
+check("an mp3 answer is still announced as mp3", url.startswith("data:audio/mpeg;base64,"), url[:40])
+
+install_transport(reply=Response(status_code=403, content=b'{"error":"quota"}'))
+try:
+    run(tts.synthesize("hello", "en"))
+    check("a rejected Gemini key is an error, not silence", False, "returned audio")
+except tts.TTSError as exc:
+    check("a rejected Gemini key tells the student audio is unavailable",
+          "unavailable" in str(exc), str(exc))
+    check("a rejected Gemini key does not mention the credential", GKEY not in str(exc))
+
+install_transport(reply=gemini_reply(parts=[]))
+try:
+    run(tts.synthesize("hello", "en"))
+    check("a 200 with no audio part is refused", False, "returned audio")
+except tts.TTSError as exc:
+    check("a 200 with no audio part says there was no audio", "no audio" in str(exc), str(exc))
+
+install_transport(reply=gemini_reply(block="SAFETY"))
+try:
+    run(tts.synthesize("hello", "en"))
+    check("a sentence the model refuses is an error", False, "returned audio")
+except tts.TTSError as exc:
+    check("a refusal tells the student to try again", "try again" in str(exc), str(exc))
+    check("a refusal does not repeat the sentence", "hello" not in str(exc), str(exc))
+
+check("WAV is cut sooner than mp3 for the same long reply",
+      len(tts.plain_text("x" * 900, tts.GEMINI_MAX_SPOKEN_CHARS)) == tts.GEMINI_MAX_SPOKEN_CHARS
+      < tts.MAX_SPOKEN_CHARS, tts.GEMINI_MAX_SPOKEN_CHARS)
+check("Gemini's note names Google as the service",
+      "Gemini" in tts.provider_note() and "sent to Google" in tts.provider_note(),
+      tts.provider_note())
+check("a voice id from another provider cannot leak in",
+      tts.voice_for("hi", "hi-IN-SwaraNeural") == "Sulafat", tts.voice_for("hi", "hi-IN-SwaraNeural"))
+check("a Gemini voice can be chosen by the student", tts.voice_for("hi", "Puck") == "Puck")
+check("an unknown Gemini voice cannot replace a known one", tts.voice_for("hi", "nope") == "Sulafat")
+check("the student is offered a real list of voices",
+      len(tts.voice_options()[0]["voices"]) >= 4, tts.voice_options())
+body = app_main.health()
+check("health reports Gemini as the service that will be called",
+      body.tts_provider == tts.GEMINI, body)
+check("health says the voice is ready once a Gemini key exists", body.tts_ready is True, body)
+configure(tts_provider="gemini")
+body = app_main.health()
+check("health does not call a keyless Gemini ready", body.tts_ready is False, body)
+
+print("\n--- live calls ---")
+# Read from this machine's real configuration, so a developer who has a key in
+# backend/.env gets the one check that no fake transport can give: the service
+# actually answered.
+real_settings = Settings()
+if real_settings.gemini_api_key.strip():
+    tts.httpx.AsyncClient = REAL_CLIENT
+    configure(
+        gemini_api_key=real_settings.gemini_api_key,
+        gemini_tts_model=real_settings.gemini_tts_model,
+        gemini_voice=real_settings.gemini_voice,
+    )
+    live_url = run(tts.synthesize("नमस्कार! Main tumhara career guide hoon. Chalo baat karte hain.", "hi"))
+    check("a real Gemini call returns playable audio",
+          live_url.startswith("data:audio/wav;base64,"), live_url[:40])
+    check("a real Gemini call returned speech rather than a stub",
+          len(audio_of(live_url)) > 20000, len(live_url))
+    check("a real Gemini call is remembered as working",
+          tts.last_attempt()["ok"] is True and tts.last_attempt()["provider"] == tts.GEMINI,
+          tts.last_attempt())
+else:
+    print("  [SKIP] no GEMINI_API_KEY in this machine's configuration, nothing was "
+          "sent to Google for real")
+
 if os.environ.get("AZURE_SPEECH_KEY", "").strip() and os.environ.get("AZURE_SPEECH_REGION", "").strip():
     tts.httpx.AsyncClient = REAL_CLIENT
     configure(

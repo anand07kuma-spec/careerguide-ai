@@ -67,6 +67,10 @@ class User(Base, TimestampMixin):
     display_name: Mapped[str] = mapped_column(String(80))
     preferred_language: Mapped[str] = mapped_column(String(8), default="en")
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    # This prototype asks for no password, so a returning browser is recognised by
+    # a random id it made for itself. It is stored so the same device finds its own
+    # account again; it is not something a person reads, remembers or shares.
+    device_id: Mapped[str | None] = mapped_column(String(64), index=True)
     # A come-back code lets the same account be reached again from another
     # browser, which a device token alone cannot do. Only derived values are
     # stored: an unsalted index to find the row, and a salted PBKDF2 digest to

@@ -125,7 +125,7 @@ def health() -> HealthOut:
         # Which service will be called, and whether it can be reached with the
         # current configuration — the check a person runs after pasting a TTS key.
         tts_provider=tts.provider(),
-        tts_ready=tts.provider() != tts.AZURE or tts.azure_ready(),
+        tts_ready=tts.configured(tts.provider()),
         # `tts_ready` only proves the settings are complete. This is the answer
         # from the last time the service was actually asked for audio, which is
         # how a datacenter-blocked Edge endpoint stops being reported as working.

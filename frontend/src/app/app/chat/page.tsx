@@ -531,7 +531,7 @@ export default function ChatPage() {
                     }
                   }}
                   label="Read replies aloud"
-                  description="Uses Microsoft Edge text-to-speech over the internet, or your browser's voice as a fallback."
+                  description="The server's speech service reads replies aloud over the internet, with your browser's own voice as a fallback. Settings names the exact service."
                 />
               </div>
               <div className="flex items-center gap-2">

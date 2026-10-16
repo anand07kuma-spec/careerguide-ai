@@ -129,24 +129,20 @@ export interface Session {
   user: User;
   profile: StudentProfile | null;
   settings: Settings;
-  /** Only present in the single response that mints a new sign-in code. */
-  comeback_code?: string | null;
 }
 
-export interface ComebackStatus {
-  has_code: boolean;
-  note: string;
-}
-
-export interface ComebackCode {
-  code: string;
-  note: string;
+/** The answer to "has this device been here before?". `known: false` is a normal
+ * reply, not an error: a new device simply goes to the one opening question. */
+export interface GuestResult {
+  known: boolean;
+  session: Session | null;
 }
 
 export interface OnboardingPayload {
   role: Role;
   display_name: string;
   preferred_language: Language;
+  device_id?: string;
   class_level?: string | null;
   age_range?: string | null;
   interest_areas?: string[];

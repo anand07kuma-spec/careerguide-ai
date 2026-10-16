@@ -455,7 +455,14 @@ async def _openai_compatible_respond(user_text: str, ctx: GuideContext, history:
         )
         response.raise_for_status()
         payload = response.json()
-        text = payload["choices"][0]["message"]["content"].strip()
+        text = (payload["choices"][0]["message"].get("content") or "").strip()
+
+    # A reasoning model can spend the whole completion budget thinking and come
+    # back with an empty answer. Serving that would look like the guide went
+    # silent, so it counts as a provider failure and the built-in reply takes
+    # over with the reason shown. (`openai/gpt-oss-20b` does exactly this.)
+    if not text:
+        raise ValueError("the configured provider returned an empty reply")
 
     hits = detect_themes(user_text)
     return GuideReply(

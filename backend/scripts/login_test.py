@@ -85,10 +85,24 @@ def onboard(**values) -> dict:
     return response.json()
 
 
+def mint(bearer: str) -> str:
+    """Ask for a code the way Settings does, since onboarding no longer offers one."""
+    response = client.post(
+        "/api/auth/comeback-code", headers={"Authorization": f"Bearer {bearer}"}
+    )
+    assert response.status_code == 200, response.text
+    return response.json()["code"]
+
+
 print("\n--- the code an account is handed ---")
 student = onboard(class_level="class-8")
-code = student.get("comeback_code") or ""
-check("onboarding hands back a come-back code", bool(code), student.keys())
+check(
+    "a guest account is created without a code",
+    student.get("comeback_code") is None,
+    sorted(student.keys()),
+)
+code = mint(student["token"])
+check("Settings can still mint one when it is asked for", bool(code), code)
 check("it is five characters, three groups", bool(re.fullmatch(r"[A-Z2-9]{5}-[A-Z2-9]{5}-[A-Z2-9]{5}", code)), code)
 check("no look-alike characters in it", not set(code.replace("-", "")) & set("IO01"), code)
 check("that is 15 characters of code", len(normalize_code(code)) == CODE_LENGTH, code)
@@ -178,7 +192,7 @@ check("and it really signs the account in", client.post("/api/auth/login", json=
 
 print("\n--- one code opens one account ---")
 parent = onboard(role="parent", display_name="Mrs Sharma", student_name="Rohan", student_class_level="class-6")
-parent_code = parent.get("comeback_code") or ""
+parent_code = mint(parent["token"])
 as_parent = client.post("/api/auth/login", json={"code": parent_code})
 check("a parent account signs in", as_parent.status_code == 200, as_parent.text)
 check("as the parent, not the child", as_parent.json().get("user", {}).get("role") == "parent")

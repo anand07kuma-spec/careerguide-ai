@@ -3,21 +3,20 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   Accessibility,
-  AlertTriangle,
   Bookmark,
   Check,
   ChevronRight,
   Contrast,
   Copy,
-  DoorOpen,
   EyeOff,
   Info,
   KeyRound,
   Languages as LanguagesIcon,
   Link2,
-  LogOut,
   Mic,
+  RotateCcw,
   ShieldCheck,
+  Smartphone,
   Trash2,
   UserRound,
   Volume2,
@@ -35,7 +34,6 @@ import { useSession } from "@/lib/session";
 import type {
   ConsentRecord,
   ConversationInfo,
-  ComebackStatus,
   GuardianLink,
   Health,
   Settings,
@@ -128,12 +126,16 @@ const BUILD_NOTES = [
     text: "There are no payments, courses or paid services anywhere in this app, and guidance is never influenced by partners.",
   },
   {
+    icon: Smartphone,
+    text: "This prototype has no login on purpose. Your work is tied to this browser only, so a different phone or cleared browser data starts a new student and the old progress cannot be recovered.",
+  },
+  {
     icon: Info,
     text: "Qualified legal review (including child-data rules like India's DPDP Act) is needed before any real deployment with children. This build makes no compliance claim.",
   },
 ];
 
-type SectionKey = "language" | "profile" | "privacy" | "family" | "code" | "about";
+type SectionKey = "language" | "profile" | "privacy" | "family" | "device" | "about";
 
 /** One line of the settings list. The detail lives behind it, not on the page. */
 function Row({
@@ -181,7 +183,7 @@ function SubHeading({ children }: { children: ReactNode }) {
 }
 
 export default function SettingsScreen() {
-  const { user, profile, settings, isStudent, saveSettings, saveProfile, signOut } = useSession();
+  const { user, profile, settings, isStudent, saveSettings, saveProfile, startOver } = useSession();
   const { toast } = useToast();
 
   const [voices, setVoices] = useState<Resource<VoiceInfo>>(initial);
@@ -190,20 +192,18 @@ export default function SettingsScreen() {
   const [consent, setConsent] = useState<Resource<ConsentRecord[]>>(initial);
   const [shareCode, setShareCode] = useState<Resource<ShareCode>>(initial);
   const [guardians, setGuardians] = useState<Resource<GuardianLink[]>>(initial);
-  const [comeback, setComeback] = useState<Resource<ComebackStatus>>(initial);
 
   const [section, setSection] = useState<SectionKey | null>(null);
   const [pendingProfile, setPendingProfile] = useState<Partial<StudentProfile> | null>(null);
   const [busyToggle, setBusyToggle] = useState<string | null>(null);
   const [codeBusy, setCodeBusy] = useState<"new" | "revoke" | null>(null);
-  const [mintedCode, setMintedCode] = useState<string | null>(null);
-  const [minting, setMinting] = useState(false);
-  const [copied, setCopied] = useState<"share" | "signin" | null>(null);
+  const [copied, setCopied] = useState<"share" | null>(null);
   const [historyModal, setHistoryModal] = useState(false);
   const [clearingHistory, setClearingHistory] = useState(false);
   const [removeTarget, setRemoveTarget] = useState<GuardianLink | null>(null);
   const [removing, setRemoving] = useState(false);
-  const [signingOut, setSigningOut] = useState(false);
+  const [resetModal, setResetModal] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const [voiceTest, setVoiceTest] = useState<{ busy: boolean; ok: boolean; message: string }>({
     busy: false,
     ok: false,
@@ -280,14 +280,6 @@ export default function SettingsScreen() {
     }
   }, []);
 
-  const loadComeback = useCallback(async () => {
-    try {
-      setComeback({ state: "ready", data: await api.comebackStatus(), error: null });
-    } catch (error) {
-      setComeback({ state: "error", data: null, error: messageFor(error) });
-    }
-  }, []);
-
   useEffect(() => {
     // Fetching is the whole purpose of this effect, and every setState inside
     // those loaders happens after an await.
@@ -296,7 +288,6 @@ export default function SettingsScreen() {
     void loadHealth();
     void loadConsent();
     void loadGuardians();
-    void loadComeback();
     if (isStudent) void loadConversations();
     if (isStudent) void loadShareCode();
   }, [
@@ -305,7 +296,6 @@ export default function SettingsScreen() {
     loadHealth,
     loadConsent,
     loadGuardians,
-    loadComeback,
     loadConversations,
     loadShareCode,
   ]);
@@ -407,26 +397,8 @@ export default function SettingsScreen() {
     }
   }, [toast]);
 
-  const mintComebackCode = useCallback(async () => {
-    setMinting(true);
-    try {
-      const next = await api.newComebackCode();
-      setMintedCode(next.code);
-      setComeback({
-        state: "ready",
-        data: { has_code: true, note: next.note },
-        error: null,
-      });
-      toast("Sign-in code created. Write it down now — it will not be shown again.", "success");
-    } catch (error) {
-      toast(messageFor(error), "error");
-    } finally {
-      setMinting(false);
-    }
-  }, [toast]);
-
   const copyValue = useCallback(
-    async (value: string, which: "share" | "signin") => {
+    async (value: string, which: "share") => {
       try {
         await navigator.clipboard.writeText(value);
       } catch {
@@ -511,14 +483,18 @@ export default function SettingsScreen() {
     );
   }, [conversations.data, loadConversations, toast]);
 
-  const doSignOut = useCallback(async () => {
-    setSigningOut(true);
+  const doStartOver = useCallback(async () => {
+    setResetting(true);
     try {
-      await signOut();
+      await startOver();
+      // The route guard sends an unknown device to the one question; nothing here
+      // has to be torn down by hand.
     } catch {
-      setSigningOut(false);
+      setResetting(false);
+      setResetModal(false);
+      toast("The server could not be asked to forget this device. Try again in a moment.", "error");
     }
-  }, [signOut]);
+  }, [startOver, toast]);
 
   /* -------------------------------------------------------------- derived UI */
 
@@ -533,7 +509,6 @@ export default function SettingsScreen() {
   const sessionCount = (conversations.data ?? []).length;
   const grantedCount = CONSENT_SCOPES.filter((entry) => consentByScope.get(entry.scope)?.granted).length;
   const guardianCount = (guardians.data ?? []).length;
-  const hasCode = comeback.data?.has_code ?? false;
   const languageLabel =
     LANGUAGE_OPTIONS.find((option) => option.value === language)?.label ?? language;
   const interestCount = (view.interest_areas ?? []).length;
@@ -626,32 +601,12 @@ export default function SettingsScreen() {
                 Parent dashboard
               </LinkButton>
             )}
-            <Button variant="ghost" size="sm" onClick={() => setSection("code")}>
-              <KeyRound className="h-4 w-4" aria-hidden />
-              Sign-in code
+            <Button variant="ghost" size="sm" onClick={() => setSection("device")}>
+              <Smartphone className="h-4 w-4" aria-hidden />
+              This device
             </Button>
           </div>
         </Card>
-
-        {/* No code means signing out loses the account, so say it where it is visible. */}
-        {comeback.state === "ready" && !hasCode ? (
-          <button
-            type="button"
-            onClick={() => setSection("code")}
-            className="flex w-full items-center gap-3 rounded-card border border-warning/40 bg-warning-mist/60 px-4 py-3.5 text-left"
-          >
-            <AlertTriangle className="h-4 w-4 shrink-0 text-amber-700" aria-hidden />
-            <span className="min-w-0 flex-1">
-              <span className="block text-sm font-semibold text-ink">
-                This account has no sign-in code yet
-              </span>
-              <span className="mt-0.5 block text-xs text-muted">
-                Create one before you sign out, or you will not be able to come back to it.
-              </span>
-            </span>
-            <ChevronRight className="h-4 w-4 shrink-0 text-amber-700" aria-hidden />
-          </button>
-        ) : null}
 
         {/* ------------------------------------------------------------ Settings list */}
         <Card className="divide-y divide-line overflow-hidden p-0">
@@ -706,19 +661,11 @@ export default function SettingsScreen() {
             />
           ) : null}
           <Row
-            icon={KeyRound}
-            tone={hasCode ? "bg-brand-mist text-brand-dark" : "bg-warning-mist text-amber-700"}
-            title="Sign-in code"
-            value={
-              comeback.state === "loading"
-                ? "Checking…"
-                : comeback.state === "error"
-                  ? "Status unknown — open to retry"
-                  : hasCode
-                    ? "Created already — a new code replaces the old one"
-                    : "Not created — do this before you sign out"
-            }
-            onClick={() => setSection("code")}
+            icon={Smartphone}
+            tone="bg-brand-mist text-brand-dark"
+            title="This device"
+            value="No login — this browser is what remembers your work"
+            onClick={() => setSection("device")}
           />
           <Row
             icon={Info}
@@ -729,22 +676,23 @@ export default function SettingsScreen() {
           />
         </Card>
 
-        {/* ------------------------------------------------------------- Sign out */}
+        {/* ---------------------------------------------------------- This device */}
         <Card className="flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-ink">Sign out</p>
-            <p className="mt-0.5 text-xs text-muted">
-              Your settings and consent choices stay on the account for next time.
+            <p className="text-sm font-semibold text-ink">There is nothing to sign out of</p>
+            <p className="mt-0.5 text-xs leading-relaxed text-muted">
+              This browser is the account, so just close the tab — everything will be waiting next
+              time you open it from here. Use start over only if somebody else will use this device.
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <LinkButton href="/login" variant="outline" size="sm">
-              <DoorOpen className="h-4 w-4" aria-hidden />
-              Sign-in page
-            </LinkButton>
-            <Button variant="secondary" loading={signingOut} onClick={() => void doSignOut()}>
-              <LogOut className="h-4 w-4" aria-hidden />
-              Sign out
+            <Button variant="ghost" size="sm" onClick={() => setSection("device")}>
+              <Info className="h-4 w-4" aria-hidden />
+              How this works
+            </Button>
+            <Button variant="secondary" size="sm" onClick={() => setResetModal(true)}>
+              <RotateCcw className="h-4 w-4" aria-hidden />
+              Start over
             </Button>
           </div>
         </Card>
@@ -813,7 +761,7 @@ export default function SettingsScreen() {
                   Read replies aloud
                 </span>
               }
-              description="Replies are read aloud by an online Microsoft text-to-speech service when the server has one configured, and by your browser's own voice otherwise. Either way it is not a human voice, and the words stay on screen."
+              description="Replies are read aloud by the server's speech service — the one named just below — and by your browser's own voice if that fails. Either way it is not a human voice, and the words stay on screen."
             />
             <Toggle
               checked={settings?.continuous_conversation ?? false}
@@ -1224,92 +1172,76 @@ export default function SettingsScreen() {
         </div>
       </Modal>
 
-      {/* -------------------------------------------------------- Sign-in code */}
+      {/* ------------------------------------------------------------ This device */}
       <Modal
-        open={section === "code"}
+        open={section === "device"}
         onClose={closeSection}
-        title="Sign-in code"
-        description="The one thing that lets you open this account again from another device."
+        title="This device"
+        description="This prototype has no login, so this browser is what your work belongs to."
         footer={<Button variant="outline" onClick={closeSection}>Done</Button>}
       >
         <div className="space-y-4">
-          {mintedCode ? (
-            <div className="rounded-2xl border border-brand/30 bg-brand-mist/40 p-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-brand-dark">
-                Copy this now — it will never be shown again
-              </p>
-              <p
-                className="mt-2 rounded-xl bg-navy px-4 py-4 text-center font-mono text-lg font-bold tracking-[0.18em] text-white sm:text-xl"
-                style={{ userSelect: "all" }}
-              >
-                {mintedCode}
-              </p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <Button size="sm" onClick={() => void copyValue(mintedCode, "signin")}>
-                  {copied === "signin" ? (
-                    <Check className="h-4 w-4" aria-hidden />
-                  ) : (
-                    <Copy className="h-4 w-4" aria-hidden />
-                  )}
-                  {copied === "signin" ? "Copied" : "Copy code"}
-                </Button>
-                <LinkButton size="sm" variant="outline" href="/login">
-                  Try it on the sign-in page
-                </LinkButton>
-              </div>
-            </div>
-          ) : null}
-
-          {comeback.state === "loading" ? (
-            <Skeleton className="h-20" />
-          ) : comeback.state === "error" ? (
-            <ErrorState description={comeback.error ?? undefined} onRetry={loadComeback} />
-          ) : (
-            <div className="rounded-2xl bg-canvas p-4">
-              <p className="flex items-center gap-2 text-sm font-semibold text-ink">
-                <span
-                  className={cn(
-                    "h-2 w-2 rounded-full",
-                    hasCode ? "bg-success" : "bg-warning",
-                  )}
-                  aria-hidden
-                />
-                {hasCode ? "A sign-in code is active" : "No sign-in code yet"}
-              </p>
-              <p className="mt-1.5 text-xs leading-relaxed text-muted">
-                {comeback.data?.note}
-              </p>
-              <Button
-                className="mt-3"
-                size="sm"
-                variant={hasCode ? "outline" : "primary"}
-                loading={minting}
-                onClick={() => void mintComebackCode()}
-              >
-                <KeyRound className="h-4 w-4" aria-hidden />
-                {hasCode ? "Create a new code" : "Create my code"}
-              </Button>
-            </div>
-          )}
+          <div className="rounded-2xl bg-canvas p-4">
+            <p className="flex items-center gap-2 text-sm font-semibold text-ink">
+              <Smartphone className="h-4 w-4 shrink-0 text-brand-dark" aria-hidden />
+              How you are recognised
+            </p>
+            <p className="mt-1.5 text-xs leading-relaxed text-muted">
+              The first time this site was opened here, the browser made up a long random number and
+              kept it in its own storage. The server files your work under that number. It is not a
+              name, an email or a password, so there is nothing to remember, write down or lose.
+            </p>
+          </div>
 
           <ul className="space-y-2 text-xs leading-relaxed text-muted">
             <li className="flex gap-2">
               <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-teal" aria-hidden />
-              This is not the sharing code you give a parent. It opens your own account, so keep it
-              private.
+              Same phone or laptop, same browser: your conversations, saved careers and settings are
+              waiting when you come back.
             </li>
             <li className="flex gap-2">
               <EyeOff className="mt-0.5 h-3.5 w-3.5 shrink-0 text-teal" aria-hidden />
-              The server stores a one-way digest of the code, not the code itself — a database leak
-              would not hand anyone a way in.
+              A different device, a private window, or cleared site data starts a brand-new student.
+              That is the price of having no sign-in — nothing can bring the old work back, so please
+              do not use a shared or public computer.
             </li>
             <li className="flex gap-2">
               <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-teal" aria-hidden />
-              Creating a new code switches the old one off the moment it is made. If you lose a code,
-              sign in while still logged in and replace it here.
+              Starting over gives this browser a new identity and stops the current session on the
+              server right away. It deletes nothing by itself: to clear what is stored, delete your
+              conversations from the privacy section first.
             </li>
           </ul>
+
+          <Button variant="secondary" size="sm" onClick={() => setResetModal(true)}>
+            <RotateCcw className="h-4 w-4" aria-hidden />
+            Start over on this device
+          </Button>
         </div>
+      </Modal>
+
+      {/* Start-over confirm */}
+      <Modal
+        open={resetModal}
+        onClose={() => !resetting && setResetModal(false)}
+        title="Start over on this device?"
+        description="This browser will be treated as somebody who has never been here."
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setResetModal(false)} disabled={resetting}>
+              Keep my work
+            </Button>
+            <Button variant="danger" loading={resetting} onClick={() => void doStartOver()}>
+              Start over
+            </Button>
+          </>
+        }
+      >
+        <p className="text-sm leading-relaxed text-muted">
+          You will be taken back to the one question, and whatever is in this session now will not be
+          reachable from this browser again. If the goal is a clean slate for the messages rather than
+          a new student, delete the conversation history in the privacy section instead.
+        </p>
       </Modal>
 
       {/* ------------------------------------------------------- About this build */}

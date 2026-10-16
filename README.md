@@ -7,7 +7,7 @@ with a guide in English, Hindi or Hinglish, explores careers, gets **exploratory
 | Folder | What it is |
 | --- | --- |
 | `frontend/` | Next.js 16 (App Router, Turbopack), TypeScript, Tailwind CSS 4 |
-| `backend/` | FastAPI + SQLAlchemy: catalogue, conversations, AI provider, Edge/Azure TTS, auth, consent |
+| `backend/` | FastAPI + SQLAlchemy: catalogue, conversations, AI provider, Gemini/Azure/Edge TTS, guest sessions, consent |
 
 ---
 
@@ -29,8 +29,8 @@ npm run dev
 ```
 
 Open **http://careerguide.localhost:3000** (Chrome/Edge on Windows resolve it without editing
-`hosts`) or **http://localhost:3000**. Both work; logins live in browser storage *per address*, so
-pick one.
+`hosts`) or **http://localhost:3000**. Both work, but the browser keeps its device id *per address*,
+so opening the other one looks like a brand-new device — pick one and stay on it.
 
 First backend start creates `backend/careerguide.db` and seeds the catalogue (55 careers,
 64 resources, 31 scholarship leads, 32 institution entries). **No `.env` is needed** — every setting
@@ -56,11 +56,12 @@ frontend code, never in a commit, never pasted into chat or a screenshot.
 | `DATABASE_URL` | backend | `sqlite:///./careerguide.db` | Any SQLAlchemy URL. Postgres works as written |
 | `DB_AUTO_SETUP` | backend | `true` | First boot creates tables and seeds. Set `false` once hosted |
 | `CORS_ORIGINS` | backend | localhost:3000 | Browser origins allowed to call the API |
-| `AI_PROVIDER` / `AI_API_KEY` / `AI_MODEL` | backend | `demo` / empty / empty | Any OpenAI-compatible provider |
-| `AI_BASE_URL` | backend | `https://api.openai.com/v1` | Swap for a compatible gateway |
-| `TTS_PROVIDER` | backend | `auto` | `auto` · `edge` · `azure` |
-| `AZURE_SPEECH_KEY` / `AZURE_SPEECH_REGION` | backend | empty | Required for voice on a cloud host (see §3) |
-| `TTS_VOICE_EN` / `TTS_VOICE_HI` | backend | `en-IN-NeerjaNeural` / `hi-IN-SwaraNeural` | Same ids on both speech services |
+| `AI_PROVIDER` / `AI_API_KEY` / `AI_MODEL` | backend | `demo` / empty / empty | Any OpenAI-compatible provider. `groq` is what this build is wired to |
+| `AI_BASE_URL` | backend | `https://api.openai.com/v1` | Swap for a compatible gateway — Groq uses `https://api.groq.com/openai/v1` |
+| `TTS_PROVIDER` | backend | `auto` | `auto` · `gemini` · `azure` · `edge` |
+| `GEMINI_API_KEY` / `GEMINI_TTS_MODEL` / `GEMINI_VOICE` | backend | empty / `gemini-3.8-flash-tts` / `Sulafat` | The voice the app uses now; `auto` prefers it whenever a key exists |
+| `AZURE_SPEECH_KEY` / `AZURE_SPEECH_REGION` | backend | empty | Alternative server voice (see §3) |
+| `TTS_VOICE_EN` / `TTS_VOICE_HI` | backend | `en-IN-NeerjaNeural` / `hi-IN-SwaraNeural` | Microsoft voice ids, used by the Azure and Edge routes |
 | `TTS_TIMEOUT_SECONDS` | backend | `25` | Synthesis timeout |
 | `SESSION_TOKEN_TTL_HOURS` | backend | `720` | Opaque device tokens in `auth_tokens` |
 | `NEXT_PUBLIC_BACKEND_URL` | frontend | `http://localhost:8000` | API origin the browser calls (baked at build time) |
@@ -107,14 +108,23 @@ run it after touching the catalogue.
 
 ### Real AI model
 
+The key lives in `backend/.env` (gitignored) and never reaches the browser:
+
 ```
-AI_PROVIDER=openai
+AI_PROVIDER=groq
 AI_API_KEY=<key, server-side only>
-AI_MODEL=<model name>
+AI_MODEL=openai/gpt-oss-120b
+AI_BASE_URL=https://api.groq.com/openai/v1
 ```
 
 Restart uvicorn. `/api/health` then reports `demo_mode: false` and the "Demo guide answer" labels
-disappear. Everything else works either way.
+disappear. Any OpenAI-compatible endpoint works the same way — only `AI_BASE_URL` and `AI_MODEL`
+change.
+
+One guard is worth knowing about: a reasoning model can spend the whole completion budget thinking
+and come back with an empty answer. That counts as a provider failure, so the student sees the
+built-in reply with the reason beside it instead of silence. (`openai/gpt-oss-20b` does this on Groq;
+`gpt-oss-120b` was chosen because it answers in Hindi, English and Hinglish.)
 
 ---
 
@@ -181,52 +191,71 @@ Serverless changed three things in the code:
 
 ## 3. Voice
 
-`TTS_PROVIDER`: `auto` uses Azure when key **and** region are set, else the free Edge endpoint;
-`edge` / `azure` force one. Both return the same mp3, the voice ids are the same Microsoft neural
-voices, and the chain is server audio → browser `speechSynthesis` → readable text. No extra
-dependency (plain `httpx`). What is spoken is the first `MAX_SPOKEN_CHARS` (1200) characters after
-markup is stripped, so a long reply is shortened, never rejected. `azure` with a missing key fails
-every spoken reply naming `AZURE_SPEECH_KEY` instead of quietly trying Edge — a broken setup should
-look broken.
+Three server transports, one chain: server audio → browser `speechSynthesis` → readable text.
 
-Honest status: Edge TTS produces real audio **from a home connection**. Microsoft answers `403` to
-datacenter egress IPs, so a deployed site is expected to fall back to the browser's own voice —
-which the screen says out loud. `backend/vercel.json` now asks for `bom1`, but **no real call has
-been recorded on the deployed instance yet** (`/api/health` → `tts_last_attempt.checked_at` is
-`null`, which is *not* the same as working). To get the Microsoft voices reliably, add an Azure key:
+| `TTS_PROVIDER` | Needs | Returns | Spoken length cap |
+| --- | --- | --- | --- |
+| `gemini` | `GEMINI_API_KEY` | `data:audio/wav;base64,…` (24 kHz mono) | 650 characters |
+| `azure` | `AZURE_SPEECH_KEY` + `AZURE_SPEECH_REGION` | `data:audio/mpeg;base64,…` | 1200 characters |
+| `edge` | nothing | `data:audio/mpeg;base64,…` | 1200 characters |
+| `auto` (default) | — | picks the first configured one, in the order above | — |
 
-1. portal.azure.com → Create a resource → **Speech** (not *Cognitive Services*), tier **F0**,
-   region e.g. **Central India**.
-2. Resource Management → **Keys and Endpoint** → copy **Key 1** and note the region string
-   (`centralindia`). A key only works in its own region — a mismatch answers `401`.
-3. Hand it to the server only, then redeploy (env changes do not apply to an existing deployment):
+What is spoken is the reply's first characters after markup is stripped, so a long answer is
+shortened rather than rejected. WAV is about four times the bytes of mp3 for the same sentence, which
+is why Gemini's cap is lower. Forcing a provider whose key is missing fails every spoken reply naming
+the variable to set instead of quietly downgrading — a broken setup should look broken. No extra
+dependency beyond `httpx` on any of the three paths.
+
+**Gemini voices.** `gemini-3.8-flash-tts` reads whichever script it is handed, so one voice carries
+Hindi, English and Hinglish; `GEMINI_VOICE` picks it (`Sulafat` is the default). Settings offers six
+warm/friendly prebuilt options and the picker only ever lists voices the *active* service can use — a
+Microsoft id cannot leak into a Gemini call, and a Gemini id cannot be sent to Azure.
+
+Honest status: a real Gemini call has produced playable audio from this machine (the test suite
+asserts it: `data:audio/wav`, over 20 KB, `tts_last_attempt.ok: true`). **The deployed API has no
+`GEMINI_API_KEY` yet**, so the live site still falls back to the browser's voice — `/api/health` on
+the deployed host reports what it actually did, and `checked_at: null` means *nobody has asked it for
+audio*, which is not the same as working.
+
+To put a real voice behind the deployed site:
 
 ```bash
-cd backend
-npx vercel env add AZURE_SPEECH_KEY production      # paste, Enter, Ctrl-D
-npx vercel env add AZURE_SPEECH_REGION production
-git commit -am "…" && git push origin main           # or: npx vercel redeploy <url>
+cd backend                                  # the Vercel project lives here, not at the repo root
+npx vercel env add GEMINI_API_KEY production    # paste, Enter, Ctrl-D
+git commit -am "…" && git push origin main       # or: npx vercel redeploy <url>
 ```
 
 Proof, not configuration: ask for one spoken reply, then read
 
 ```bash
 curl https://careerguide-api-omega.vercel.app/api/health
-# "tts_provider": "microsoft-azure-tts", "tts_last_attempt": {"ok": true, …}
+# "tts_provider": "google-gemini-tts", "tts_last_attempt": {"ok": true, …}
 ```
 
 `ok: false` means `reason` holds the readable failure and the student is hearing the browser voice.
 Settings → Language and voice shows the same answer, with a **Test the voice** button that asks the
 server for a real clip.
 
+The Azure route stays available for anyone who prefers the Microsoft neural voices:
+
+1. portal.azure.com → Create a resource → **Speech** (not *Cognitive Services*), tier **F0**,
+   region e.g. **Central India**.
+2. Resource Management → **Keys and Endpoint** → copy **Key 1** and note the region string
+   (`centralindia`). A key only works in its own region — a mismatch answers `401`.
+3. `npx vercel env add AZURE_SPEECH_KEY production` then `AZURE_SPEECH_REGION`, and redeploy.
+
 Cost and privacy:
 
-* F0 is free up to 500,000 characters/month (~3,000 spoken replies of 150 words), then stops until
-  the next month.
-* **On the free tier Microsoft may use submitted text to improve its service** (not on a paid tier).
-  The text sent is the guide's reply — never the student's microphone. If sending replies to a speech
-  vendor is unacceptable for children, keep the deployed site on the browser voice; that path needs no
-  key and sends nothing.
+* Gemini and Azure both receive the **text of the guide's reply** to turn into audio — never the
+  student's microphone, which is transcribed in the browser. Settings says this out loud, and the
+  same sentence is in `/api/voice/voices` → `note`.
+* Azure F0 is free up to 500,000 characters/month (~3,000 spoken replies of 150 words), then stops
+  until the next month. **On the free tier Microsoft may use submitted text to improve its service**
+  (not on a paid tier).
+* Edge TTS produces real audio from a home connection but answers `403` to datacenter egress IPs, so
+  a deployed site without a key is expected to fall back to the browser's own voice — which the
+  screen says. If sending replies to any speech vendor is unacceptable for children, keep the
+  deployed site on that path: it needs no key and sends nothing.
 * `scripts/tts_provider_test.py` covers all of this offline: SSML escaping of conversation text, the
   key travelling as a header rather than in a URL or the spoken body, `401`/empty/timeout messages
   that name neither the credential nor the reply, provider choice, and what `/api/health` reports.
@@ -238,8 +267,7 @@ Cost and privacy:
 | Route | Purpose |
 | --- | --- |
 | `/` | Landing, including "What CareerGuide AI will not do" |
-| `/onboarding` | One question — student or parent — optional nickname, two consent confirmations. Ends by showing the come-back code |
-| `/login` | Sign in with a come-back code |
+| `/onboarding` | One question — student or parent — optional nickname, two consent confirmations. There is no account to create afterwards |
 | `/app` | Student dashboard: journey counts, directions worth exploring, saved careers, next step |
 | `/app/call` | Voice call — 10 explicit states, captions, typed fallback, microphone only while listening |
 | `/app/chat` | The same conversation by typing, with dictation and read-aloud |
@@ -251,10 +279,10 @@ Cost and privacy:
 | `/app/resources` | Free learning resources |
 | `/app/scholarships` | Financial-guidance leads + "how to check a scheme is real" checklist |
 | `/app/institutes` | Sample directory; sponsored entries badged, order explicitly not a ranking |
-| `/app/settings` | Six icon rows, each opening a panel: language & voice, profile, privacy & consent, family access, sign-in code, about this build |
+| `/app/settings` | Six icon rows, each opening a panel: language & voice, profile, privacy & consent, family access, this device, about this build |
 | `/parent` | Parent dashboard: summary not surveillance, guidance, access management |
 
-### Profile facts, language, sign-in
+### Profile facts, language
 
 `services/profile_facts.py` gathers the rest of a profile inside the chat — `/onboarding` asks no
 factual question at all.
@@ -276,17 +304,41 @@ factual question at all.
   career/resource/scholarship/institute catalogue are English-only, there are no Hindi career titles,
   and dictation has no Hinglish locale (`hi-IN` / `en-IN`).
 
-**Sign-in has no email, phone or password.** Onboarding ends with a 15-character **come-back code**
-(alphabet without `O I 0 1`), shown once, replaceable from Settings — a new code kills the old one
-instantly. Only derived values are stored: `comeback_index` (first 48 hex of an unsalted SHA-256, so
-the server can find the row) and `comeback_hash` (salted PBKDF2-SHA256, 210,000 iterations, compared
-with `hmac.compare_digest`). The code cannot be recovered from the database. Wrong and unknown codes
-get an identical message, so the endpoint cannot enumerate accounts. **Lose the code, lose the
-account** — there is deliberately no recovery path.
+### There is no login: this prototype recognises the device
 
-Deploying this onto an existing database needs those two nullable columns (`create_all` never alters a
-table): `scripts/db_init.py` adds missing nullable columns and their index, and drops or rewrites
-nothing unless `--recreate-if-empty` is passed while every table is still empty.
+No email, no phone, no password, no sign-up screen — `/login` is gone and nothing in the UI offers a
+sign-in. `frontend/src/lib/device.ts` makes a random id on first visit (`crypto.randomUUID()`, or a
+`getRandomValues` hex fallback) and keeps it in this browser's `localStorage` under
+`careerguide.device-id`. On a later visit with no stored token, `POST /api/auth/guest {device_id}`
+asks one question — *has this device been here before?* — and answers `known: true` with a fresh
+session token, or `known: false` so the route guard sends the visitor to the single opening question.
+
+Two things make that safe rather than lazy:
+
+* The device id is a **lookup, not a credential**. It is never trusted on its own after the first
+  frame: every data request still carries the server-issued bearer token, and the ownership checks in
+  §6 run against that token. Guessing somebody else's id does not read their conversation.
+* `users.device_id` is unique-ish by construction: a second onboarding for a device the server
+  already knows is a `409`, not a silent second student on the same row.
+
+Settings → **This device** explains it in the student's words and offers **Start over**, which
+rotates the id. Rotating matters: revoking the token alone would leave the id recognised, and the
+same student would quietly come back on the next page load.
+
+**The honest limitation.** Progress belongs to one browser on one device. Clearing this site's data,
+using a private window, or switching phone starts a fresh student and there is nothing to recover the
+old one with — and anyone sitting at this browser can continue the conversation. Fine for a prototype
+demoed on your own machine; **not a shape to hand to real children**.
+
+The old account model has not been deleted from the server — `/api/auth/login` and the come-back-code
+endpoints still work and `scripts/login_test.py` still proves their hashing and anti-enumeration
+behaviour. Only the screens that offered them are gone, so adding a real sign-in later is a UI task,
+not a rewrite.
+
+Deploying this onto an existing database needs the new nullable columns (`create_all` never alters a
+table): `scripts/db_init.py` adds missing nullable columns and their index — `users.device_id`
+arrives this way, as it did on first boot here — and drops or rewrites nothing unless
+`--recreate-if-empty` is passed while every table is still empty.
 
 ---
 
@@ -296,6 +348,7 @@ nothing unless `--recreate-if-empty` is passed while every table is still empty.
 cd backend
 ./.venv/Scripts/python.exe scripts/smoke_test.py
 ./.venv/Scripts/python.exe scripts/login_test.py
+./.venv/Scripts/python.exe scripts/guest_session_test.py
 ./.venv/Scripts/python.exe scripts/conversation_facts_test.py
 ./.venv/Scripts/python.exe scripts/tts_provider_test.py
 ./.venv/Scripts/python.exe scripts/serverless_guard_test.py
@@ -308,19 +361,26 @@ Last full run (2026-10-14), on this machine:
 | Suite | Result |
 | --- | --- |
 | `smoke_test.py` — consent gates, server-side ownership, conversations, the AI provider call against a stand-in service, recommendations, plans, reports, transcript deletion, logout | **104 passed, 0 failed** |
-| `login_test.py` — come-back codes | **59 passed, 0 failed** |
+| `login_test.py` — come-back codes (still on the server, no screen offers them) | **60 passed, 0 failed** |
+| `guest_session_test.py` — the device-id entry path: new vs known device, one device one account, token still guards every read, start-over rotation, cross-device isolation | **40 passed, 0 failed** |
 | `conversation_facts_test.py` — the guide asking for facts inside the chat | **24 passed, 0 failed** |
-| `tts_provider_test.py` — SSML escaping, key as header, error messages, provider choice, `/api/health` | **45 passed, 0 failed, 1 skipped** (its live call needs a real Azure key; it prints `SKIP` rather than pretending) |
+| `tts_provider_test.py` — SSML escaping, key as header, error messages, provider choice, `/api/health`, plus a real Gemini synthesis | **75 passed, 0 failed, 1 skipped** (its live Azure call needs a real key; it prints `SKIP` rather than pretending. The live Gemini call did run and produced audio) |
 | `serverless_guard_test.py` — the no-database shape | **10 passed, 0 failed** |
 | `schema_fit_check.py` | 182 seeded values measured, **0 columns too short** |
 | `tsc --noEmit`, `eslint src` | clean |
-| `scripts/layout-shot.mjs` — every route screenshotted at 320, 390, 768 and 1440 px | 17 routes × 4 widths, **no horizontal overflow, no console errors** |
+| `scripts/layout-shot.mjs` — every route screenshotted at 320, 390, 768 and 1440 px | 16 routes × 4 widths = **64 shots, no horizontal overflow, no console errors, no failed requests** |
 
-Walked in a real browser with a signed-in session: onboarding → consent gate → dashboard, a Hinglish
-reply that learned a class and showed the badge, chat send → reply → spoken audio (an 8.8 s clip
-decoded from the data URL), call start → greeting → typed answer → spoken reply → end, voice-consent
-gate, career search + save, interests, plan + step status, report generation, resources /
-scholarships / institutes, parent share-code linking. No console errors on those routes.
+Walked in a real browser starting from a clean slate — no token, no login, only a device id:
+the one question → consent gate → dashboard, a **real Groq** Hinglish reply that learned a class and
+showed the badge, chat send → reply → **real Gemini** audio (a WAV decoded from the data URL), then
+the entry path itself: reloading the page with the token removed resumed the same student, a second
+profile with a different id was told it was new and saw none of the first one's data, and
+Settings → This device → Start over left the old id still recognised server-side while the browser
+came back as a fresh student. No console errors on those routes.
+
+The rest of the screens — call states, career search and save, interests, plans, reports, resources,
+scholarships, institutes, parent share-code linking — are exercised end to end by `smoke_test.py`
+against the real database and were re-screenshotted with a live session at every width below.
 
 Still needs your own testing:
 
@@ -329,19 +389,23 @@ Still needs your own testing:
   Chrome/Edge yes, Firefox/Safari inconsistently.
 * **Hearing the audio** and Hindi voice quality — no speakers here.
 * **Layouts** — every route was screenshotted at 320, 390, 768 and 1440 px by
-  `scripts/layout-shot.mjs`, which also asks the page whether it is wider than its window:
-  **68 sweeps, no horizontal overflow and no console errors**. What that tool cannot see is a
-  keyboard-only walkthrough of the ☰ drawer, and anything that needs a real microphone.
-* **Azure voice on the deployed site** (§3) and **real model replies** (needs a key).
+  `scripts/layout-shot.mjs`, which also asks the page whether it is wider than its window. All 64
+  shots were taken with a live session behind them (a student token for the `/app` screens, a
+  separately onboarded parent token for `/parent`): **no horizontal overflow and no console errors**.
+  What that tool cannot see is a keyboard-only walkthrough of the ☰ drawer, and anything that needs a
+  real microphone.
+* **The deployed site** (§3) still has no Groq or Gemini key, so live it is demo text plus the
+  browser's own voice. Adding them is two `vercel env add` commands and a redeploy.
 * **This is not full-duplex streaming audio** — one voice speaks at a time and the call screen says
-  so. Edge TTS needs internet; it is not an offline guarantee.
+  so. The server's speech service needs internet; none of these voices is an offline guarantee.
 
 ---
 
 ## 6. Rules the code enforces (not only the UI)
 
 * Access is checked server-side against the session token: a parent cannot read another family's
-  data by changing an id in a request.
+  data by changing an id in a request. The prototype's device id is only ever a lookup — sending it
+  as a bearer token is answered `401`, which `guest_session_test.py` asserts.
 * Consent is recorded per scope and gates voice and history; transcripts can be deleted by the
   student. Raw microphone audio is never stored, nothing records in the background, and no
   monitoring happens without an explicit, visible session.

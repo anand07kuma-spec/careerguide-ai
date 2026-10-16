@@ -31,7 +31,7 @@ export function RouteGuard({
     access === "any" || (access === "student" ? isStudent : isParent);
 
   const redirect =
-    status === "signed-out" ? "/login" : status === "ready" && !roleOk
+    status === "new-device" ? "/onboarding" : status === "ready" && !roleOk
       ? OTHER_HOME[access === "student" ? "student" : "parent"]
       : null;
 
@@ -62,8 +62,8 @@ export function RouteGuard({
           <Wordmark />
           <p className="text-sm font-semibold text-ink">The server is not answering</p>
           <p className="text-xs leading-relaxed text-muted">
-            Your sign-in is still on this device — nothing has been lost. This usually means
-            the backend is starting up or the internet dropped for a moment.
+            Nothing has been cleared on this device. This usually means the backend is starting
+            up, or the internet dropped for a moment.
           </p>
           <Button
             variant="secondary"
@@ -81,7 +81,7 @@ export function RouteGuard({
     );
   }
 
-  if (status === "signed-out" || !roleOk) {
+  if (status === "new-device" || !roleOk) {
     return (
       <div className="flex min-h-dvh items-center justify-center bg-canvas px-6 text-center">
         <p className="max-w-sm text-sm text-muted" role="status">

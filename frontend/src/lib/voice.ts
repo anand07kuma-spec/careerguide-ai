@@ -6,8 +6,9 @@
  * Two honest limits shape everything here:
  * - Speech recognition is the browser's Web Speech API. It is missing in some
  *   browsers, needs a microphone permission, and is not our server's capability.
- * - Replies are spoken by Edge text-to-speech, which needs an internet
- *   connection. Neither is offline, and neither is a human voice.
+ * - Replies are spoken by whichever server-side speech service is configured,
+ *   which needs an internet connection. Neither is offline, and neither is a
+ *   human voice.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -370,7 +371,7 @@ export function browserTtsSupported(): boolean {
 }
 
 /**
- * Used when the server's Edge text-to-speech is unavailable. It must be
+ * Used when the server's speech service is unavailable. It must be
  * labelled as the browser's own voice, because it sounds different.
  */
 export function speakWithBrowser(

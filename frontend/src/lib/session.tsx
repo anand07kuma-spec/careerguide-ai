@@ -10,9 +10,10 @@ import {
   type ReactNode,
 } from "react";
 import { api, ApiError, isOffline, setAuthToken } from "./api";
-import type { OnboardingPayload, Session, Settings, StudentProfile, User } from "./types";
+import { deviceId, rotateDeviceId } from "./device";
+import type { GuestResult, OnboardingPayload, Session, Settings, StudentProfile, User } from "./types";
 
-type Status = "loading" | "signed-out" | "ready" | "offline";
+type Status = "loading" | "new-device" | "ready" | "offline";
 
 /** A server that accepts the connection and then says nothing would otherwise
  * leave the student under "Checking your account…" with no way out. */
@@ -45,8 +46,8 @@ interface SessionValue {
   isStudent: boolean;
   isParent: boolean;
   completeOnboarding: (payload: OnboardingPayload) => Promise<Session>;
-  signIn: (code: string) => Promise<Session>;
-  signOut: () => Promise<void>;
+  /** Forget this device on the server and get a brand-new identity here. */
+  startOver: () => Promise<void>;
   saveSettings: (patch: Partial<Settings>) => Promise<void>;
   saveProfile: (patch: Record<string, unknown>) => Promise<void>;
   reload: () => Promise<void>;
@@ -79,26 +80,51 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setStatus("ready");
   }, []);
 
+  const clear = useCallback(() => {
+    setUser(null);
+    setProfile(null);
+    setSettings(EMPTY_SETTINGS);
+    setStatus("new-device");
+  }, []);
+
   const reload = useCallback(async () => {
     const stored = api.readStoredToken();
-    if (!stored) {
-      setAuthToken(null);
-      setStatus("signed-out");
+    if (stored) {
+      setAuthToken(stored);
+      try {
+        apply(await withDeadline(api.me(), CHECK_TIMEOUT_MS));
+      } catch (error) {
+        if (isOffline(error)) {
+          // The stored token *is* the account: there is no password to type again.
+          // A network that is merely down or slow must not throw the only copy away.
+          setStatus("offline");
+          return;
+        }
+        // A token the server refuses is genuinely stale. Ask the device again
+        // rather than assuming a stranger is sitting at this keyboard.
+        api.rememberToken(null);
+      }
       return;
     }
-    setAuthToken(stored);
+
+    // No token in this browser. The device id alone decides whether this is the
+    // same student coming back or somebody who has never been here.
     try {
-      apply(await withDeadline(api.me(), CHECK_TIMEOUT_MS));
+      const answer: GuestResult = await withDeadline(api.guest(deviceId()), CHECK_TIMEOUT_MS);
+      if (answer.known && answer.session) {
+        api.rememberToken(answer.session.token);
+        apply(answer.session);
+        return;
+      }
+      setStatus("new-device");
     } catch (error) {
       if (isOffline(error)) {
-        // The stored token *is* the account: there is no password to type again.
-        // A network that is merely down or slow must not throw the only copy away.
         setStatus("offline");
         return;
       }
-      // A token the server refuses is genuinely stale — back to signing in.
-      api.rememberToken(null);
-      setStatus("signed-out");
+      // An unusable device id (locked-down browser storage) still means: ask the
+      // one question and let the student in. Nothing is lost, nothing is assumed.
+      setStatus("new-device");
     }
   }, [apply]);
 
@@ -120,20 +146,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const completeOnboarding = useCallback(
     async (payload: OnboardingPayload) => {
-      const next = await api.onboarding(payload);
-      api.rememberToken(next.token);
-      apply(next);
-      // The caller has to show the come-back code, so it travels back out. It is
-      // never stored on this device — holding it in memory for one screen is the
-      // whole point of a code meant to be written down.
-      return next;
-    },
-    [apply],
-  );
-
-  const signIn = useCallback(
-    async (code: string) => {
-      const next = await api.login(code);
+      // The device is the account: this id is the only handle the server keeps
+      // for finding the work again on the next visit from this browser.
+      const next = await api.onboarding({ ...payload, device_id: deviceId() });
       api.rememberToken(next.token);
       apply(next);
       return next;
@@ -141,17 +156,18 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     [apply],
   );
 
-  const signOut = useCallback(async () => {
+  const startOver = useCallback(async () => {
     try {
       await api.logout();
     } catch {
       setAuthToken(null);
     }
+    // Revoking the token is not enough: the device id would still be recognised on
+    // the next page load and the same student would silently come back.
     api.rememberToken(null);
-    setUser(null);
-    setProfile(null);
-    setStatus("signed-out");
-  }, []);
+    rotateDeviceId();
+    clear();
+  }, [clear]);
 
   const saveSettings = useCallback(async (patch: Partial<Settings>) => {
     setSettings((current) => ({ ...current, ...patch }));
@@ -180,8 +196,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       isStudent: user?.role === "student",
       isParent: user?.role === "parent",
       completeOnboarding,
-      signIn,
-      signOut,
+      startOver,
       saveSettings,
       saveProfile,
       reload,
@@ -192,8 +207,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       profile,
       settings,
       completeOnboarding,
-      signIn,
-      signOut,
+      startOver,
       saveSettings,
       saveProfile,
       reload,

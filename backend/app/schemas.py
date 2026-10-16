@@ -11,6 +11,10 @@ Role = Literal["student", "parent"]
 Language = Literal["en", "hi", "hinglish"]
 MessageRole = Literal["user", "assistant", "system"]
 
+# The browser makes this itself (a UUID), so it is digits, letters and dashes and
+# nothing that could break a log line or a quote.
+DEVICE_ID_PATTERN = r"^[A-Za-z0-9_-]{16,64}$"
+
 
 class ORMModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -37,6 +41,9 @@ class OnboardingIn(BaseModel):
     consent_profile: bool = False
     consent_voice: bool = False
     consent_age: Literal["3-5", "6-8", "9-10", "11-12", "adult"] = "6-8"
+    # The device that is asking, so this account can be found again without a
+    # password. Optional: an account made before this existed simply has none.
+    device_id: str | None = Field(default=None, pattern=DEVICE_ID_PATTERN)
 
 
 class SessionOut(BaseModel):
@@ -47,6 +54,21 @@ class SessionOut(BaseModel):
     # Present only in the one response that mints a fresh code. The server keeps
     # just a salted digest, so a code can never be read back out afterwards.
     comeback_code: str | None = None
+
+
+class GuestIn(BaseModel):
+    device_id: str = Field(pattern=DEVICE_ID_PATTERN)
+
+
+class GuestOut(BaseModel):
+    """Whether this device has been here before, and the session if it has.
+
+    An unknown device is not a failure: it is a new student, who then answers the
+    one question onboarding asks.
+    """
+
+    known: bool
+    session: SessionOut | None = None
 
 
 class LoginIn(BaseModel):

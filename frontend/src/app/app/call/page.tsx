@@ -714,8 +714,8 @@ export default function VoiceCallPage() {
         <p className="mt-4 pb-6 text-center text-[11px] leading-relaxed text-white/40">
           The microphone only records while the call screen is listening — never in the background,
           and raw audio is not stored. Speech recognition is your browser&apos;s, spoken replies come
-          from Microsoft Edge text-to-speech over the internet, and this is not full-duplex
-          streaming: one voice speaks at a time.
+          from the server&apos;s speech service over the internet (Settings names which one), and this
+          is not full-duplex streaming: one voice speaks at a time.
         </p>
       </div>
     </div>

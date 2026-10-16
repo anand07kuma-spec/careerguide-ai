@@ -5,7 +5,6 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from ..config import get_settings
 from ..database import get_db
 from ..models import User
 from ..schemas import TTSIn, VoiceInfoOut
@@ -17,12 +16,13 @@ router = APIRouter(prefix="/api/voice", tags=["voice"])
 
 @router.get("/voices", response_model=VoiceInfoOut)
 def voices() -> VoiceInfoOut:
-    settings = get_settings()
     return VoiceInfoOut(
         voices=tts.voice_options(),
         provider=tts.provider(),
         note=tts.provider_note(),
-        default_voice=settings.tts_voice_en,
+        # The voice this service would actually use, so the picker can start on a
+        # name the student can hear rather than a Microsoft id with a Gemini key.
+        default_voice=tts.voice_for("en"),
     )
 
 

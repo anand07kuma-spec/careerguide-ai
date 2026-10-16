@@ -73,7 +73,7 @@ function isActive(pathname: string, href: string) {
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const { status, user, profile, isParent, signOut } = useSession();
+  const { status, user, profile, isParent } = useSession();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const openButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -193,13 +193,6 @@ export function AppShell({ children }: { children: ReactNode }) {
               {user?.role === "parent" ? "Parent account" : classLabel(profile?.class_level) ?? "Student"}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => void signOut()}
-            className="rounded-lg px-2 py-1 text-[11px] font-medium text-white/60 hover:bg-white/10 hover:text-white"
-          >
-            Sign out
-          </button>
         </div>
       </div>
     </nav>
@@ -288,16 +281,6 @@ export function AppShell({ children }: { children: ReactNode }) {
             <p className="min-w-0 flex-1 truncate text-xs font-medium text-white">
               {user?.display_name}
             </p>
-            <button
-              type="button"
-              onClick={() => {
-                closeDrawer(false);
-                void signOut();
-              }}
-              className="shrink-0 rounded-lg px-2 py-1 text-[11px] font-medium text-white/60 hover:bg-white/10 hover:text-white"
-            >
-              Sign out
-            </button>
           </div>
         </div>
       </div>

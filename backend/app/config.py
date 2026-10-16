@@ -47,14 +47,20 @@ class Settings(BaseSettings):
     tts_voice_en: str = "en-IN-NeerjaNeural"
     tts_timeout_seconds: int = 25
 
-    # auto = Azure when its key is present, otherwise the free Edge endpoint.
-    # Microsoft's Edge read-aloud service answers 403 to datacenter egress IPs, so
-    # a deployment on serverless hosting needs `azure` (or a key set) to speak.
-    # Forcing `azure` without a key fails loudly instead of silently downgrading.
+    # auto = the best configured service for this host, in the order below.
+    # Microsoft's Edge read-aloud endpoint answers 403 to datacenter egress IPs, so
+    # a deployment on serverless hosting needs gemini or azure. Forcing a provider
+    # whose key is missing fails loudly instead of silently downgrading.
     tts_provider: str = "auto"
     azure_speech_key: str = ""
     # The Speech resource's own region, e.g. "eastus". The key only works there.
     azure_speech_region: str = ""
+
+    gemini_api_key: str = ""
+    gemini_tts_model: str = "gemini-3.8-flash-tts"
+    # One voice carries Hindi, English and Hinglish: Gemini reads the script of the
+    # text it is given. "Sulafat" is Google's warmest prebuilt voice.
+    gemini_voice: str = "Sulafat"
 
     session_token_ttl_hours: int = 720
 

@@ -93,12 +93,8 @@ export default function LandingPage() {
             </a>
           </nav>
           <div className="flex items-center gap-2">
-            {/* Below `sm` the header has room for one action only, and that is the
-                one that matters. The hero's own "Sign in" is a scroll below, so
-                nothing becomes unreachable by hiding the duplicate. */}
-            <LinkButton size="sm" variant="ghost" href="/login" className="hidden sm:inline-flex">
-              Sign in
-            </LinkButton>
+            {/* There is no sign-in to offer: this device is the account, so the only
+                action a visitor needs is the one question on the first screen. */}
             <LinkButton size="sm" href="/onboarding">
               Get started
               <ArrowRight className="h-4 w-4" aria-hidden />
@@ -347,9 +343,6 @@ export default function LandingPage() {
               <LinkButton size="lg" className="shrink-0" href="/onboarding">
                 Get started
                 <ArrowRight className="h-4 w-4" aria-hidden />
-              </LinkButton>
-              <LinkButton size="lg" variant="outline" href="/login" className="shrink-0">
-                Sign in
               </LinkButton>
             </div>
           </Card>
