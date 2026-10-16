@@ -658,7 +658,7 @@ export default function StudentHome() {
                 <span>
                   <span className="block text-sm font-semibold text-ink">Privacy, consent and a parent link</span>
                   <span className="mt-0.5 block text-xs text-muted">
-                    What is stored, who may see it, and your sign-in code.
+                    What is stored, who may see it, and what this device remembers.
                   </span>
                 </span>
               </span>

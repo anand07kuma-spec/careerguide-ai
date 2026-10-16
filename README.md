@@ -211,21 +211,20 @@ Hindi, English and Hinglish; `GEMINI_VOICE` picks it (`Sulafat` is the default).
 warm/friendly prebuilt options and the picker only ever lists voices the *active* service can use — a
 Microsoft id cannot leak into a Gemini call, and a Gemini id cannot be sent to Azure.
 
-Honest status: a real Gemini call has produced playable audio from this machine (the test suite
-asserts it: `data:audio/wav`, over 20 KB, `tts_last_attempt.ok: true`). **The deployed API has no
-`GEMINI_API_KEY` yet**, so the live site still falls back to the browser's voice — `/api/health` on
-the deployed host reports what it actually did, and `checked_at: null` means *nobody has asked it for
-audio*, which is not the same as working.
+Honest status: a real Gemini call has produced playable audio from this machine and **from the
+deployed API too** — `https://careerguide-api-omega.vercel.app/api/health` currently answers
+`"tts_provider": "google-gemini-tts"` with `"tts_last_attempt": {"ok": true}`, which is the proof, not
+the dashboard setting. `checked_at: null` on that host would mean *nobody has asked it for audio*,
+which is not the same as working.
 
-To put a real voice behind the deployed site:
+One thing to know before pointing this at a long-lived database: **the deployed API does not run its
+startup schema sync** — a serverless import never reaches that hook, so a column added to a model
+after the database was created simply is not there, and the first request touching it answers `500`.
+That is exactly how `POST /api/auth/guest` failed here on the day it shipped. Run
+`scripts/db_init.py` against the deployment's own `DATABASE_URL` after every model change
+(`npx vercel env pull .env.live --environment=production` to get it, then delete the file).
 
-```bash
-cd backend                                  # the Vercel project lives here, not at the repo root
-npx vercel env add GEMINI_API_KEY production    # paste, Enter, Ctrl-D
-git commit -am "…" && git push origin main       # or: npx vercel redeploy <url>
-```
-
-Proof, not configuration: ask for one spoken reply, then read
+To check what the live site is really doing, ask it directly:
 
 ```bash
 curl https://careerguide-api-omega.vercel.app/api/health
@@ -394,8 +393,9 @@ Still needs your own testing:
   separately onboarded parent token for `/parent`): **no horizontal overflow and no console errors**.
   What that tool cannot see is a keyboard-only walkthrough of the ☰ drawer, and anything that needs a
   real microphone.
-* **The deployed site** (§3) still has no Groq or Gemini key, so live it is demo text plus the
-  browser's own voice. Adding them is two `vercel env add` commands and a redeploy.
+* **The deployed site** — live it is now a real Groq reply and a real Gemini voice, verified through
+  the API on 2026-10-16, but nobody has *listened* to that audio or walked the guest flow in a browser
+  on the production URL. Do that before showing it to anyone.
 * **This is not full-duplex streaming audio** — one voice speaks at a time and the call screen says
   so. The server's speech service needs internet; none of these voices is an offline guarantee.
 
