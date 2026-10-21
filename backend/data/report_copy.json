@@ -1,0 +1,218 @@
+{
+  "version": "1",
+  "_about": "The words the generated PDF carries. Everything a student's own answers supply — area names, bands, caveats, the catalogue note — comes from the assessment bank and the scoring service instead, so this file holds only the report's own chrome. English keys, so a missing translation is visible in the drawing code rather than silent.",
+  "strings": {
+    "Career report": {
+      "en": "Career report",
+      "hi": "करियर रिपोर्ट"
+    },
+    "Prepared for": {
+      "en": "Prepared for",
+      "hi": "इनके लिए"
+    },
+    "Class": {
+      "en": "Class",
+      "hi": "कक्षा"
+    },
+    "Date of the questionnaire": {
+      "en": "Date of the questionnaire",
+      "hi": "प्रश्नावली की तारीख़"
+    },
+    "Date this PDF was made": {
+      "en": "Date this PDF was made",
+      "hi": "यह PDF किस दिन बना"
+    },
+    "Questions were asked in": {
+      "en": "Questions were asked in",
+      "hi": "सवाल किस भाषा में पूछे गए"
+    },
+    "Hindi": {
+      "en": "Hindi",
+      "hi": "हिन्दी"
+    },
+    "English": {
+      "en": "English",
+      "hi": "अंग्रेज़ी"
+    },
+    "What this is": {
+      "en": "What this is",
+      "hi": "यह क्या है"
+    },
+    "A self-questionnaire, not a diagnosis": {
+      "en": "A self-questionnaire, not a diagnosis",
+      "hi": "यह स्व-प्रश्नावली है, कोई निदान नहीं"
+    },
+    "This report holds one student's own answers to a questionnaire they chose to take. It is not a diagnosis, an IQ score, a rank or a prediction about a future. Only the practice puzzles were marked right or wrong, and those say more about practice than about ability.": {
+      "en": "This report holds one student's own answers to a questionnaire they chose to take. It is not a diagnosis, an IQ score, a rank or a prediction about a future. Only the practice puzzles were marked right or wrong, and those say more about practice than about ability.",
+      "hi": "इस रिपोर्ट में एक विद्यार्थी के अपने जवाब हैं, उस प्रश्नावली के जो उसने खुद भरने का फ़ैसला किया। यह कोई निदान नहीं है, न IQ स्कोर है, न रैंक है और न भविष्य की कोई भविष्यवाणी। केवल पहेलियों को सही या ग़लत माना गया है, और वे प्रतिभा से ज़्यादा अभ्यास के बारे में बताती हैं।"
+    },
+    "Inside this report": {
+      "en": "Inside this report",
+      "hi": "इस रिपोर्ट में"
+    },
+    "Summary": {
+      "en": "Summary",
+      "hi": "सारांश"
+    },
+    "The shape of each answer set": {
+      "en": "The shape of each answer set",
+      "hi": "हर जवाबों का आकार"
+    },
+    "Careers worth a look": {
+      "en": "Careers worth a look",
+      "hi": "एक नज़र इन करियर पर"
+    },
+    "Next steps": {
+      "en": "Next steps",
+      "hi": "अब आगे"
+    },
+    "How much you answered": {
+      "en": "How much you answered",
+      "hi": "आपने कितना भरा"
+    },
+    "Not in this report": {
+      "en": "Not in this report",
+      "hi": "इस रिपोर्ट में नहीं"
+    },
+    "{answered} of {total} questions answered ({percent}%)": {
+      "en": "{answered} of {total} questions answered ({percent}%)",
+      "hi": "{total} में से {answered} सवालों के जवाब दिए ({percent}%)"
+    },
+    "{count} answers could not be scored and were left out.": {
+      "en": "{count} answers could not be scored and were left out.",
+      "hi": "{count} जवाब जाँचे नहीं जा सके, इसलिए छोड़ दिए गए।"
+    },
+    "What each area came back as": {
+      "en": "What each area came back as",
+      "hi": "हर क्षेत्र में क्या आया"
+    },
+    "Area": {
+      "en": "Area",
+      "hi": "क्षेत्र"
+    },
+    "Score": {
+      "en": "Score",
+      "hi": "स्कोर"
+    },
+    "How it reads": {
+      "en": "How it reads",
+      "hi": "इसे ऐसे पढ़ें"
+    },
+    "Answered": {
+      "en": "Answered",
+      "hi": "जवाब दिए"
+    },
+    "No number yet": {
+      "en": "No number yet",
+      "hi": "अभी कोई संख्या नहीं"
+    },
+    "What these numbers are not": {
+      "en": "What these numbers are not",
+      "hi": "ये संख्याएँ क्या नहीं हैं"
+    },
+    "{name}: your shape": {
+      "en": "{name}: your shape",
+      "hi": "{name}: आपका आकार"
+    },
+    "One line per area. Longer means more of your strongest answers fell in that area.": {
+      "en": "One line per area. Longer means more of your strongest answers fell in that area.",
+      "hi": "हर क्षेत्र के लिए एक रेखा। जितनी लंबी, उतने ही आपके मज़बूत जवाब उस क्षेत्र में आए।"
+    },
+    "Not enough areas are scored yet for a shape, so each area is listed on its own.": {
+      "en": "Not enough areas are scored yet for a shape, so each area is listed on its own.",
+      "hi": "आकार बनाने के लिए पर्याप्त क्षेत्र भरे नहीं गए, इसलिए हर क्षेत्र अलग से दिखाया गया है।"
+    },
+    "Areas with no number are left out of the shape rather than drawn as zero.": {
+      "en": "Areas with no number are left out of the shape rather than drawn as zero.",
+      "hi": "जिन क्षेत्रों का स्कोर नहीं है उन्हें आकार से बाहर रखा गया है — उन्हें शून्य नहीं दिखाया गया।"
+    },
+    "Every area, with its number": {
+      "en": "Every area, with its number",
+      "hi": "हर क्षेत्र, अपने स्कोर के साथ"
+    },
+    "Career": {
+      "en": "Career",
+      "hi": "करियर"
+    },
+    "It came from": {
+      "en": "It came from",
+      "hi": "यह सुझाव आया"
+    },
+    "Status": {
+      "en": "Status",
+      "hi": "स्थिति"
+    },
+    "Sample data — verify": {
+      "en": "Sample data — verify",
+      "hi": "नमूना डेटा — जाँचें"
+    },
+    "Verified source": {
+      "en": "Verified source",
+      "hi": "जाँची गई जानकारी"
+    },
+    "These are starting points to read about, not admissions advice. Nothing here predicts that you will get in, or that you will like it.": {
+      "en": "These are starting points to read about, not admissions advice. Nothing here predicts that you will get in, or that you will like it.",
+      "hi": "ये पढ़ने के लिए शुरुआती बिंदु हैं, प्रवेश की सलाह नहीं। यहाँ कुछ भी यह नहीं कहता कि आप चुने जाएँगे या कि आपको यह पसंद आएगा।"
+    },
+    "No careers are listed because no area had enough answers to point at one. That is a normal result of doing only a few questions.": {
+      "en": "No careers are listed because no area had enough answers to point at one. That is a normal result of doing only a few questions.",
+      "hi": "कोई करियर सूची में नहीं है, क्योंकि किसी क्षेत्र में इतने जवाब थे ही नहीं कि कुछ कहा जा सके। यह सामान्य बात है जब आपने कम सवाल भरे हों।"
+    },
+    "Career names are printed in English: the catalogue has no Hindi titles, and the app translates them on screen.": {
+      "en": "Career names are printed in English: the catalogue has no Hindi titles, and the app translates them on screen.",
+      "hi": "करियर के नाम अंग्रेज़ी में छपे हैं: कैटलॉग में उनके हिन्दी नाम नहीं हैं, ऐप उन्हें स्क्रीन पर अनुवादित करता है।"
+    },
+    "{area} has no number yet — {count} more answers there would change that.": {
+      "en": "{area} has no number yet — {count} more answers there would change that.",
+      "hi": "{area} का अभी कोई स्कोर नहीं है — वहाँ {count} और जवाब देने से यह बदल जाएगा।"
+    },
+    "Read what one of these careers is actually like: {career}.": {
+      "en": "Read what one of these careers is actually like: {career}.",
+      "hi": "इनमें से किसी एक करियर का असली दिन कैसा होता है, वह पढ़ें: {career}।"
+    },
+    "Talk to your AI Guide about anything on these pages.": {
+      "en": "Talk to your AI Guide about anything on these pages.",
+      "hi": "इन पेजों में से किसी भी बात पर अपने AI गाइड से बात करें।"
+    },
+    "Check fees, entry requirements and dates on an official website before planning around anything here.": {
+      "en": "Check fees, entry requirements and dates on an official website before planning around anything here.",
+      "hi": "यहाँ की किसी भी बात पर योजना बनाने से पहले फ़ीस, प्रवेश शर्तें और तारीख़ें आधिकारिक वेबसाइट से जाँच लें।"
+    },
+    "Take the other questionnaires when you feel like it. Three shapes say more than one.": {
+      "en": "Take the other questionnaires when you feel like it. Three shapes say more than one.",
+      "hi": "जब मन हो, बाकी प्रश्नावलियाँ भी भरें। तीन आकार एक से ज़्यादा बताते हैं।"
+    },
+    "Not taken yet: {names}.": {
+      "en": "Not taken yet: {names}.",
+      "hi": "अभी नहीं भरी: {names}।"
+    },
+    "Re-read this in a month. Interests move, and a page that no longer fits is useful information.": {
+      "en": "Re-read this in a month. Interests move, and a page that no longer fits is useful information.",
+      "hi": "एक महीने बाद इसे फिर पढ़ें। रुचियाँ बदलती हैं, और जो पेज अब नहीं जमता वह भी काम की जानकारी है।"
+    },
+    "Questionnaires in this report": {
+      "en": "Questionnaires in this report",
+      "hi": "इस रिपोर्ट की प्रश्नावलियाँ"
+    },
+    "Page {page} of {total}": {
+      "en": "Page {page} of {total}",
+      "hi": "पृष्ठ {page} / {total}"
+    },
+    "Corrections and questions: {repo}": {
+      "en": "Corrections and questions: {repo}",
+      "hi": "सुधार और सवाल: {repo}"
+    },
+    "No support email or postal address is set up for this build yet — the contact page says so plainly.": {
+      "en": "No support email or postal address is set up for this build yet — the contact page says so plainly.",
+      "hi": "इस बिल्ड के लिए अभी कोई सहायता ईमेल या डाक पता नहीं बनाया गया है — संपर्क पृष्ठ यह स्पष्ट रूप से कहता है।"
+    },
+    "Where this file lives": {
+      "en": "Where this file lives",
+      "hi": "यह फ़ाइल कहाँ रहती है"
+    },
+    "This PDF is stored on the server so you can download it again. It belongs to the account that answered the questionnaire, and deleting that result deletes this file. Nothing in it is sent to a school, an institute or an advertiser.": {
+      "en": "This PDF is stored on the server so you can download it again. It belongs to the account that answered the questionnaire, and deleting that result deletes this file. Nothing in it is sent to a school, an institute or an advertiser.",
+      "hi": "यह PDF सर्वर पर सहेजा जाता है ताकि आप इसे दोबारा उठा सकें। यह उसी खाते का है जिसने प्रश्नावली भरी, और उस रिज़ल्ट को हटाने पर यह फ़ाइल भी हट जाती है। इसका कुछ भी किसी स्कूल, संस्थान या विज्ञापनदाता को नहीं भेजा जाता।"
+    }
+  }
+}

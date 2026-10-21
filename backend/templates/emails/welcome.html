@@ -1,0 +1,47 @@
+{#
+  Welcome. Context: `name` (the account's display name, as typed by its owner).
+
+  Sent to an address that has already been proved to belong to whoever typed it:
+  either the confirmation link below it was opened, or the address matched a Clerk
+  account that had already verified it. So this message can say the account is ready
+  without asking anyone to trust a mail they did not request.
+
+  There is no "explore your personalised career path!" paragraph. The last line is
+  the one that matters on a shared family mailbox: how to make this stop.
+#}
+{% extends "base.html" %}
+
+{% block title %}{{ txt(site_name ~ " is ready", site_name ~ " तैयार है") }}{% endblock %}
+{% block preheader %}{{ txt("Your address is confirmed on this account", "इस खाते पर आपका पता पुष्ट हो चुका है") }}{% endblock %}
+
+{% block eyebrow %}{{ txt("Account ready", "खाता तैयार है") }}{% endblock %}
+
+{% block heading %}
+  {{ txt("Welcome" ~ (", " ~ name if name else "") ~ ".", (name ~ "," if name else "") ~ " आपका स्वागत है।") }}
+{% endblock %}
+
+{% block body %}
+  <p style="margin:0 0 14px;">
+    {{ txt("This address is now attached to a", "यह पता अब एक") }}
+    <strong style="color:#0b1730;">{{ site_name }}</strong>
+    {{ txt("account, and the confirmation link you opened has switched it on. From now on the account can write to this address — and only the kinds of messages that were agreed to, one at a time.", "खाते से जोड़ा गया है, और जिस पुष्टि लिंक को आपने खोला, वह उसे चालू कर चुका है। अब यह खाता इस पते पर लिख सकता है — मगर केवल उन्हीं संदेशों के लिए, जिनकी अलग-अलग अनुमति दी गई हो।") }}
+  </p>
+  <p style="margin:0 0 14px;">
+    {{ txt("Everything that account holds came out of talking to the guide: the conversations, the questionnaires, the report. It stays there. A message like this one carries no answers inside it, and nothing in this app follows you to another site.", "इस खाते में जो कुछ है, वह मार्गदर्शक से बातचीत से आया है: संवाद, प्रश्नावली, रिपोर्ट। वहीँ रहेगा। इस तरह के संदेश के अंदर बच्चे के कोई उत्तर नहीं होते, और यह ऐप आपके पीछे दूसरी साइटों तक नहीं जाता।") }}
+  </p>
+  <p style="margin:0 0 18px;">
+    {{ txt("Open it whenever you like. One question about what you actually do all day is enough to start.", "जब चाहें खोलें। शुरू करने के लिए एक ही सवाल काफ़ी है कि आप सारा दिन असल में क्या करते हैं।") }}
+  </p>
+  <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 22px;">
+    <tr>
+      <td style="border-radius:12px;background:#1f4ed0;">
+        <a href="{{ site_url }}" style="display:inline-block;padding:12px 22px;font-family:Arial,'Noto Sans',sans-serif;font-size:15px;font-weight:600;line-height:20px;color:#ffffff;text-decoration:none;">{{ txt("Open the guide", "मार्गदर्शक खोलें") }}</a>
+      </td>
+    </tr>
+  </table>
+  <p style="margin:0;padding:14px 16px;background:#f4f7fd;border-radius:12px;color:#41536e;">
+    {{ txt("Did not ask for this? Either somebody mistyped their own address, or they typed yours.", "अगर आपने यह नहीं माँगा? हो सकता है किसी ने अपना पता गलत लिख दिया, या उसने आपका पता लिख दिया।") }}
+    <a href="{{ site_url }}/app/settings" style="color:#3f6fe0;">{{ txt("Remove it from the account", "खाते से यह पता हटाएँ") }}</a>
+    {{ txt(", and no further message will be sent.", " — उसके बाद कोई संदेश नहीं जाएगा।") }}
+  </p>
+{% endblock %}

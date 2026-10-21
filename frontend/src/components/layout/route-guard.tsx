@@ -6,6 +6,7 @@ import { RefreshCw } from "lucide-react";
 import { Wordmark } from "@/components/brand";
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
+import { useT } from "@/lib/i18n";
 import { useSession } from "@/lib/session";
 
 type Access = "any" | "student" | "parent";
@@ -25,6 +26,7 @@ export function RouteGuard({
 }) {
   const { status, isStudent, isParent, reload } = useSession();
   const router = useRouter();
+  const t = useT();
   const [retrying, setRetrying] = useState(false);
 
   const roleOk =
@@ -45,7 +47,7 @@ export function RouteGuard({
         <div className="flex flex-col items-center gap-3">
           <Wordmark />
           <p className="text-sm text-muted" role="status">
-            Checking your account…
+            {t("Checking your account…")}
           </p>
         </div>
       </div>
@@ -60,10 +62,11 @@ export function RouteGuard({
       <div className="flex min-h-dvh items-center justify-center bg-canvas px-6">
         <div className="flex max-w-sm flex-col items-center gap-3 text-center">
           <Wordmark />
-          <p className="text-sm font-semibold text-ink">The server is not answering</p>
+          <p className="text-sm font-semibold text-ink">{t("The server is not answering")}</p>
           <p className="text-xs leading-relaxed text-muted">
-            Nothing has been cleared on this device. This usually means the backend is starting
-            up, or the internet dropped for a moment.
+            {t(
+              "Nothing has been cleared on this device. This usually means the backend is starting up, or the internet dropped for a moment.",
+            )}
           </p>
           <Button
             variant="secondary"
@@ -74,7 +77,7 @@ export function RouteGuard({
             }}
           >
             <RefreshCw className="h-4 w-4" aria-hidden />
-            Try again
+            {t("Try again")}
           </Button>
         </div>
       </div>
@@ -85,7 +88,7 @@ export function RouteGuard({
     return (
       <div className="flex min-h-dvh items-center justify-center bg-canvas px-6 text-center">
         <p className="max-w-sm text-sm text-muted" role="status">
-          Taking you to the right place…
+          {t("Taking you to the right place…")}
         </p>
       </div>
     );

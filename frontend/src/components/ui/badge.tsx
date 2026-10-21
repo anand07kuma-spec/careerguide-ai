@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 type Tone = "brand" | "teal" | "neutral" | "success" | "warning" | "danger";
@@ -50,9 +51,10 @@ export function VerificationBadge({
   verified: boolean;
   className?: string;
 }) {
+  const t = useT();
   return (
     <Badge tone={verified ? "success" : "warning"} className={className}>
-      {verified ? "Verified source" : "Verify on official site"}
+      {verified ? t("Verified source") : t("Verify on official site")}
     </Badge>
   );
 }
@@ -64,6 +66,7 @@ export function EvidenceBadge({
   level: "early" | "some" | "good";
   className?: string;
 }) {
+  const t = useT();
   const map = {
     early: { tone: "warning" as Tone, label: "Early signal" },
     some: { tone: "brand" as Tone, label: "Some evidence" },
@@ -72,7 +75,7 @@ export function EvidenceBadge({
   const item = map[level];
   return (
     <Badge tone={item.tone} className={className}>
-      {item.label}
+      {t(item.label)}
     </Badge>
   );
 }

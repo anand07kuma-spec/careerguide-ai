@@ -1,0 +1,980 @@
+{
+  "version": "1",
+  "note": {
+    "en": "These questions were written for this app, in house. They are self-questionnaires in the RIASEC and Big Five traditions, not licensed clinical instruments, and they are not a diagnosis, an IQ score, or a prediction about any child.",
+    "hi": "ये सवाल इस ऐप के लिए खुद लिखे गए हैं। ये RIASEC और Big Five परंपरा के स्व-प्रश्नावली हैं, लाइसेंस प्राप्त क्लीनिकल टेस्ट नहीं — और न ही किसी बच्चे का निदान, IQ स्कोर या भविष्यवाणी हैं।"
+  },
+  "scale": {
+    "likert": [
+      { "value": 1, "label": { "en": "Not me at all", "hi": "यह बिल्कुल नहीं" } },
+      { "value": 2, "label": { "en": "Rarely me", "hi": "शायद ही ऐसा होता है" } },
+      { "value": 3, "label": { "en": "Sometimes me", "hi": "कभी-कभी ऐसा होता है" } },
+      { "value": 4, "label": { "en": "Often me", "hi": "अक्सर ऐसा होता है" } },
+      { "value": 5, "label": { "en": "Very much me", "hi": "बिल्कुल ऐसा ही है" } }
+    ]
+  },
+  "instruments": [
+    {
+      "type": "interest",
+      "name": { "en": "What you are drawn to", "hi": "आपकी रुचियाँ" },
+      "blurb": {
+        "en": "Thirty everyday statements about what you enjoy doing. Answers are added up into six interest areas so you can see which kinds of work might feel good to you.",
+        "hi": "आपको क्या करना अच्छा लगता है, इस पर तीस आम बातें। जवाबों से छह रुचि-क्षेत्र बनते हैं, ताकि आप देख सकें कि कौन-सा काम आपको अच्छा लग सकता है।"
+      },
+      "minutes": 8,
+      "min_class": 6,
+      "response": "likert",
+      "dimensions": {
+        "R": {
+          "name": { "en": "Building and doing", "hi": "बनाना और करना" },
+          "blurb": {
+            "en": "Working with your hands, tools, machines, animals or the outdoors, and seeing a real thing at the end.",
+            "hi": "हाथों, औज़ारों, मशीनों, जानवरों या खुले में काम करना और अंत में एक असली चीज़ देखना।"
+          }
+        },
+        "I": {
+          "name": { "en": "Investigating and figuring out", "hi": "जाँचना और समझना" },
+          "blurb": {
+            "en": "Asking why, testing ideas, solving puzzles, and working things out from evidence.",
+            "hi": "यह पूछना कि क्यों, विचारों की जाँच करना, पहेलियाँ सुलझाना और सबूत से बात तक पहुँचना।"
+          }
+        },
+        "A": {
+          "name": { "en": "Creating and expressing", "hi": "रचना और अभिव्यक्ति" },
+          "blurb": {
+            "en": "Making things that did not exist before — art, writing, music, design, performance.",
+            "hi": "पहले जो नहीं था उसे बनाना — कला, लेखन, संगीत, डिज़ाइन, प्रस्तुति।"
+          }
+        },
+        "S": {
+          "name": { "en": "Helping and teaching", "hi": "मदद और शिक्षण" },
+          "blurb": {
+            "en": "Explaining, caring for, training or supporting people, and noticing how they are doing.",
+            "hi": "समझाना, देखभाल करना, प्रशिक्षण देना या लोगों का साथ देना, और यह भाँपना कि वे कैसे हैं।"
+          }
+        },
+        "E": {
+          "name": { "en": "Leading and persuading", "hi": "नेतृत्व और मनाना" },
+          "blurb": {
+            "en": "Starting things, organising people, speaking up, and going after a goal that needs others.",
+            "hi": "कुछ शुरू करना, लोगों को जोड़ना, आगे आकर बोलना, और ऐसा लक्ष्य पाना जिसमें दूसरों की ज़रूरत हो।"
+          }
+        },
+        "C": {
+          "name": { "en": "Organising and checking", "hi": "व्यवस्था और जाँच" },
+          "blurb": {
+            "en": "Keeping records, following steps, spotting the mistake, and making systems run smoothly.",
+            "hi": "रिकॉर्ड साफ़ रखना, क्रम से चलना, ग़लती पकड़ना, और काम को सुचारू रूप से चलाना।"
+          }
+        }
+      },
+      "caveat": {
+        "en": "Interests change, sometimes a lot, and a busy week can shift these answers. This is a picture of right now, not a fixed type, and it never decides which stream or career is open to you.",
+        "hi": "रुचियाँ बदलती हैं, कभी बहुत ज़्यादा बदलती हैं, और एक व्यस्त हफ़्ते में जवाब भी बदल सकते हैं। यह अभी का चित्र है, कोई पक्का प्रकार नहीं — और यह तय नहीं करता कि आपके लिए कौन-सा स्ट्रीम या करियर खुला है।"
+      }
+    },
+    {
+      "type": "personality",
+      "name": { "en": "How you tend to work", "hi": "आप कैसे काम करते हैं" },
+      "blurb": {
+        "en": "Twenty statements about habits and temperament, in the Big Five tradition. Read as descriptions of how you like to work, not as labels on who you are.",
+        "hi": "आदतों और स्वभाव पर बीस बातें, Big Five परंपरा में। इन्हें इस तरह पढ़ें कि आपको काम कैसे पसंद है — आप कौन हैं, इसका लेबल बनाने के लिए नहीं।"
+      },
+      "minutes": 6,
+      "min_class": 6,
+      "response": "likert",
+      "dimensions": {
+        "O": {
+          "name": { "en": "Openness to new things", "hi": "नई चीज़ों के लिए खुलापन" },
+          "blurb": {
+            "en": "Trying what you have not tried, imagining alternatives, and enjoying ideas from outside your usual world.",
+            "hi": "जो आज़माया नहीं वह आज़माना, दूसरे तरीक़े की कल्पना करना, और अपने रोज़ के संसार से परे विचारों में मज़ा लेना।"
+          }
+        },
+        "C": {
+          "name": { "en": "Getting things done", "hi": "काम पूरा करना" },
+          "blurb": {
+            "en": "Plans, routines, finishing before the last minute, and keeping things where they belong.",
+            "hi": "योजना, नियमित दिनचर्या, आख़िरी पल से पहले काम निपटाना, और चीज़ों को उनकी जगह रखना।"
+          }
+        },
+        "E": {
+          "name": { "en": "Being around people", "hi": "लोगों के बीच" },
+          "blurb": {
+            "en": "Where your energy comes from — company and conversation, or quiet time alone.",
+            "hi": "आपकी ऊर्जा कहाँ से आती है — साथ और बातचीत से, या अकेले की शांति से।"
+          }
+        },
+        "A": {
+          "name": { "en": "Working kindly with others", "hi": "दूसरों के साथ मिलकर" },
+          "blurb": {
+            "en": "Trust, forgiveness, and how easily you take another person's side of a story.",
+            "hi": "भरोसा, क्षमा, और दूसरे पक्ष को समझना आपको कितना सहज लगता है।"
+          }
+        },
+        "N": {
+          "name": { "en": "Staying calm under pressure", "hi": "दबाव में शांत रहना" },
+          "blurb": {
+            "en": "How much worry and upset you tend to carry when things go wrong, and whether you can start again.",
+            "hi": "जब बात बिगड़े तो कितनी चिंता और परेशानी रहती है, और दोबारा शुरू करने का हौसला रहता है या नहीं।"
+          }
+        }
+      },
+      "caveat": {
+        "en": "This is not a mental-health assessment. It does not diagnose anything, it is not a judgement on your character, and there is no healthy or unhealthy end of any of these five scales. Everyone sits somewhere on all of them.",
+        "hi": "यह मानसिक स्वास्थ्य का आकलन नहीं है। यह किसी का निदान नहीं करता, आपके चरित्र पर फ़ैसला नहीं सुनाता, और इन पाँचों में किसी एक छोर पर होना ठीक या ग़लत नहीं है। हर इंसान इन पाँचों पर कहीं न कहीं होता है।"
+      }
+    },
+    {
+      "type": "aptitude",
+      "name": { "en": "Puzzles to try", "hi": "आज़माने के लिए पहेलियाँ" },
+      "blurb": {
+        "en": "Twenty-five short puzzles in numbers, words, reasoning and shapes. Nothing is timed, you may use paper, and you can stop whenever you like.",
+        "hi": "अंक, शब्द, तर्क और आकृतियों पर पच्चीस छोटी पहेलियाँ। कोई समय सीमा नहीं है, आप कागज़ इस्तेमाल कर सकते हैं, और कभी भी रुक सकते हैं।"
+      },
+      "minutes": 10,
+      "min_class": 6,
+      "response": "choice",
+      "dimensions": {
+        "numerical": {
+          "name": { "en": "Numbers", "hi": "अंक" },
+          "blurb": {
+            "en": "Arithmetic, percentages, money and time — the everyday maths of a shop, a budget or a timetable.",
+            "hi": "गणित, प्रतिशत, पैसा और समय — दुकान, बजट या टाइम-टेबल का रोज़मर्रा का गणित।"
+          }
+        },
+        "verbal": {
+          "name": { "en": "Words", "hi": "शब्द" },
+          "blurb": {
+            "en": "Meaning, opposites, categories and analogies — getting what words are doing.",
+            "hi": "अर्थ, विलोम, श्रेणियाँ और सादृश्य — शब्द क्या कह रहे हैं, यह पकड़ना।"
+          }
+        },
+        "logical": {
+          "name": { "en": "Reasoning", "hi": "तर्क" },
+          "blurb": {
+            "en": "Sequences, deductions and what follows from what — being careful about what you can actually conclude.",
+            "hi": "क्रम, निष्कर्ष और क्या किसके बाद आता है — यह सावधानी कि वास्तव में क्या सिद्ध होता है।"
+          }
+        },
+        "spatial": {
+          "name": { "en": "Shapes", "hi": "आकृतियाँ" },
+          "blurb": {
+            "en": "Turning, folding, mirroring and counting shapes in the mind's eye.",
+            "hi": "मन की आँख से आकृतियों को घुमाना, मोड़ना, प्रतिबिंब देखना और गिनना।"
+          }
+        }
+      },
+      "caveat": {
+        "en": "These puzzles are practice, not a measurement of ability. They are not an IQ test and they are not timed, a practice set cannot separate a child who has seen this kind of question before from one who has not, and nobody's future is decided by 25 items. Marks, school support, language and practice affect answers far more than talent does.",
+        "hi": "ये पहेलियाँ अभ्यास हैं, क्षमता की माप नहीं। ये IQ टेस्ट नहीं हैं और इन पर कोई समय सीमा नहीं है। अभ्यास सेट यह नहीं बता सकता कि किसी ने इस तरह का सवाल पहले देखा है या नहीं — पच्चीस सवाल से किसी का भविष्य तय नहीं होता। अंक, स्कूल का सहारा, भाषा और अभ्यास प्रतिभा से कहीं ज़्यादा असर डालते हैं।"
+      }
+    }
+  ],
+  "items": [
+    {
+      "code": "R1",
+      "type": "interest",
+      "dimension": "R",
+      "order": 1,
+      "keyed": "+",
+      "text": { "en": "I like building things with my hands — models, toys, or fixing something that broke.", "hi": "मुझे हाथों से चीज़ें बनाना अच्छा लगता है — मॉडल, खिलौने, या टूटी चीज़ ठीक करना।" }
+    },
+    {
+      "code": "R2",
+      "type": "interest",
+      "dimension": "R",
+      "order": 2,
+      "keyed": "+",
+      "text": { "en": "Using tools, machines or equipment feels enjoyable to me.", "hi": "मुझे औज़ार, मशीन या सामान चलाने में मज़े आते हैं।" }
+    },
+    {
+      "code": "R3",
+      "type": "interest",
+      "dimension": "R",
+      "order": 3,
+      "keyed": "+",
+      "text": { "en": "I would rather work outdoors than sit at a desk all day.", "hi": "मुझे पूरा दिन मेज़ पर बैठने से ज़्यादा बाहर काम करना अच्छा लगता है।" }
+    },
+    {
+      "code": "R4",
+      "type": "interest",
+      "dimension": "R",
+      "order": 4,
+      "keyed": "+",
+      "text": { "en": "Fixing something that stopped working comes easily to me.", "hi": "जो चीज़ काम करना बंद कर दे, उसे ठीक करना मेरे लिए सहज होता है।" }
+    },
+    {
+      "code": "R5",
+      "type": "interest",
+      "dimension": "R",
+      "order": 5,
+      "keyed": "+",
+      "text": { "en": "I like making something I can actually hold and use.", "hi": "मुझे ऐसी चीज़ बनाना अच्छा लगता है जिसे मैं सच में पकड़ कर इस्तेमाल कर सकूँ।" }
+    },
+    {
+      "code": "I1",
+      "type": "interest",
+      "dimension": "I",
+      "order": 6,
+      "keyed": "+",
+      "text": { "en": "I like finding out why something happens.", "hi": "मुझे यह पता लगाना अच्छा लगता है कि कोई चीज़ क्यों होती है।" }
+    },
+    {
+      "code": "I2",
+      "type": "interest",
+      "dimension": "I",
+      "order": 7,
+      "keyed": "+",
+      "text": { "en": "Puzzles, maths problems and brain teasers are fun for me.", "hi": "मुझे पहेलियाँ, गणित के सवाल और दिमागी खेल अच्छे लगते हैं।" }
+    },
+    {
+      "code": "I3",
+      "type": "interest",
+      "dimension": "I",
+      "order": 8,
+      "keyed": "+",
+      "text": { "en": "I enjoy reading or watching things about science and how the world works.", "hi": "मुझे विज्ञान और दुनिया कैसे काम करती है, इसके बारे में पढ़ना-देखना अच्छा लगता है।" }
+    },
+    {
+      "code": "I4",
+      "type": "interest",
+      "dimension": "I",
+      "order": 9,
+      "keyed": "+",
+      "text": { "en": "I like doing an experiment and checking what actually happened.", "hi": "मुझे प्रयोग करना और देखना अच्छा लगता है कि वास्तव में क्या हुआ।" }
+    },
+    {
+      "code": "I5",
+      "type": "interest",
+      "dimension": "I",
+      "order": 10,
+      "keyed": "+",
+      "text": { "en": "I keep asking questions until a thing makes clear sense to me.", "hi": "मुझे सवाल पूछना अच्छा लगता है, ताकि बात साफ़-साफ़ समझ में आ जाए।" }
+    },
+    {
+      "code": "A1",
+      "type": "interest",
+      "dimension": "A",
+      "order": 11,
+      "keyed": "+",
+      "text": { "en": "I enjoy drawing, painting, or making things look nice.", "hi": "मुझे ड्रॉइंग, पेंटिंग करना या चीज़ों को सुंदर बनाना अच्छा लगता है।" }
+    },
+    {
+      "code": "A2",
+      "type": "interest",
+      "dimension": "A",
+      "order": 12,
+      "keyed": "+",
+      "text": { "en": "Music, dance, drama or acting feels good to do.", "hi": "मुझे संगीत, नृत्य, नाटक या अभिनय करना अच्छा लगता है।" }
+    },
+    {
+      "code": "A3",
+      "type": "interest",
+      "dimension": "A",
+      "order": 13,
+      "keyed": "+",
+      "text": { "en": "I make up stories, poems, or whole imaginary worlds.", "hi": "मुझे अपनी कल्पना से कहानियाँ, कविताएँ या नई दुनियाएँ बनाना अच्छा लगता है।" }
+    },
+    {
+      "code": "A4",
+      "type": "interest",
+      "dimension": "A",
+      "order": 14,
+      "keyed": "+",
+      "text": { "en": "I like designing things — clothes, a room, a poster, or a game.", "hi": "मुझे चीज़ें डिज़ाइन करना अच्छा लगता है — कपड़े, कमरा, पोस्टर या खेल।" }
+    },
+    {
+      "code": "A5",
+      "type": "interest",
+      "dimension": "A",
+      "order": 15,
+      "keyed": "+",
+      "text": { "en": "I would rather create something my own way than only follow the steps.", "hi": "मुझे सिर्फ़ निर्देशों का पालन करने से ज़्यादा अपनी तरह से कुछ बनाना पसंद है।" }
+    },
+    {
+      "code": "S1",
+      "type": "interest",
+      "dimension": "S",
+      "order": 16,
+      "keyed": "+",
+      "text": { "en": "I like helping someone who is stuck or upset.", "hi": "मुझे किसी परेशान या दुखी व्यक्ति की मदद करना अच्छा लगता है।" }
+    },
+    {
+      "code": "S2",
+      "type": "interest",
+      "dimension": "S",
+      "order": 17,
+      "keyed": "+",
+      "text": { "en": "Explaining something to a friend or a younger child comes easily to me.", "hi": "किसी दोस्त या छोटे बच्चे को समझाना मेरे लिए आसान होता है।" }
+    },
+    {
+      "code": "S3",
+      "type": "interest",
+      "dimension": "S",
+      "order": 18,
+      "keyed": "+",
+      "text": { "en": "I enjoy working in a team more than working alone.", "hi": "मुझे अकेले काम करने से ज़्यादा टीम में काम करना अच्छा लगता है।" }
+    },
+    {
+      "code": "S4",
+      "type": "interest",
+      "dimension": "S",
+      "order": 19,
+      "keyed": "+",
+      "text": { "en": "I notice when someone in my class is feeling low.", "hi": "कक्षा में कोई उदास है तो वह मुझसे छिपता नहीं।" }
+    },
+    {
+      "code": "S5",
+      "type": "interest",
+      "dimension": "S",
+      "order": 20,
+      "keyed": "+",
+      "text": { "en": "I like teaching others something I already know.", "hi": "मुझे जो पहले से आता है, वह दूसरों को सिखाना अच्छा लगता है।" }
+    },
+    {
+      "code": "E1",
+      "type": "interest",
+      "dimension": "E",
+      "order": 21,
+      "keyed": "+",
+      "text": { "en": "I like leading a group or organising an event.", "hi": "मुझे समूह का नेतृत्व करना या कोई कार्यक्रम आयोजित करना अच्छा लगता है।" }
+    },
+    {
+      "code": "E2",
+      "type": "interest",
+      "dimension": "E",
+      "order": 22,
+      "keyed": "+",
+      "text": { "en": "Speaking up in front of others or convincing people feels natural to me.", "hi": "दूसरों के सामने बोलना या लोगों को मनाना मुझे सहज लगता है।" }
+    },
+    {
+      "code": "E3",
+      "type": "interest",
+      "dimension": "E",
+      "order": 23,
+      "keyed": "+",
+      "text": { "en": "I like starting something new — a small stall, a club, or a game.", "hi": "मुझे नया कुछ शुरू करना अच्छा लगता है — छोटी दुकान, क्लब या खेल।" }
+    },
+    {
+      "code": "E4",
+      "type": "interest",
+      "dimension": "E",
+      "order": 24,
+      "keyed": "+",
+      "text": { "en": "When nothing is moving, taking charge does not feel awkward to me.", "hi": "जब कुछ आगे नहीं बढ़ रहा हो, ज़िम्मेदारी संभालने में मुझे झिझक नहीं होती।" }
+    },
+    {
+      "code": "E5",
+      "type": "interest",
+      "dimension": "E",
+      "order": 25,
+      "keyed": "+",
+      "text": { "en": "I enjoy competing and trying to win.", "hi": "मुझे मुक़ाबला करना और जीतने की कोशिश करना अच्छा लगता है।" }
+    },
+    {
+      "code": "C1",
+      "type": "interest",
+      "dimension": "C",
+      "order": 26,
+      "keyed": "+",
+      "text": { "en": "My things, notes or files stay neatly organised.", "hi": "मेरा सामान, नोट्स और फ़ाइलें साफ-सुथरे तरीक़े से व्यवस्थित रहते हैं।" }
+    },
+    {
+      "code": "C2",
+      "type": "interest",
+      "dimension": "C",
+      "order": 27,
+      "keyed": "+",
+      "text": { "en": "Following a plan or a timetable feels easy to me.", "hi": "अपनी योजना या टाइम-टेबल के अनुसार चलना मुझे आसान लगता है।" }
+    },
+    {
+      "code": "C3",
+      "type": "interest",
+      "dimension": "C",
+      "order": 28,
+      "keyed": "+",
+      "text": { "en": "Numbers, lists and small details get my attention.", "hi": "अंक, सूचियाँ और छोटी-छोटी बारीकियाँ मेरा ध्यान खींचती हैं।" }
+    },
+    {
+      "code": "C4",
+      "type": "interest",
+      "dimension": "C",
+      "order": 29,
+      "keyed": "+",
+      "text": { "en": "I like doing things in the right order, following the steps or the rules.", "hi": "मुझे काम सही क्रम में, नियमों के अनुसार करना अच्छा लगता है।" }
+    },
+    {
+      "code": "C5",
+      "type": "interest",
+      "dimension": "C",
+      "order": 30,
+      "keyed": "+",
+      "text": { "en": "Sorting information and checking it for mistakes feels satisfying.", "hi": "सूचना को बाँटना और उसमें ग़लतियाँ ढूँढ़ना मुझे अच्छा लगता है।" }
+    },
+    {
+      "code": "O1",
+      "type": "personality",
+      "dimension": "O",
+      "order": 1,
+      "keyed": "+",
+      "text": { "en": "I enjoy trying something I have never done before.", "hi": "मुझे पहले कभी न की गई चीज़ आज़माना अच्छा लगता है।" }
+    },
+    {
+      "code": "O2",
+      "type": "personality",
+      "dimension": "O",
+      "order": 2,
+      "keyed": "-",
+      "text": { "en": "I prefer doing things the same way every single time.", "hi": "मुझे हर बार काम करने का वही पुराना तरीक़ा अच्छा लगता है।" }
+    },
+    {
+      "code": "O3",
+      "type": "personality",
+      "dimension": "O",
+      "order": 3,
+      "keyed": "+",
+      "text": { "en": "I like imagining what would happen if things were different.", "hi": "मुझे यह कल्पना करना अच्छा लगता है कि चीज़ें दूसरी होतीं तो क्या होता।" }
+    },
+    {
+      "code": "O4",
+      "type": "personality",
+      "dimension": "O",
+      "order": 4,
+      "keyed": "-",
+      "text": { "en": "I would rather read what the book says than think about what else could be true.", "hi": "मुझे किताब में जो लिखा है उसे पढ़ना अच्छा लगता है, इस बारे में सोचने से कि कुछ और भी सच हो सकता है।" }
+    },
+    {
+      "code": "C1",
+      "type": "personality",
+      "dimension": "C",
+      "order": 5,
+      "keyed": "+",
+      "text": { "en": "The work I have to do gets finished before playtime.", "hi": "खेलने से पहले मेरा ज़रूरी काम पूरा हो जाता है।" }
+    },
+    {
+      "code": "C2",
+      "type": "personality",
+      "dimension": "C",
+      "order": 6,
+      "keyed": "+",
+      "text": { "en": "Sticking to a plan I decided on feels natural to me.", "hi": "पहले से तय की गई योजना के अनुसार चलना मुझे सहज लगता है।" }
+    },
+    {
+      "code": "C3",
+      "type": "personality",
+      "dimension": "C",
+      "order": 7,
+      "keyed": "-",
+      "text": { "en": "Things usually get left till the last minute.", "hi": "काम आमतौर पर आख़िरी पल तक टलते हैं।" }
+    },
+    {
+      "code": "C4",
+      "type": "personality",
+      "dimension": "C",
+      "order": 8,
+      "keyed": "-",
+      "text": { "en": "My bag, desk or notes are usually untidy.", "hi": "मेरा बैग, मेज़ या नोट्स आमतौर पर बिखरे हुए रहते हैं।" }
+    },
+    {
+      "code": "E1",
+      "type": "personality",
+      "dimension": "E",
+      "order": 9,
+      "keyed": "+",
+      "text": { "en": "Being with lots of people lifts my energy.", "hi": "बहुत सारे लोगों के बीच मेरी ऊर्जा बढ़ जाती है।" }
+    },
+    {
+      "code": "E2",
+      "type": "personality",
+      "dimension": "E",
+      "order": 10,
+      "keyed": "+",
+      "text": { "en": "Starting a conversation with someone new feels easy.", "hi": "किसी नए व्यक्ति से बात शुरू करना मेरे लिए आसान है।" }
+    },
+    {
+      "code": "E3",
+      "type": "personality",
+      "dimension": "E",
+      "order": 11,
+      "keyed": "-",
+      "text": { "en": "I would rather stay quietly by myself.", "hi": "मुझे चुपचाप अकेले रहना ज़्यादा अच्छा लगता है।" }
+    },
+    {
+      "code": "E4",
+      "type": "personality",
+      "dimension": "E",
+      "order": 12,
+      "keyed": "-",
+      "text": { "en": "Being in a big group leaves me feeling tired.", "hi": "बड़े समूह में रहने के बाद थकान महसूस होती है।" }
+    },
+    {
+      "code": "A1",
+      "type": "personality",
+      "dimension": "A",
+      "order": 13,
+      "keyed": "+",
+      "text": { "en": "How other people feel matters to me.", "hi": "दूसरे लोग कैसे महसूस कर रहे हैं, इसकी परवाह मुझे होती है।" }
+    },
+    {
+      "code": "A2",
+      "type": "personality",
+      "dimension": "A",
+      "order": 14,
+      "keyed": "+",
+      "text": { "en": "Forgiving someone and helping them again feels easy.", "hi": "किसी को जल्दी माफ़ कर के दोबारा मदद करना मेरे लिए सहज है।" }
+    },
+    {
+      "code": "A3",
+      "type": "personality",
+      "dimension": "A",
+      "order": 15,
+      "keyed": "-",
+      "text": { "en": "It is hard for me to be pleasant with someone I dislike.", "hi": "जिससे मुझे लगाव नहीं, उससे मिल-जुल कर पेश आना कठिन लगता है।" }
+    },
+    {
+      "code": "A4",
+      "type": "personality",
+      "dimension": "A",
+      "order": 16,
+      "keyed": "-",
+      "text": { "en": "I argue mainly to get my own way.", "hi": "मुझे अपनी बात मनवाने के लिए बहस करने की आदत है।" }
+    },
+    {
+      "code": "N1",
+      "type": "personality",
+      "dimension": "N",
+      "order": 17,
+      "keyed": "-",
+      "text": { "en": "I worry a lot about what could go wrong.", "hi": "क्या ग़लत हो सकता है, इसकी काफ़ी चिंता रहती है।" }
+    },
+    {
+      "code": "N2",
+      "type": "personality",
+      "dimension": "N",
+      "order": 18,
+      "keyed": "-",
+      "text": { "en": "When someone criticises my work, I stay upset for a long time.", "hi": "जब कोई मेरे काम की आलोचना करता है तो बुरा लगना देर तक बना रहता है।" }
+    },
+    {
+      "code": "N3",
+      "type": "personality",
+      "dimension": "N",
+      "order": 19,
+      "keyed": "+",
+      "text": { "en": "I stay calm when something goes wrong suddenly.", "hi": "अचानक कुछ बिगड़ जाने पर भी शांति बनी रहती है।" }
+    },
+    {
+      "code": "N4",
+      "type": "personality",
+      "dimension": "N",
+      "order": 20,
+      "keyed": "+",
+      "text": { "en": "After failing at something, I can gather the courage to try again.", "hi": "असफल होने के बाद भी दोबारा कोशिश करने का हौसला रहता है।" }
+    },
+    {
+      "code": "NU1",
+      "type": "aptitude",
+      "dimension": "numerical",
+      "order": 1,
+      "text": { "en": "15 + 27 = ?", "hi": "15 + 27 = ?" },
+      "options": [
+        { "value": "a", "label": { "en": "40", "hi": "40" } },
+        { "value": "b", "label": { "en": "41", "hi": "41" } },
+        { "value": "c", "label": { "en": "42", "hi": "42" } },
+        { "value": "d", "label": { "en": "43", "hi": "43" } }
+      ],
+      "answer": "c"
+    },
+    {
+      "code": "NU2",
+      "type": "aptitude",
+      "dimension": "numerical",
+      "order": 2,
+      "text": { "en": "What is half of 124?", "hi": "124 का आधा कितना है?" },
+      "options": [
+        { "value": "a", "label": { "en": "52", "hi": "52" } },
+        { "value": "b", "label": { "en": "60", "hi": "60" } },
+        { "value": "c", "label": { "en": "62", "hi": "62" } },
+        { "value": "d", "label": { "en": "64", "hi": "64" } }
+      ],
+      "answer": "c"
+    },
+    {
+      "code": "NU3",
+      "type": "aptitude",
+      "dimension": "numerical",
+      "order": 3,
+      "text": {
+        "en": "Three pencils cost ₹18. How much do five pencils cost at the same rate?",
+        "hi": "तीन पेंसिल की कीमत ₹18 है। इसी दर से पाँच पेंसिल की कितनी कीमत होगी?"
+      },
+      "options": [
+        { "value": "a", "label": { "en": "₹24", "hi": "₹24" } },
+        { "value": "b", "label": { "en": "₹27", "hi": "₹27" } },
+        { "value": "c", "label": { "en": "₹30", "hi": "₹30" } },
+        { "value": "d", "label": { "en": "₹36", "hi": "₹36" } }
+      ],
+      "answer": "c"
+    },
+    {
+      "code": "NU4",
+      "type": "aptitude",
+      "dimension": "numerical",
+      "order": 4,
+      "text": { "en": "Which of these is the largest?", "hi": "इनमें से सबसे बड़ा कौन-सा है?" },
+      "options": [
+        { "value": "a", "label": { "en": "0.65", "hi": "0.65" } },
+        { "value": "b", "label": { "en": "0.7", "hi": "0.7" } },
+        { "value": "c", "label": { "en": "5/8", "hi": "5/8" } },
+        { "value": "d", "label": { "en": "2/3", "hi": "2/3" } }
+      ],
+      "answer": "b"
+    },
+    {
+      "code": "NU5",
+      "type": "aptitude",
+      "dimension": "numerical",
+      "order": 5,
+      "text": { "en": "12 × 8 = ?", "hi": "12 × 8 = ?" },
+      "options": [
+        { "value": "a", "label": { "en": "84", "hi": "84" } },
+        { "value": "b", "label": { "en": "92", "hi": "92" } },
+        { "value": "c", "label": { "en": "96", "hi": "96" } },
+        { "value": "d", "label": { "en": "108", "hi": "108" } }
+      ],
+      "answer": "c"
+    },
+    {
+      "code": "NU6",
+      "type": "aptitude",
+      "dimension": "numerical",
+      "order": 6,
+      "text": {
+        "en": "A bus leaves at 9:40 and reaches at 12:15 on the same day. How long was the journey?",
+        "hi": "एक बस सुबह 9:40 बजे चलती है और उसी दिन 12:15 बजे पहुँचती है। सफ़र में कितना समय लगा?"
+      },
+      "options": [
+        { "value": "a", "label": { "en": "2 hours 25 minutes", "hi": "2 घंटे 25 मिनट" } },
+        { "value": "b", "label": { "en": "2 hours 35 minutes", "hi": "2 घंटे 35 मिनट" } },
+        { "value": "c", "label": { "en": "2 hours 45 minutes", "hi": "2 घंटे 45 मिनट" } },
+        { "value": "d", "label": { "en": "3 hours 5 minutes", "hi": "3 घंटे 5 मिनट" } }
+      ],
+      "answer": "b"
+    },
+    {
+      "code": "NU7",
+      "type": "aptitude",
+      "dimension": "numerical",
+      "order": 7,
+      "text": { "en": "What is 25% of 80?", "hi": "80 का 25% कितना है?" },
+      "options": [
+        { "value": "a", "label": { "en": "15", "hi": "15" } },
+        { "value": "b", "label": { "en": "20", "hi": "20" } },
+        { "value": "c", "label": { "en": "25", "hi": "25" } },
+        { "value": "d", "label": { "en": "40", "hi": "40" } }
+      ],
+      "answer": "b"
+    },
+    {
+      "code": "VE1",
+      "type": "aptitude",
+      "dimension": "verbal",
+      "order": 8,
+      "text": {
+        "en": "Book is to reading as fork is to ___.",
+        "hi": "जैसे किताब का संबंध पढ़ने से है, वैसे ही काँटे का संबंध ___ से है।"
+      },
+      "options": [
+        { "value": "a", "label": { "en": "eating", "hi": "खाने" } },
+        { "value": "b", "label": { "en": "cooking", "hi": "पकाने" } },
+        { "value": "c", "label": { "en": "washing", "hi": "धोने" } },
+        { "value": "d", "label": { "en": "drawing", "hi": "बनाने" } }
+      ],
+      "answer": "a"
+    },
+    {
+      "code": "VE2",
+      "type": "aptitude",
+      "dimension": "verbal",
+      "order": 9,
+      "text": {
+        "en": "Which word is the opposite of 'ancient'?",
+        "hi": "'प्राचीन' का विलोम शब्द कौन-सा है?"
+      },
+      "options": [
+        { "value": "a", "label": { "en": "old", "hi": "पुराना" } },
+        { "value": "b", "label": { "en": "modern", "hi": "आधुनिक" } },
+        { "value": "c", "label": { "en": "historic", "hi": "ऐतिहासिक" } },
+        { "value": "d", "label": { "en": "worn out", "hi": "जर्जर" } }
+      ],
+      "answer": "b"
+    },
+    {
+      "code": "VE3",
+      "type": "aptitude",
+      "dimension": "verbal",
+      "order": 10,
+      "text": {
+        "en": "Which one does not belong with the others: apple, mango, banana, carrot?",
+        "hi": "इनमें से कौन-सा दूसरों से अलग है: सेब, आम, केला, गाजर?"
+      },
+      "options": [
+        { "value": "a", "label": { "en": "apple", "hi": "सेब" } },
+        { "value": "b", "label": { "en": "mango", "hi": "आम" } },
+        { "value": "c", "label": { "en": "banana", "hi": "केला" } },
+        { "value": "d", "label": { "en": "carrot", "hi": "गाजर" } }
+      ],
+      "answer": "d"
+    },
+    {
+      "code": "VE4",
+      "type": "aptitude",
+      "dimension": "verbal",
+      "order": 11,
+      "text": {
+        "en": "A brave person is someone who is ___.",
+        "hi": "साहसिक व्यक्ति वह है जो ___ होता है।"
+      },
+      "options": [
+        { "value": "a", "label": { "en": "fearful", "hi": "डरपोक" } },
+        { "value": "b", "label": { "en": "careless", "hi": "लापरवाह" } },
+        { "value": "c", "label": { "en": "fearless", "hi": "निडर" } },
+        { "value": "d", "label": { "en": "lazy", "hi": "आलसी" } }
+      ],
+      "answer": "c"
+    },
+    {
+      "code": "VE5",
+      "type": "aptitude",
+      "dimension": "verbal",
+      "order": 12,
+      "text": {
+        "en": "Doctor is to hospital as teacher is to ___.",
+        "hi": "डॉक्टर का संबंध अस्पताल से है, वैसे ही शिक्षक का संबंध ___ से है।"
+      },
+      "options": [
+        { "value": "a", "label": { "en": "student", "hi": "छात्र" } },
+        { "value": "b", "label": { "en": "school", "hi": "स्कूल" } },
+        { "value": "c", "label": { "en": "book", "hi": "किताब" } },
+        { "value": "d", "label": { "en": "lesson", "hi": "पाठ" } }
+      ],
+      "answer": "b"
+    },
+    {
+      "code": "VE6",
+      "type": "aptitude",
+      "dimension": "verbal",
+      "order": 13,
+      "text": {
+        "en": "'Enormous' means something that is ___.",
+        "hi": "'विशाल' का अर्थ है जो ___ हो।"
+      },
+      "options": [
+        { "value": "a", "label": { "en": "very quick", "hi": "बहुत तेज़" } },
+        { "value": "b", "label": { "en": "very hard", "hi": "बहुत कठिन" } },
+        { "value": "c", "label": { "en": "very dark", "hi": "बहुत गहरा" } },
+        { "value": "d", "label": { "en": "very large", "hi": "बहुत बड़ा" } }
+      ],
+      "answer": "d"
+    },
+    {
+      "code": "VE7",
+      "type": "aptitude",
+      "dimension": "verbal",
+      "order": 14,
+      "text": {
+        "en": "A person who explains clearly is good at ___.",
+        "hi": "जो व्यक्ति स्पष्ट रूप से समझाता है, वह किसमें अच्छा है?"
+      },
+      "options": [
+        { "value": "a", "label": { "en": "hiding information", "hi": "बात छिपाने" } },
+        { "value": "b", "label": { "en": "making others understand", "hi": "दूसरों को समझाने" } },
+        { "value": "c", "label": { "en": "working alone", "hi": "अकेले काम करने" } },
+        { "value": "d", "label": { "en": "drawing pictures", "hi": "चित्र बनाने" } }
+      ],
+      "answer": "b"
+    },
+    {
+      "code": "LO1",
+      "type": "aptitude",
+      "dimension": "logical",
+      "order": 15,
+      "text": { "en": "What comes next: 2, 4, 8, 16, ___", "hi": "आगे क्या आएगा: 2, 4, 8, 16, ___" },
+      "options": [
+        { "value": "a", "label": { "en": "20", "hi": "20" } },
+        { "value": "b", "label": { "en": "24", "hi": "24" } },
+        { "value": "c", "label": { "en": "32", "hi": "32" } },
+        { "value": "d", "label": { "en": "64", "hi": "64" } }
+      ],
+      "answer": "c"
+    },
+    {
+      "code": "LO2",
+      "type": "aptitude",
+      "dimension": "logical",
+      "order": 16,
+      "text": { "en": "What comes next: A, C, E, G, ___", "hi": "आगे क्या आएगा: A, C, E, G, ___" },
+      "options": [
+        { "value": "a", "label": { "en": "H", "hi": "H" } },
+        { "value": "b", "label": { "en": "I", "hi": "I" } },
+        { "value": "c", "label": { "en": "J", "hi": "J" } },
+        { "value": "d", "label": { "en": "K", "hi": "K" } }
+      ],
+      "answer": "b"
+    },
+    {
+      "code": "LO3",
+      "type": "aptitude",
+      "dimension": "logical",
+      "order": 17,
+      "text": {
+        "en": "All roses are flowers. Some flowers fade quickly. Can we say that roses fade quickly?",
+        "hi": "सभी गुलाब फूल हैं। कुछ फूल जल्दी मुरझा जाते हैं। क्या हम कह सकते हैं कि गुलाब जल्दी मुरझाते हैं?"
+      },
+      "options": [
+        { "value": "a", "label": { "en": "Yes, definitely", "hi": "हाँ, ज़रूर" } },
+        { "value": "b", "label": { "en": "No, that does not follow", "hi": "नहीं, यह निष्कर्ष निकलता नहीं" } },
+        { "value": "c", "label": { "en": "Only in winter", "hi": "केवल सर्दियों में" } },
+        { "value": "d", "label": { "en": "Roses never fade", "hi": "गुलाब कभी नहीं मुरझाते" } }
+      ],
+      "answer": "b"
+    },
+    {
+      "code": "LO4",
+      "type": "aptitude",
+      "dimension": "logical",
+      "order": 18,
+      "text": {
+        "en": "Which number does not belong: 10, 15, 20, 21?",
+        "hi": "इनमें से कौन-सी संख्या अलग है: 10, 15, 20, 21?"
+      },
+      "options": [
+        { "value": "a", "label": { "en": "10", "hi": "10" } },
+        { "value": "b", "label": { "en": "15", "hi": "15" } },
+        { "value": "c", "label": { "en": "20", "hi": "20" } },
+        { "value": "d", "label": { "en": "21", "hi": "21" } }
+      ],
+      "answer": "d"
+    },
+    {
+      "code": "LO5",
+      "type": "aptitude",
+      "dimension": "logical",
+      "order": 19,
+      "text": {
+        "en": "Ravi is taller than Meena. Meena is taller than Sunil. Who is the shortest?",
+        "hi": "रवि, मीना से लंबा है। मीना, सुनील से लंबी है। सबसे छोटा कौन है?"
+      },
+      "options": [
+        { "value": "a", "label": { "en": "Ravi", "hi": "रवि" } },
+        { "value": "b", "label": { "en": "Meena", "hi": "मीना" } },
+        { "value": "c", "label": { "en": "Sunil", "hi": "सुनील" } },
+        { "value": "d", "label": { "en": "Cannot be said", "hi": "कहा नहीं जा सकता" } }
+      ],
+      "answer": "c"
+    },
+    {
+      "code": "LO6",
+      "type": "aptitude",
+      "dimension": "logical",
+      "order": 20,
+      "text": {
+        "en": "Today is Wednesday. What day of the week will it be after 7 days?",
+        "hi": "आज बुधवार है। सात दिन बाद सप्ताह का कौन-सा दिन होगा?"
+      },
+      "options": [
+        { "value": "a", "label": { "en": "Thursday", "hi": "गुरुवार" } },
+        { "value": "b", "label": { "en": "Friday", "hi": "शुक्रवार" } },
+        { "value": "c", "label": { "en": "Wednesday", "hi": "बुधवार" } },
+        { "value": "d", "label": { "en": "Saturday", "hi": "शनिवार" } }
+      ],
+      "answer": "c"
+    },
+    {
+      "code": "SP1",
+      "type": "aptitude",
+      "dimension": "spatial",
+      "order": 21,
+      "text": {
+        "en": "How many flat faces does a cube have?",
+        "hi": "एक घन (क्यूब) में कितनी सपाट सतहें होती हैं?"
+      },
+      "options": [
+        { "value": "a", "label": { "en": "4", "hi": "4" } },
+        { "value": "b", "label": { "en": "6", "hi": "6" } },
+        { "value": "c", "label": { "en": "8", "hi": "8" } },
+        { "value": "d", "label": { "en": "12", "hi": "12" } }
+      ],
+      "answer": "b"
+    },
+    {
+      "code": "SP2",
+      "type": "aptitude",
+      "dimension": "spatial",
+      "order": 22,
+      "text": {
+        "en": "Which letter is the mirror image of 'b'?",
+        "hi": "'b' का दर्पण प्रतिबिंब कौन-सा अक्षर है?"
+      },
+      "options": [
+        { "value": "a", "label": { "en": "p", "hi": "p" } },
+        { "value": "b", "label": { "en": "q", "hi": "q" } },
+        { "value": "c", "label": { "en": "d", "hi": "d" } },
+        { "value": "d", "label": { "en": "b", "hi": "b" } }
+      ],
+      "answer": "c"
+    },
+    {
+      "code": "SP3",
+      "type": "aptitude",
+      "dimension": "spatial",
+      "order": 23,
+      "text": {
+        "en": "A square is turned through 90 degrees. What does it look like now?",
+        "hi": "एक वर्ग को 90 डिग्री घुमाया जाए। अब वह कैसा दिखेगा?"
+      },
+      "options": [
+        { "value": "a", "label": { "en": "a rectangle", "hi": "आयत" } },
+        { "value": "b", "label": { "en": "the same square", "hi": "वही वर्ग" } },
+        { "value": "c", "label": { "en": "a triangle", "hi": "त्रिभुज" } },
+        { "value": "d", "label": { "en": "a circle", "hi": "वृत्त" } }
+      ],
+      "answer": "b"
+    },
+    {
+      "code": "SP4",
+      "type": "aptitude",
+      "dimension": "spatial",
+      "order": 24,
+      "text": {
+        "en": "A big square is divided into 4 equal smaller squares. How many squares are there in all, counting the big one?",
+        "hi": "एक बड़े वर्ग को 4 बराबर छोटे वर्गों में बाँटा गया है। कुल कितने वर्ग बने, बड़ा वर्ग भी मिलाकर?"
+      },
+      "options": [
+        { "value": "a", "label": { "en": "4", "hi": "4" } },
+        { "value": "b", "label": { "en": "5", "hi": "5" } },
+        { "value": "c", "label": { "en": "6", "hi": "6" } },
+        { "value": "d", "label": { "en": "8", "hi": "8" } }
+      ],
+      "answer": "b"
+    },
+    {
+      "code": "SP5",
+      "type": "aptitude",
+      "dimension": "spatial",
+      "order": 25,
+      "text": {
+        "en": "You are standing facing North and turn to your right. Which way are you facing now?",
+        "hi": "आप उत्तर की ओर मुँह करके खड़े हैं और दाईं ओर मुड़ते हैं। अब आपके मुँह की दिशा कौन-सी है?"
+      },
+      "options": [
+        { "value": "a", "label": { "en": "South", "hi": "दक्षिण" } },
+        { "value": "b", "label": { "en": "East", "hi": "पूर्व" } },
+        { "value": "c", "label": { "en": "West", "hi": "पश्चिम" } },
+        { "value": "d", "label": { "en": "Still North", "hi": "वही उत्तर" } }
+      ],
+      "answer": "b"
+    }
+  ]
+}

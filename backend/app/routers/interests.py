@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -112,7 +112,7 @@ def _in_language(prompt: dict, language: str) -> dict:
 
 
 @router.get("/prompts")
-def prompts(language: str = "hinglish") -> dict:
+def prompts(language: str = Query(default="hinglish", max_length=16)) -> dict:
     chosen = language if language in ("en", "hi", "hinglish") else "en"
     return {
         "prompts": [_in_language(item, chosen) for item in PROMPTS],

@@ -428,14 +428,18 @@ if real_settings.gemini_api_key.strip():
         gemini_tts_model=real_settings.gemini_tts_model,
         gemini_voice=real_settings.gemini_voice,
     )
-    live_url = run(tts.synthesize("नमस्कार! Main tumhara career guide hoon. Chalo baat karte hain.", "hi"))
-    check("a real Gemini call returns playable audio",
-          live_url.startswith("data:audio/wav;base64,"), live_url[:40])
-    check("a real Gemini call returned speech rather than a stub",
-          len(audio_of(live_url)) > 20000, len(live_url))
-    check("a real Gemini call is remembered as working",
-          tts.last_attempt()["ok"] is True and tts.last_attempt()["provider"] == tts.GEMINI,
-          tts.last_attempt())
+    try:
+        live_url = run(tts.synthesize("नमस्कार! Main tumhara career guide hoon. Chalo baat karte hain.", "hi"))
+    except tts.TTSError as exc:
+        check("a real Gemini call returns playable audio", False, str(exc))
+    else:
+        check("a real Gemini call returns playable audio",
+              live_url.startswith("data:audio/wav;base64,"), live_url[:40])
+        check("a real Gemini call returned speech rather than a stub",
+              len(audio_of(live_url)) > 20000, len(live_url))
+        check("a real Gemini call is remembered as working",
+              tts.last_attempt()["ok"] is True and tts.last_attempt()["provider"] == tts.GEMINI,
+              tts.last_attempt())
 else:
     print("  [SKIP] no GEMINI_API_KEY in this machine's configuration, nothing was "
           "sent to Google for real")

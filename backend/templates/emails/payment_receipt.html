@@ -1,0 +1,75 @@
+{#
+  Payment receipt. Context: `name`, `plan_name`, `interval_label` (a period named in
+  the reader's language), `amount_label` (already formatted with its rupee symbol —
+  this template never does arithmetic), `receipt_ref` (the app's own short reference,
+  the one a family can quote in a mail nobody else can read as anything),
+  `paid_on`, `expires_label`, `test_mode` (bool), `billing_url`.
+
+  Two sentences in here exist because leaving them out would be a lie by omission: a
+  payment made with a test key is not money, and this message is not a tax invoice.
+  The first one has to be loud, because a family who believes they paid twice will
+  ask for two refunds.
+#}
+{% extends "base.html" %}
+
+{% block title %}
+  {% if test_mode %}{{ txt("Test payment recorded", "परीक्षण भुगतान दर्ज हुआ") }}
+  {% else %}{{ txt("Payment received", "भुगतान मिल गया") }}{% endif %}
+{% endblock %}
+{% block preheader %}{{ txt("What was paid, what it unlocked, and what this is not", "क्या भुगतान हुआ, क्या खुला, और यह क्या नहीं है") }}{% endblock %}
+
+{% block eyebrow %}{{ txt("Payment", "भुगतान") }}{% endblock %}
+
+{% block heading %}
+  {% if test_mode %}{{ txt("A test payment came through", "एक परीक्षण भुगतान आया") }}
+  {% else %}{{ txt("Your payment came through", "आपका भुगतान आ गया है") }}{% endif %}
+{% endblock %}
+
+{% block body %}
+  {% if test_mode %}
+  <p style="margin:0 0 16px;padding:14px 16px;background:#fff4e5;border:1px solid #f0d4a8;border-radius:12px;color:#6b4a12;font-weight:600;">
+    {{ txt("This was made with a test key. No money left any account, and nothing here is a receipt for a real payment.", "यह परीक्षण कुंजी से किया गया था। किसी खाते से पैसा नहीं गया, और यह किसी असली भुगतान की रसीद नहीं है।") }}
+  </p>
+  {% endif %}
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 18px;">
+    <tr>
+      <td style="padding:16px 18px;background:#f4f7fd;border-radius:12px;font-family:Arial,'Noto Sans',sans-serif;">
+        <p style="margin:0 0 8px;font-size:20px;font-weight:700;line-height:26px;color:#0b1730;">{{ amount_label }}</p>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;line-height:20px;color:#41536e;">
+          <tr>
+            <td style="padding:3px 0;">{{ txt("Plan", "योजना") }}</td>
+            <td align="right" style="padding:3px 0;color:#0b1730;font-weight:600;">{{ plan_name }} · {{ interval_label }}</td>
+          </tr>
+          <tr>
+            <td style="padding:3px 0;">{{ txt("Paid on", "भुगतान की तारीख") }}</td>
+            <td align="right" style="padding:3px 0;color:#0b1730;">{{ paid_on }}</td>
+          </tr>
+          <tr>
+            <td style="padding:3px 0;">{{ txt("Runs until", "कब तक") }}</td>
+            <td align="right" style="padding:3px 0;color:#0b1730;">{{ expires_label }}</td>
+          </tr>
+          <tr>
+            <td style="padding:3px 0;">{{ txt("Reference", "संदर्भ") }}</td>
+            <td align="right" style="padding:3px 0;color:#0b1730;">{{ receipt_ref }}</td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+
+  <p style="margin:0 0 16px;">
+    {{ txt("The plan is already switched on for the account this address belongs to; nothing has to be confirmed.", "योजना उस खाते के लिए पहले से चालू हो गई है जिससे यह पता जुड़ा है; पुष्टि करने की ज़रूरत नहीं है।") }}
+    <a href="{{ billing_url }}" style="color:#3f6fe0;font-weight:600;text-decoration:underline;">{{ txt("See the billing page", "बिलिंग पृष्ठ देखें") }}</a>.
+  </p>
+
+  <p style="margin:0 0 16px;">
+    {{ txt("The card or UPI handle was collected by Razorpay, in their own window. This application never saw it and keeps no copy of it — the four lines above are the entire record of the payment on our side.", "कार्ड या UPI विवरण Razorpay ने अपनी विंडो में लिया। इस ऐप्लिकेशन ने उसे कभी देखा नहीं और उसकी कोई प्रत रखती नहीं — ऊपर दी चार पंक्तियाँ हमारे पक्ष में इस भुगतान का पूरा रिकॉर्ड हैं।") }}
+  </p>
+
+  <p style="margin:0;padding:14px 16px;background:#f4f7fd;border-radius:12px;color:#41536e;">
+    {{ txt("This is a confirmation from the app, not a tax invoice. If you need a GST invoice for a school or an employer, ask through", "यह ऐप की पुष्टि है, कर चालान (tax invoice) नहीं। अगर स्कूल या नियोक्ता के लिए GST चालान चाहिए तो") }}
+    <a href="{{ site_url }}/contact" style="color:#3f6fe0;">{{ txt("the contact page", "संपर्क पृष्ठ") }}</a>
+    {{ txt("with the reference above.", " और ऊपर दिया संदर्भ भेजें।") }}
+  </p>
+{% endblock %}

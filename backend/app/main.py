@@ -15,13 +15,15 @@ import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from .config import get_settings
 from .database import Base, SessionLocal, engine
-from .routers import auth, catalogue, careers, conversations, interests
-from .routers import journey, recommendations, reports, study_plans, voice
+from .middleware.cors import configure_cors
+from .middleware.rate_limit import register_rate_limiting
+from .routers import admin, assessments, auth, catalogue, careers, clerk, clerk_webhooks, conversations
+from .routers import email, exams, interests, journey, organizations, payments, recommendations
+from .routers import report_pdfs, reports, study_abroad, study_plans, users, voice
 from .schema_sync import add_missing_columns
 from .schemas import HealthOut
 from .seed import seed_if_empty
@@ -92,27 +94,37 @@ async def refuse_without_storage(request: Request, call_next):
     return await call_next(request)
 
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.cors_origin_list,
-    allow_credentials=False,
-    allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type"],
-)
+configure_cors(app, settings)
+register_rate_limiting(app)
 
 for module in (
     auth,
+    users,
+    admin,
+    clerk,
+    clerk_webhooks,
     careers,
+    exams,
     conversations,
     voice,
+    email,
     interests,
+    assessments,
     recommendations,
     journey,
+    organizations,
+    payments,
     study_plans,
+    study_abroad,
     catalogue,
     reports,
+    report_pdfs,
 ):
     app.include_router(module.router)
+
+# `exams` is the first module with two routers: the public catalogue and the operator's
+# side of the same table, which carries its own `Depends(get_admin_user)` guard.
+app.include_router(exams.admin_router)
 
 
 @app.get("/api/health", response_model=HealthOut, tags=["meta"])
@@ -130,6 +142,9 @@ def health() -> HealthOut:
         # from the last time the service was actually asked for audio, which is
         # how a datacenter-blocked Edge endpoint stops being reported as working.
         tts_last_attempt=tts.last_attempt(),
+        # The same kind of answer a person wants after pasting a Resend key: not
+        # "is the router imported", but "could this server actually mail anything".
+        email_enabled=settings.email_enabled,
         demo_mode=not settings.ai_configured,
     )
 

@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { AlertTriangle, Inbox, Loader2, RefreshCw, type LucideIcon } from "lucide-react";
+import { useT } from "@/lib/i18n";
 import { Button } from "./button";
 import { cn } from "@/lib/utils";
 
@@ -21,6 +22,7 @@ export function SkeletonCard() {
 }
 
 export function LoadingPanel({ label = "Loading" }: { label?: string }) {
+  const t = useT();
   return (
     <div
       role="status"
@@ -28,7 +30,7 @@ export function LoadingPanel({ label = "Loading" }: { label?: string }) {
       className="flex items-center justify-center gap-2 py-12 text-sm text-muted"
     >
       <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-      {label}
+      {t(label)}
     </div>
   );
 }
@@ -46,6 +48,7 @@ export function EmptyState({
   action?: ReactNode;
   className?: string;
 }) {
+  const t = useT();
   return (
     <div
       className={cn(
@@ -56,8 +59,12 @@ export function EmptyState({
       <span className="mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-brand-mist text-brand-dark">
         <Icon className="h-5 w-5" aria-hidden />
       </span>
-      <p className="text-sm font-semibold text-ink">{title}</p>
-      {description ? <p className="mt-1 max-w-md text-sm text-muted">{description}</p> : null}
+      <p className="text-sm font-semibold text-ink">{t(title)}</p>
+      {description ? (
+        <p className="mt-1 max-w-md text-sm text-muted">
+          {typeof description === "string" ? t(description) : description}
+        </p>
+      ) : null}
       {action ? <div className="mt-4">{action}</div> : null}
     </div>
   );
@@ -79,6 +86,7 @@ export function ErrorState({
   extra?: ReactNode;
   className?: string;
 }) {
+  const t = useT();
   return (
     <div
       role="alert"
@@ -90,13 +98,17 @@ export function ErrorState({
       <span className="mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-danger/10 text-danger">
         <AlertTriangle className="h-5 w-5" aria-hidden />
       </span>
-      <p className="text-sm font-semibold text-ink">{title}</p>
-      {description ? <p className="mt-1 max-w-md text-sm text-muted">{description}</p> : null}
+      <p className="text-sm font-semibold text-ink">{t(title)}</p>
+      {description ? (
+        <p className="mt-1 max-w-md text-sm text-muted">
+          {typeof description === "string" ? t(description) : description}
+        </p>
+      ) : null}
       <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
         {onRetry ? (
           <Button size="sm" variant="outline" onClick={onRetry}>
             <RefreshCw className="h-4 w-4" aria-hidden />
-            {retryLabel}
+            {t(retryLabel)}
           </Button>
         ) : null}
         {extra}
@@ -120,11 +132,12 @@ export function ProgressBar({
 }) {
   const percent = total > 0 ? Math.min(100, Math.round((value / total) * 100)) : 0;
   const fill = tone === "teal" ? "bg-teal" : tone === "success" ? "bg-success" : "bg-brand";
+  const t = useT();
   return (
     <div className={className}>
       {label ? (
         <div className="mb-1.5 flex items-center justify-between text-xs font-medium text-muted">
-          <span>{label}</span>
+          <span>{t(label)}</span>
           <span>{percent}%</span>
         </div>
       ) : null}
@@ -133,7 +146,7 @@ export function ProgressBar({
         aria-valuenow={percent}
         aria-valuemin={0}
         aria-valuemax={100}
-        aria-label={label ?? "Progress"}
+        aria-label={t(label ?? "Progress")}
         className="h-2 w-full overflow-hidden rounded-full bg-slate-200"
       >
         <div className={cn("h-full rounded-full transition-[width] duration-500", fill)} style={{ width: `${percent}%` }} />
@@ -165,9 +178,10 @@ export function Stat({
     success: "text-success",
     warning: "text-amber-600",
   }[tone];
+  const t = useT();
   const body = (
     <>
-      <p className="text-xs font-medium uppercase tracking-wide text-muted">{label}</p>
+      <p className="text-xs font-medium uppercase tracking-wide text-muted">{t(label)}</p>
       <p className={cn("mt-1.5 text-2xl font-semibold leading-none", accent)}>{value}</p>
       {hint ? <p className="mt-2 text-xs text-muted">{hint}</p> : null}
       {footer}

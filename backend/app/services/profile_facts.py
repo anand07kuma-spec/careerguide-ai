@@ -19,9 +19,10 @@ from __future__ import annotations
 
 import re
 
-# Stored as "class-3" … "class-12", matching the vocabulary in app/routers/auth.py
-# and the frontend's CLASS_OPTIONS.
-CLASS_MIN, CLASS_MAX = 3, 12
+# Stored as "class-6" … "class-12", matching the vocabulary in app/routers/auth.py
+# and the frontend's CLASS_OPTIONS. The app serves classes 6 to 12; a younger answer
+# is not a class this product has content for, so it is left unknown rather than stored.
+CLASS_MIN, CLASS_MAX = 6, 12
 
 _AGE_BANDS = (
     (5, "3-5"),
@@ -30,6 +31,24 @@ _AGE_BANDS = (
     (12, "11-12"),
     (120, "adult"),
 )
+
+# The ages a stated number is kept for. Deliberately wide: typing one's own age is
+# a fact, not a choice of product tier, and the class floor above is what gates the
+# content. Outside this range the number is ignored rather than stored — a profile
+# holding "age 200" is a worse outcome than one holding nothing.
+AGE_MIN, AGE_MAX = 3, 99
+
+
+def band_for_age(years: int) -> str:
+    """The band an exact age sits in.
+
+    `age_range` is derived from `age` wherever a student states a number, so the
+    five labels the guide's framework works in never have to be chosen by hand.
+    """
+    for ceiling, band in _AGE_BANDS:
+        if years <= ceiling:
+            return band
+    return _AGE_BANDS[-1][1]
 
 _NUM_WORDS = {
     "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8,
@@ -107,30 +126,28 @@ _FINANCIAL_CUES = (
 )
 
 
-def _class_from_number(value: str) -> str | None:
-    number = int(value.translate(_DEV_DIGITS))
-    if CLASS_MIN <= number <= CLASS_MAX:
-        return f"class-{number}"
-    return None
-
-
 def detect_class_level(text: str) -> str | None:
     for pattern in _CLASS_PATTERNS:
         for match in pattern.finditer(text):
             if _CLASS_MEASURE.match(text[match.end() : match.end() + 16]):
                 continue
             word = match.group(1).lower().strip()
-            if word in _NUM_WORDS:
-                return f"class-{_NUM_WORDS[word]}"
-            if word in _HINDI_CLASS_WORDS:
-                return f"class-{_HINDI_CLASS_WORDS[word]}"
-            found = _class_from_number(word)
-            if found:
-                return found
+            number = _NUM_WORDS.get(word) or _HINDI_CLASS_WORDS.get(word)
+            if number is None:
+                raw = word.translate(_DEV_DIGITS)
+                number = int(raw) if raw.isdigit() else None
+            if number is None or not (CLASS_MIN <= number <= CLASS_MAX):
+                continue
+            return f"class-{number}"
     return None
 
 
-def detect_age_range(text: str) -> str | None:
+def detect_age_years(text: str) -> int | None:
+    """The exact age in years this message states about the student themselves.
+
+    Kept as a number, because that is what was said: "main 14 saal ka hoon" states 14,
+    not "the 11-to-12 band". The band is derived from it at `band_for_age`.
+    """
     for pattern in _AGE_PATTERNS:
         match = pattern.search(text)
         if not match:
@@ -139,12 +156,15 @@ def detect_age_range(text: str) -> str | None:
         if not raw.isdigit():
             continue
         years = int(raw)
-        if years < 3 or years > 99:
+        if not (AGE_MIN <= years <= AGE_MAX):
             continue
-        for ceiling, band in _AGE_BANDS:
-            if years <= ceiling:
-                return band
+        return years
     return None
+
+
+def detect_age_range(text: str) -> str | None:
+    years = detect_age_years(text)
+    return band_for_age(years) if years is not None else None
 
 
 def detect_education(text: str) -> str | None:
@@ -167,8 +187,9 @@ def detect_facts(text: str) -> dict[str, object]:
     found: dict[str, object] = {}
     if cls := detect_class_level(text):
         found["class_level"] = cls
-    if age := detect_age_range(text):
-        found["age_range"] = age
+    if years := detect_age_years(text):
+        found["age"] = years
+        found["age_range"] = band_for_age(years)
     if edu := detect_education(text):
         found["education_context"] = edu
     if money := detect_financial(text):
@@ -181,7 +202,7 @@ def detect_facts(text: str) -> dict[str, object]:
 # short enough to read as an answer, or a sentence inside a longer message clearly
 # states it about the student.
 _SHORT_ANSWER_WORDS = 7
-_CONTEXTUAL_KEYS = ("class_level", "age_range")
+_CONTEXTUAL_KEYS = ("class_level", "age", "age_range")
 
 # The third path needs the number to sit in a sentence that also says who it is
 # about, so "mere papa class 12 mein the" cannot become the student's class.
@@ -196,9 +217,15 @@ _SELF_COPULA = re.compile(
 )
 
 
-def self_stated(key: str, text: str) -> str | None:
-    """The class or age this message states about the student themselves."""
-    detect = detect_class_level if key == "class_level" else detect_age_range
+def self_stated(key: str, text: str) -> str | int | None:
+    """The class or age this message states about the student themselves.
+
+    `age` and `age_range` are the same statement read two ways, so they get here through
+    the same sentence and the same care: whichever number this finds, the caller stores
+    the years and derives the band from them.
+    """
+    detectors = {"class_level": detect_class_level, "age": detect_age_years}
+    detect = detectors.get(key, detect_age_range)
     for sentence in re.split(r"[.!?\n;,]+", text):
         if not _SELF_SUBJECT.search(sentence) or not _SELF_COPULA.search(sentence):
             continue

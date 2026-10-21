@@ -1,9 +1,9 @@
 """Test signing back in to an account that already exists.
 
-Before this, an account was reachable only from the browser that created it: the
-device token lived in localStorage, and signing out — or clearing browser data,
-or switching to a phone — left a child's profile on the server with no way back
-in. The fix is a come-back code, and the things most likely to be wrong are
+Before this, an account was reachable only from the browser that created it: the session
+token lived in a store that browser could read but no other device could, so signing out —
+or clearing site data, or switching to a phone — left a child's profile on the server with
+no way back in. The fix is a come-back code, and the things most likely to be wrong are
 exactly the ones a person cannot see:
 
   * the code stored as readable text, so a database dump is a list of accounts;
@@ -36,6 +36,7 @@ if TEST_DB.exists():
 
 os.environ["DATABASE_URL"] = f"sqlite:///{TEST_DB.as_posix()}"
 os.environ["AI_PROVIDER"] = "demo"
+os.environ["RATE_LIMIT_ENABLED"] = "false"  # throttles are proved in security_test.py
 os.environ["DB_AUTO_SETUP"] = "false"
 
 from sqlalchemy import inspect, text  # noqa: E402
@@ -69,6 +70,15 @@ from fastapi.testclient import TestClient  # noqa: E402
 from app.main import app  # noqa: E402
 
 client = TestClient(app)
+# A second client, with its own empty cookie jar. Every minting response now sets a
+# session cookie and `TestClient` keeps whatever it is given, so a request that means to
+# present *no* credential has to be sent by a client that holds none — otherwise the check
+# passes for the wrong reason and the unauthenticated path is never proved.
+jarless = TestClient(app)
+
+# The shape `crypto.randomUUID()` gives a browser, and the value a second device would
+# send alongside a come-back code so that the code only has to be typed once.
+NEW_DEVICE = "7c9e6679-7425-40de-944b-e07fc1f90ae7"
 
 
 def onboard(**values) -> dict:
@@ -173,7 +183,7 @@ check("the old code no longer opens the account", client.post("/api/auth/login",
 check("the new code does", client.post("/api/auth/login", json={"code": newer}).status_code == 200)
 check("the warning says the old one is dead", "stopped working" in rotated.json().get("note", ""))
 check("and warns that the code grants access", "anyone who has it" in rotated.json().get("note", "").lower())
-unauthorized = client.post("/api/auth/comeback-code")
+unauthorized = jarless.post("/api/auth/comeback-code")
 check("nobody can mint a code without signing in", unauthorized.status_code == 401, unauthorized.text)
 
 print("\n--- an account from before this existed ---")
@@ -197,7 +207,25 @@ as_parent = client.post("/api/auth/login", json={"code": parent_code})
 check("a parent account signs in", as_parent.status_code == 200, as_parent.text)
 check("as the parent, not the child", as_parent.json().get("user", {}).get("role") == "parent")
 check("child code and parent code are different", parent_code != newer)
-check("the student's code does not grant the parent account", client.post("/api/auth/login", json={"code": newer}).json().get("user", {}).get("role") == "student")
+again = client.post("/api/auth/login", json={"code": newer})
+check(
+    "the student's code does not grant the parent account",
+    again.json().get("user", {}).get("role") == "student",
+    f"{again.status_code} {again.text}",
+)
+# A code typed on a phone is worth less if that phone has to type it again every time it
+# opens the app, so the sign-in binds the device that made it. Binding only happens for a
+# device that has no account of its own: a shared laptop must not be able to move a
+# stranger's browser onto a child's profile by typing a code over it.
+bound = client.post("/api/auth/login", json={"code": newer, "device_id": NEW_DEVICE})
+check("a code signs a new device in", bound.status_code == 200, bound.text)
+check(
+    "…and the next visit from that device is a return, not a second typing-out",
+    client.post("/api/auth/guest", json={"device_id": NEW_DEVICE}).json()["session"]["user"][
+        "id"
+    ]
+    == bound.json()["user"]["id"],
+)
 
 print("\n--- a stale schema gets its new columns ---")
 with engine.connect() as conn:

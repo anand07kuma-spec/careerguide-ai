@@ -5,6 +5,7 @@
 // headless Chrome over CDP so phone and laptop widths can both be looked at.
 //
 //   CG_TOKEN=<session token> node scripts/layout-shot.mjs /app shot.png --width=1440
+//   CG_THEME=dark CG_UI_LANG=hi node scripts/layout-shot.mjs /careers dark-hi.png
 //
 // The token is read from the environment and only ever written into the browser
 // profile under a temp directory, which is deleted on the way out.
@@ -17,6 +18,12 @@ const CHROME =
   process.env.CHROME_PATH ?? "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
 const BASE = process.env.CG_URL ?? "http://careerguide.localhost:3000";
 const TOKEN = process.env.CG_TOKEN ?? "";
+// Devanagari labels are usually longer than their English sources, so the
+// responsive sweep is run in both languages rather than only one.
+const UI_LANG = process.env.CG_UI_LANG ?? "";
+// The appearance is device-local, so a screenshot of the dark theme has to say so
+// in the browser profile rather than through a header or a query string.
+const THEME = process.env.CG_THEME ?? "";
 
 const args = process.argv.slice(2);
 const positional = args.filter((a) => !a.startsWith("--"));
@@ -26,6 +33,11 @@ const flag = (name, fallback) => {
 };
 
 const route = positional[0] ?? "/";
+if (!route.startsWith("/")) {
+  // Git Bash rewrites a leading-slash argument into a Windows path, which would
+  // otherwise produce a blank page and a clean-looking report. Fail loudly.
+  throw new Error(`route must start with "/", got ${JSON.stringify(route)} (export MSYS_NO_PATHCONV=1)`);
+}
 const out = positional[1] ?? "shot.png";
 const width = Number(flag("width", 1440));
 const height = Number(flag("height", 900));
@@ -146,6 +158,10 @@ try {
     deviceScaleFactor: 1,
     mobile,
   });
+  // `--media=print` renders the page through the print stylesheet, which is the
+  // only way to see what a parent would get from Ctrl+P on a legal page.
+  const media = flag("media", "");
+  if (media) await call("Emulation.setEmulatedMedia", { media });
 
   // Give the page its origin first so localStorage lands on the right host.
   await goto(`${BASE}/onboarding`);
@@ -153,6 +169,16 @@ try {
   if (TOKEN) {
     await call("Runtime.evaluate", {
       expression: `localStorage.setItem('careerguide.token', ${JSON.stringify(TOKEN)})`,
+    });
+  }
+  if (UI_LANG) {
+    await call("Runtime.evaluate", {
+      expression: `localStorage.setItem('careerguide.ui-lang', ${JSON.stringify(UI_LANG)})`,
+    });
+  }
+  if (THEME) {
+    await call("Runtime.evaluate", {
+      expression: `localStorage.setItem('careerguide.theme', ${JSON.stringify(THEME)})`,
     });
   }
   await goto(`${BASE}${route.startsWith("/") ? route : `/${route}`}`);

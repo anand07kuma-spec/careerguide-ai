@@ -1,0 +1,61 @@
+version: 2
+
+# Dependabot opens a pull request; it never merges one. That is the only honest way to
+# combine "these pins are exactly what passed the test battery" with "an advisory exists in
+# a package three levels down". The scan in `.github/workflows/security.yml` says what is
+# vulnerable; this says a fix is available and which release it is.
+#
+# Nothing here changes `requirements.txt` or `package-lock.json` by itself, and every PR it
+# opens has to pass the frontend and backend workflows before it is worth looking at. If
+# this noise is not wanted, deleting this file is the whole of the unsubscribe.
+
+updates:
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+    open-pull-requests-limit: 5
+    groups:
+      # One PR for a batch of patch/minor bumps instead of thirty, so the decision is
+      # "accept this week's safe set" rather than a queue of single-line diffs.
+      javascript-patches:
+        patterns:
+          - "*"
+        update-types:
+          - "patch"
+          - "minor"
+    commit-message:
+      prefix: "deps(frontend)"
+
+  - package-ecosystem: "pip"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+    open-pull-requests-limit: 5
+    groups:
+      python-patches:
+        patterns:
+          - "*"
+        update-types:
+          - "patch"
+          - "minor"
+    commit-message:
+      prefix: "deps(backend)"
+
+  - package-ecosystem: "docker"
+    directories:
+      - "/backend"
+      - "/frontend"
+    schedule:
+      interval: "monthly"
+    commit-message:
+      prefix: "deps(image)"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    commit-message:
+      prefix: "deps(ci)"

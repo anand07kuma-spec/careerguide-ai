@@ -12,6 +12,14 @@ rather than assumed:
 * being new is a normal answer, not an error, so a fresh browser goes to the one
   question onboarding asks instead of a dead end.
 
+And the two things that make a stolen token worth less than a month: what the database
+keeps is a digest of each credential rather than the credential, and a session is a day
+long, renewable while the page is open and capped at a ceiling counted from the sign-in
+that started it. Those are read back out of the rows here, not taken on trust. Where the
+browser keeps its session is the third: an `httpOnly` cookie the page cannot read, which
+the last section checks attribute by attribute — including that a request with no header
+at all still gets the child's own account back.
+
 Run from `backend/`:
 
     .venv/Scripts/python.exe scripts/guest_session_test.py
@@ -23,6 +31,7 @@ import os
 import pathlib
 import sys
 import tempfile
+from datetime import datetime, timedelta, timezone
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -32,10 +41,16 @@ if DB_PATH.exists():
     DB_PATH.unlink()
 os.environ["DATABASE_URL"] = f"sqlite:///{DB_PATH.as_posix()}"
 os.environ["AI_PROVIDER"] = "demo"
+os.environ["RATE_LIMIT_ENABLED"] = "false"  # throttles are proved in security_test.py
 
 from fastapi.testclient import TestClient  # noqa: E402
+from sqlalchemy import text  # noqa: E402
 
+from app.config import get_settings  # noqa: E402
+from app.database import SessionLocal  # noqa: E402
 from app.main import app  # noqa: E402
+from app.models import AuthToken, User  # noqa: E402
+from app.security import device_hash_of, token_hash_of  # noqa: E402
 
 PASS, FAIL = [], []
 
@@ -149,7 +164,10 @@ with client:
     for path in ["/api/auth/me", "/api/conversations"]:
         r = client.get(path, headers=auth(DEVICE_A))
         check(f"{path} will not open with a device id as the token", r.status_code == 401, str(r.status_code))
-    check("no token at all is refused", client.get("/api/conversations").status_code in (401, 422))
+    check(
+        "a request with neither a header nor a cookie is refused",
+        TestClient(app).get("/api/conversations").status_code == 401,
+    )
 
     section("Signing out and starting over")
     r = client.post("/api/auth/logout", headers=auth(token_a2))
@@ -161,6 +179,146 @@ with client:
     final_token = r.json()["session"]["token"]
     r = client.get("/api/conversations", headers=auth(final_token))
     check("and its conversation is still there", r.status_code == 200 and len(r.json()) == 1, r.text[:200])
+
+    section("What the database actually holds")
+    # The two values a browser presents are the whole of this app's authentication, so
+    # what matters is not that they are secret in transit but that reading the database
+    # does not hand them over. Every check below reads the row back the way an incident
+    # responder would: with the plaintext in hand, looking for it.
+    settings = get_settings()
+    db = SessionLocal()
+    try:
+        check("a session is issued for a day, not for a month",
+              settings.session_token_ttl_hours == 24, settings.session_token_ttl_hours)
+        check("…and rolling renewal has a ceiling it cannot pass",
+              settings.session_absolute_ttl_hours == 720, settings.session_absolute_ttl_hours)
+        check("the bearer string the browser holds is not a key in the database",
+              db.get(AuthToken, final_token) is None)
+        record = db.get(AuthToken, token_hash_of(final_token))
+        check("…its digest is, and it opens the same account",
+              record is not None and record.user_id == user_id)
+        check("…and it is the only kind of value that table holds: every session row is 64 hex",
+              db.execute(text("select count(*) from auth_tokens where length(token_hash) <> 64")
+                         ).scalar() == 0)
+        check("no session row can be found by the token it was issued as",
+              db.execute(text("select count(*) from auth_tokens where token_hash = :plain"),
+                         {"plain": final_token}).scalar() == 0)
+        stored = db.get(User, user_id).device_hash
+        check("the device id is stored as the digest the lookup uses, never as text",
+              stored == device_hash_of(DEVICE_A) and stored != DEVICE_A, stored)
+        check("…so a reader of this table cannot tell which device ids are real",
+              db.execute(text("select count(*) from users where device_hash = :plain"),
+                         {"plain": DEVICE_A}).scalar() == 0)
+        span = record.expires_at - record.created_at
+        check("…and the session that was just minted is set to expire a day after it started",
+              timedelta(hours=23, minutes=59) < span < timedelta(hours=24, minutes=1),
+              span)
+
+        section("Renewal: quietly, and only up to the ceiling")
+        # A page left open all evening must not lose a child's work, and a token copied
+        # onto a shared laptop must not quietly become permanent. Both are the same call.
+        stale = datetime.now(timezone.utc) + timedelta(hours=2)
+        record.expires_at = stale
+        db.commit()
+        r = client.get("/api/auth/me", headers=auth(final_token))
+        db.refresh(record)
+        check("an ordinary signed-in request renews a session that is running low",
+              r.status_code == 200 and record.expires_at > stale, str(record.expires_at))
+        check("…to a fresh day from now, not a day from when it started",
+              timedelta(hours=23) < record.expires_at - datetime.now(timezone.utc)
+              < timedelta(hours=24, minutes=1), str(record.expires_at))
+
+        record.expires_at = datetime.now(timezone.utc) + timedelta(hours=2)
+        record.created_at = datetime.now(timezone.utc) - timedelta(hours=700)
+        db.commit()
+        r = client.post("/api/auth/refresh", headers=auth(final_token))
+        db.refresh(record)
+        check("an explicit refresh is answered without handing out a second token",
+              r.status_code == 200 and "token" not in r.json(), r.text[:200])
+        check("…and says honestly whether it moved the date", r.json().get("extended") is True)
+        ceiling = record.created_at + timedelta(hours=settings.session_absolute_ttl_hours)
+        check("…but never past the ceiling counted from the sign-in that minted it",
+              abs((record.expires_at - ceiling).total_seconds()) < 2,
+              [str(record.expires_at), str(ceiling)])
+
+        # Past the ceiling there is nothing left to grant, and the route must say so
+        # rather than pretend the session got longer.
+        before_expired = record.expires_at
+        r = client.post("/api/auth/refresh", headers=auth(final_token))
+        db.refresh(record)
+        check("asking again at the ceiling is refused with a false, not a silent yes",
+              r.status_code == 200 and r.json().get("extended") is False
+              and record.expires_at == before_expired, r.text[:200])
+
+        record.created_at = datetime.now(timezone.utc)
+        record.expires_at = datetime.now(timezone.utc) - timedelta(minutes=1)
+        db.commit()
+        r = client.get("/api/auth/me", headers=auth(final_token))
+        check("a session past its date is refused even though the token is still correct",
+              r.status_code == 401, str(r.status_code))
+        r = client.post("/api/auth/refresh", headers=auth(final_token))
+        check("…and cannot be refreshed back to life, which is what makes the day mean "
+              "something", r.status_code == 401, str(r.status_code))
+
+        r = client.post("/api/auth/guest", json={"device_id": DEVICE_A})
+        check("…while the device that owns it simply starts a new session, because a day is "
+              "a guard against a stolen token and not against the child who holds it",
+              r.json()["session"]["token"] != final_token)
+
+        section("The session travels in a cookie the page cannot read")
+        # What this is for: a token a page can read is a token a page can lose. Anything
+        # served to that page — a bundler bug, a third-party script, one template that
+        # interpolates a child's message into HTML — could have copied it out of
+        # `localStorage` and sent it somewhere. `HttpOnly` is the only attribute a browser
+        # enforces against its own script, so these checks are about the attributes, not
+        # about the value.
+        jar = TestClient(app)
+        minted = jar.post("/api/auth/guest", json={"device_id": DEVICE_A})
+        minted_token = minted.json()["session"]["token"]
+        offered = minted.headers.get("set-cookie", "")
+        check("a response that starts a session sets the session cookie",
+              "cg_session=" in offered and "HttpOnly" in offered, offered)
+        check("…scoped to every path of this API, and to no other host",
+              "Path=/" in offered and "Domain=" not in offered, offered)
+        check("…with the cross-site attribute the deployment needs",
+              "SameSite=" in offered, offered)
+        check("…and it is the same session the body names, not a second one",
+              f"cg_session={minted_token}" in offered, offered)
+        check("a browser holding that cookie and sending no header at all is signed in",
+              jar.get("/api/auth/me").json().get("user", {}).get("id") == user_id,
+              jar.get("/api/auth/me").text[:200])
+        check("…while a client that was never given one is refused",
+              TestClient(app).get("/api/auth/me").status_code == 401)
+        check("the header wins when a request presents both",
+              jar.get("/api/auth/me", headers=auth(minted_token)).status_code == 200)
+        check("…and a header that is present and wrong is a refusal, not a cue to try the jar",
+              jar.get("/api/auth/me", headers=auth("z" * 43)).status_code == 401)
+        out = jar.post("/api/auth/logout")
+        check("signing out works from the cookie alone", out.status_code == 204,
+              str(out.status_code))
+        cleared = out.headers.get("set-cookie", "")
+        check("…and the cookie is expired with the attributes it was set with, or the "
+              "browser keeps offering a dead session",
+              'cg_session=""' in cleared and "HttpOnly" in cleared and "Path=/" in cleared,
+              cleared)
+        check("…so the browser that signed out has nothing left to present",
+              jar.get("/api/auth/me").status_code == 401)
+        proxied = TestClient(app)
+        over_proxy = proxied.post("/api/auth/guest", json={"device_id": DEVICE_A},
+                                 headers={"x-forwarded-proto": "https"})
+        check("behind a proxy that says the browser reached us over https, the cookie asks "
+              "for Secure and the only mode that survives with it",
+              "Secure" in over_proxy.headers.get("set-cookie", "")
+              and "SameSite=None" in over_proxy.headers.get("set-cookie", ""),
+              over_proxy.headers.get("set-cookie"))
+        # The same pair on plain http, which is what a laptop dev server is: `None` without
+        # `Secure` is a cookie a browser throws away rather than a looser one, so the two
+        # have to step down together or nobody signs in locally.
+        check("…and on plain http the mode steps down to Lax instead of promising a cookie "
+              "the browser would discard",
+              "Secure" not in offered and "SameSite=Lax" in offered, offered)
+    finally:
+        db.close()
 
 if DB_PATH.exists():
     # The engine keeps SQLite's file open until the process ends, so this can

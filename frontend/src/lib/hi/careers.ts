@@ -1,0 +1,67 @@
+/**
+ * Hindi names for the 55 careers in the catalogue.
+ *
+ * The catalogue lives in the database with English titles, so the translation
+ * sits here rather than in a column: adding `title_hi` would mean migrating a
+ * live table, and a career name is a label, not data.
+ *
+ * Words Indian students always say in English (CA, pilot, nursing, UI design)
+ * stay transliterated; the ones with a common Hindi name get it.
+ */
+export const HI: Record<string, string> = {
+  "Actuarial Science": "एक्चुअरियल साइंस",
+  "Agronomy and Modern Agriculture": "खेती और आधुनिक कृषि",
+  "Air Traffic Control": "एयर ट्रैफिक कंट्रोल",
+  "Aircraft Maintenance Engineering": "विमान रखरखाव इंजीनियरिंग",
+  "Animation, VFX and Gaming Art": "एनिमेशन, VFX और गेमिंग आर्ट",
+  "Armed Forces Officer": "सशस्त्र सेना अधिकारी",
+  "Automotive and Vehicle Technology": "ऑटोमोबाइल और वाहन तकनीक",
+  "Business Analytics": "बिज़नेस एनालिटिक्स",
+  "Chartered Accountancy": "चार्टर्ड अकाउंटेंसी (CA)",
+  "Chef and Culinary Arts": "शेफ और कुकिंग आर्ट्स",
+  "Civil Engineering": "सिविल इंजीनियरिंग",
+  "Civil Services and Public Administration": "सिविल सेवा और प्रशासन",
+  "Clinical Psychology": "क्लिनिकल साइकोलॉजी",
+  "Commercial Pilot": "कमर्शियल पायलट",
+  "Community Medicine and Public Health": "सामुदायिक चिकित्सा और जन स्वास्थ्य",
+  "Company Secretary": "कंपनी सेक्रेटरी (CS)",
+  "Content Creation and Digital Media": "कंटेंट निर्माण और डिजिटल मीडिया",
+  "Cybersecurity": "साइबर सुरक्षा",
+  "Data Science and Analytics": "डेटा साइंस और एनालिटिक्स",
+  "Doctor (MBBS and post-graduate specialisation)": "डॉक्टर (MBBS और स्पेशलाइज़ेशन)",
+  "Education Technology and Learning Design": "एजुकेशन टेक और लर्निंग डिज़ाइन",
+  "Electrician and Electrical ITI Trades": "इलेक्ट्रीशियन और ITI इलेक्ट्रिकल ट्रेड",
+  "Electronics and Semiconductor Engineering": "इलेक्ट्रॉनिक्स और सेमीकंडक्टर इंजीनियरिंग",
+  "Entrepreneurship and Small Business": "उद्यमिता और छोटा व्यापार",
+  "Environmental Science and Conservation": "पर्यावरण विज्ञान और संरक्षण",
+  "Esports and Gaming": "ईस्पोर्ट्स और गेमिंग",
+  "Film and Video Production": "फिल्म और वीडियो निर्माण",
+  "Food Technology and Processing": "फूड टेक्नोलॉजी और प्रोसेसिंग",
+  "Genetic Counselling": "जेनेटिक काउंसलिंग",
+  "Graphic and UI Design": "ग्राफिक और UI डिज़ाइन",
+  "Hotel and Hospitality Management": "होटल और हॉस्पिटैलिटी मैनेजमेंट",
+  "Journalism and Media": "पत्रकारिता और मीडिया",
+  "Law and Advocacy": "कानून और वकालत",
+  "Machine Learning Engineering": "मशीन लर्निंग इंजीनियरिंग",
+  "Marketing and Brand Management": "मार्केटिंग और ब्रांड मैनेजमेंट",
+  "Mechanical Engineering": "मैकेनिकल इंजीनियरिंग",
+  "Nursing": "नर्सिंग",
+  "Occupational Therapy": "ऑक्यूपेशनल थेरेपी",
+  "Physiotherapy": "फ़िज़ियोथेरेपी",
+  "Plumbing, Welding and Fabrication": "प्लंबिंग, वेल्डिंग और फैब्रिकेशन",
+  "Police and Security Services": "पुलिस और सुरक्षा सेवाएँ",
+  "Product Management": "प्रोडक्ट मैनेजमेंट",
+  "Professional Sportsperson": "प्रोफेशनल खिलाड़ी",
+  "Robotics and Mechatronics": "रोबोटिक्स और मैकाट्रॉनिक्स",
+  "School Teaching": "स्कूल टीचिंग",
+  "Scientific Research": "वैज्ञानिक अनुसंधान",
+  "Social Work and Community Development": "सामाजिक कार्य और समुदाय विकास",
+  "Solar and Renewable Energy Technician": "सोलर और नवीकरणीय ऊर्जा तकनीशियन",
+  "Speech and Language Pathology": "स्पीच और लैंग्वेज पैथोलॉजी",
+  "Sports Coaching": "स्पोर्ट्स कोचिंग",
+  "Sports Science and Strength Training": "स्पोर्ट्स साइंस और स्ट्रेंथ ट्रेनिंग",
+  "Supply Chain and Logistics": "सप्लाई चेन और लॉजिस्टिक्स",
+  "Travel, Tourism and Guiding": "यात्रा, पर्यटन और गाइडिंग",
+  "Veterinary Science and Animal Husbandry": "पशु चिकित्सा और पशुपालन",
+  "Wildlife and Forest Conservation": "वन्यजीव और वन संरक्षण",
+};

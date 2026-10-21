@@ -42,5 +42,14 @@ def add_missing_columns(engine: Engine) -> list[str]:
                             f'ON "{table.name}" ("{column.name}")'
                         )
                     )
+            # A table that already exists never gets its declared indexes either, so
+            # a unique rule added to a model afterwards — one email, one account —
+            # would exist in the models and in Alembic but not in the database the
+            # app is actually talking to. The router's own check would still refuse
+            # it; the database should not have to rely on that.
+            named = {index["name"] for index in inspector.get_indexes(table.name)}
+            for index in table.indexes:
+                if index.name and index.name not in named:
+                    index.create(conn, checkfirst=True)
         conn.commit()
     return added

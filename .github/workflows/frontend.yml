@@ -1,0 +1,182 @@
+name: Frontend
+
+# What this proves, and what it does not.
+#
+# Every step here is a check somebody runs by hand before shipping this app, put on a
+# machine that has never seen the developer's laptop: no `node_modules` carried over, no
+# stale `.next` build cache, no environment variables except the three the built site
+# needs. That is the point. A production build that only works on the machine that made
+# it is not a production build.
+#
+#  * `npm ci` — installs exactly `package-lock.json`, and fails if the lock file does not
+#    match `package.json`. A hand-edited dependency version is caught here.
+#  * `tsc --noEmit` — the types the screens are written against.
+#  * `eslint` — this repository's own rules, including the React hook rules that a
+#    setState-in-effect bug depends on.
+#  * `npm run build` — the real thing: every route rendered at build time, the security
+#    headers and middleware compiled in, the service worker and manifest copied to the
+#    output. A route that throws on render fails the build, not the visitor.
+#
+# The build needs `NEXT_PUBLIC_BACKEND_URL` and `NEXT_PUBLIC_SITE_URL` at build time,
+# because that is how `NEXT_PUBLIC_*` works — the value is written into the browser code
+# while the bundle is made, which is also why no secret may ever be named one. The PR
+# values below are the development defaults: a preview build pointing at a local API is
+# useless to a visitor, and so is a real token in a public log.
+#
+# There is no `deploy` step on push. Both projects are already deployed by Vercel's own
+# Git integration, which builds `main` and every pull request on its own; a second deploy
+# path here would race it and produce two builds for one commit. The manual job at the
+# bottom is for the day that is not wanted — a rollback, or a deploy from a branch nobody
+# merged — and it refuses to run rather than pretending to succeed if its secrets are not
+# set.
+#
+# It is reachable only through `workflow_dispatch`, which is the one thing that used to be
+# missing: the job was written `if: github.event_name == 'workflow_dispatch'` while the
+# `on:` block named no such trigger, so the button did not exist and the condition could
+# never be true. A job that cannot be started is worse than no job, because it reads as
+# though a rollback path exists.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "frontend/**"
+      - ".github/workflows/frontend.yml"
+  pull_request:
+    paths:
+      - "frontend/**"
+      - ".github/workflows/frontend.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: frontend-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  node_version: "24"
+  # The Vercel CLI is not pinned by any lock file in this repository — `npx vercel` asks
+  # the registry for whatever is current at the moment the button is pressed, so the same
+  # commit deploys with a different builder next month, and a build that breaks then breaks
+  # with no diff to look at. 64.7.0 is the registry's `latest` as read on 2026-10-20; bump
+  # it deliberately, in a commit that says so.
+  VERCEL_VERSION: "64.7.0"
+
+jobs:
+  check:
+    name: Type-check, lint and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.node_version }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install exactly what the lock file names
+        run: npm ci --no-audit --no-fund
+
+      - name: Types
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Production build
+        env:
+          NEXT_PUBLIC_BACKEND_URL: http://localhost:8000
+          NEXT_PUBLIC_SITE_URL: http://localhost:3000
+        run: npm run build
+
+      # Not a nicety. The service worker and the manifest live in `public/` and are served
+      # verbatim; if that breaks, the installed app stops opening offline and nothing else
+      # in this app complains. And a route that did not make it into the build is a 404 in
+      # production that works perfectly in `next dev`, so both are asserted here — against
+      # the build's own route manifest, rather than against a list of file names somebody
+      # has to remember to update.
+      - name: The PWA still describes routes this build actually serves
+        run: |
+          node -e '
+          const fs = require("fs");
+          const man = JSON.parse(fs.readFileSync("public/manifest.webmanifest", "utf8"));
+          const routes = Object.values(require("./.next/app-path-routes-manifest.json"));
+          const files = man.icons.map((i) => i.src);
+          for (const w of ["/icon-192.png", "/icon-512.png", "/icon-maskable-192.png", "/icon-maskable-512.png"])
+            if (!files.includes(w)) { console.error("manifest names no " + w); process.exit(1); }
+          for (const f of files)
+            if (!fs.existsSync("public" + f)) { console.error("icon " + f + " is not in public/"); process.exit(1); }
+          const purposes = new Set(man.icons.flatMap((i) => String(i.purpose).split(" ")));
+          if (!purposes.has("maskable")) { console.error("no maskable icon: Android crops the logo"); process.exit(1); }
+          if (!man.theme_color || !man.display) { console.error("manifest has no theme_color or display"); process.exit(1); }
+          if (!routes.includes(man.start_url)) { console.error("start_url " + man.start_url + " is not a route this build serves"); process.exit(1); }
+          for (const r of ["/app/admin/dashboard", "/app/admin/settings", "/app/admin/users", "/app/admin/content",
+                           "/app/admin/leads", "/join", "/careers", "/blog"])
+            if (!routes.includes(r)) { console.error("the build does not serve " + r); process.exit(1); }
+          for (const f of ["sw.js", "manifest.webmanifest"])
+            if (!fs.existsSync("public/" + f)) { console.error("public/" + f + " is gone"); process.exit(1); }
+          console.log("PWA ok | start_url " + man.start_url + " | icons " + files.length + " | routes " + routes.length);
+          '
+
+  deploy:
+    name: Deploy to Vercel (manual only)
+    if: github.event_name == 'workflow_dispatch'
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Refuse to deploy without the Vercel secrets
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          if [ -z "$VERCEL_TOKEN" ] || [ -z "$VERCEL_ORG_ID" ] || [ -z "$VERCEL_PROJECT_ID" ]; then
+            echo "::error::This job needs repository secrets VERCEL_TOKEN, VERCEL_ORG_ID and VERCEL_PROJECT_ID."
+            echo "Nothing was deployed. Until they are set, Vercel's own Git integration is the only thing"
+            echo "that publishes this app — which is a legitimate arrangement, but not one to discover twice."
+            exit 1
+          fi
+          echo "Secrets present."
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.node_version }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Pull the environment Vercel already holds
+        # All three ids, not just the token. `.vercel/project.json` is gitignored — it is
+        # the developer's machine state — so a fresh checkout has nothing else to say which
+        # project to pull, and `vercel pull` without them prompts for an interactive login.
+        run: npx --yes vercel@${{ env.VERCEL_VERSION }} pull --yes --environment=production --token "$VERCEL_TOKEN"
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      - name: Build with that environment
+        run: npx --yes vercel@${{ env.VERCEL_VERSION }} build --prod --token "$VERCEL_TOKEN"
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      - name: Deploy
+        run: npx --yes vercel@${{ env.VERCEL_VERSION }} deploy --prebuilt --prod --token "$VERCEL_TOKEN"
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}

@@ -53,7 +53,7 @@ export default function NotFound() {
               href={place.href}
               variant="ghost"
               size="sm"
-              className="flex h-auto w-full flex-col items-start gap-0.5 rounded-xl border border-line bg-white/60 px-4 py-3 text-left"
+              className="flex h-auto w-full flex-col items-start gap-0.5 rounded-xl border border-line bg-surface/60 px-4 py-3 text-left"
             >
               <span className="font-semibold text-ink">{place.label}</span>
               <span className="text-xs font-normal text-muted">{place.hint}</span>

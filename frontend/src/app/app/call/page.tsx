@@ -23,6 +23,7 @@ import { GuideAvatar, VoiceWave, Wordmark } from "@/components/brand";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { api, ApiError, BACKEND_URL, isOffline } from "@/lib/api";
+import { useT } from "@/lib/i18n";
 import { useSession } from "@/lib/session";
 import { cn } from "@/lib/utils";
 import { THEME_LABELS, type ConversationInfo, type ThemeKey } from "@/lib/types";
@@ -56,6 +57,8 @@ interface Caption {
   themes?: string[];
 }
 
+// The labels stay in English source text; the screen runs them through t() at
+// render, so a dictionary key matches the source and a gap falls back to English.
 const STATE_COPY: Record<CallState, { label: string; hint: string; tone: string }> = {
   ready: {
     label: "Ready to call",
@@ -119,6 +122,7 @@ const FALLBACK_GREETING: Record<string, string> = {
 };
 
 export default function VoiceCallPage() {
+  const t = useT();
   const { settings, user, isStudent } = useSession();
   const language = settings.language || user?.preferred_language || "hinglish";
   // Which language this call is actually running in right now. The guide
@@ -216,18 +220,18 @@ export default function VoiceCallPage() {
         const reason =
           failure instanceof ApiError
             ? failure.message
-            : "The guide's voice service did not answer.";
+            : t("The guide's voice service did not answer.");
         const handled = speakWithBrowser(text, used, () => onEndedRef.current());
         if (handled) {
-          setNotice(`${reason} Your browser's own voice is reading this one.`);
+          setNotice(`${reason} ${t("Your browser's own voice is reading this one.")}`);
         } else {
-          setNotice(`${reason} Spoken replies are off right now; captions still work.`);
+          setNotice(`${reason} ${t("Spoken replies are off right now; captions still work.")}`);
           if (settings.continuous_conversation) beginListening();
           else go("ready");
         }
       }
     },
-    [beginListening, go, player, settings.continuous_conversation, settings.voice, spoken],
+    [beginListening, go, player, settings.continuous_conversation, settings.voice, spoken, t],
   );
 
   const sendTurn = useCallback(
@@ -269,7 +273,7 @@ export default function VoiceCallPage() {
           await player.play(answer.audio_url);
         } else {
           if (answer.audio_error && !mutedRef.current) {
-            setNotice(`${answer.audio_error} Using your browser's voice instead.`);
+            setNotice(`${answer.audio_error} ${t("Using your browser's voice instead.")}`);
             const handled = speakWithBrowser(answer.reply.content, answer.language || spoken, () =>
               onEndedRef.current(),
             );
@@ -290,14 +294,14 @@ export default function VoiceCallPage() {
         setNotice(
           error instanceof Error
             ? error.message
-            : "The guide could not hear that. Try again, or type your answer.",
+            : t("The guide could not hear that. Try again, or type your answer."),
         );
         go("ready");
       } finally {
         sendingRef.current = false;
       }
     },
-    [beginListening, clearSilenceTimer, go, player, settings.continuous_conversation, spoken],
+    [beginListening, clearSilenceTimer, go, player, settings.continuous_conversation, spoken, t],
   );
 
   // The recognition and audio callbacks are wired after commit, so each one sees
@@ -366,10 +370,10 @@ export default function VoiceCallPage() {
         return;
       }
       setOffline(isOffline(error));
-      setNotice(error instanceof Error ? error.message : "The call could not start.");
+      setNotice(error instanceof Error ? error.message : t("The call could not start."));
       go("ready");
     }
-  }, [go, speak, spoken]);
+  }, [go, speak, spoken, t]);
 
   const endCall = useCallback(async () => {
     clearSilenceTimer();
@@ -410,26 +414,33 @@ export default function VoiceCallPage() {
     else go("silence");
   }, [clearSilenceTimer, go, sendTurn]);
 
+  // The labels are translated here rather than at the call sites: this function
+  // closes over the microphone handlers, and handing what it returns to another
+  // function trips the rule against reading a ref during render.
   const centralAction = () => {
     switch (state) {
       case "ready":
       case "ended":
-        return { label: state === "ended" ? "Call again" : "Start the call", icon: Phone, run: startCall };
+        return {
+          label: state === "ended" ? t("Call again") : t("Start the call"),
+          icon: Phone,
+          run: startCall,
+        };
       case "connecting":
       case "thinking":
       case "greeting":
       case "speaking":
-        return { label: "Interrupt and talk", icon: Mic, run: interrupt };
+        return { label: t("Interrupt and talk"), icon: Mic, run: interrupt };
       case "listening":
-        return { label: "Done talking", icon: MicOff, run: stopListening };
+        return { label: t("Done talking"), icon: MicOff, run: stopListening };
       case "paused":
-        return { label: "Talk now", icon: Mic, run: interrupt };
+        return { label: t("Talk now"), icon: Mic, run: interrupt };
       case "silence":
-        return { label: "Try again", icon: RefreshCw, run: beginListening };
+        return { label: t("Try again"), icon: RefreshCw, run: beginListening };
       case "blocked":
-        return { label: "Try the microphone again", icon: RefreshCw, run: beginListening };
+        return { label: t("Try the microphone again"), icon: RefreshCw, run: beginListening };
       default:
-        return { label: "Talk", icon: Mic, run: beginListening };
+        return { label: t("Talk"), icon: Mic, run: beginListening };
     }
   };
 
@@ -467,7 +478,7 @@ export default function VoiceCallPage() {
               )}
             >
               {muted ? <VolumeX className="h-3.5 w-3.5" aria-hidden /> : <Volume2 className="h-3.5 w-3.5" aria-hidden />}
-              {muted ? "Voice off" : "Voice on"}
+              {muted ? t("Voice off") : t("Voice on")}
             </button>
             <button
               type="button"
@@ -479,7 +490,7 @@ export default function VoiceCallPage() {
               )}
             >
               <Captions className="h-3.5 w-3.5" aria-hidden />
-              Captions
+              {t("Captions")}
             </button>
           </div>
         </header>
@@ -494,9 +505,9 @@ export default function VoiceCallPage() {
 
           <div>
             <p className={cn("text-lg font-semibold sm:text-xl", copy.tone)} role="status">
-              {copy.label}
+              {t(copy.label)}
             </p>
-            <p className="mt-1 text-xs leading-relaxed text-white/55">{copy.hint}</p>
+            <p className="mt-1 text-xs leading-relaxed text-white/55">{t(copy.hint)}</p>
           </div>
 
           <VoiceWave active={state === "listening" || state === "speaking" || state === "greeting"} />
@@ -513,22 +524,23 @@ export default function VoiceCallPage() {
                 <div className="rounded-card border border-amber-400/40 bg-amber-400/10 p-4">
                   <p className="flex items-center gap-2 text-sm font-semibold text-amber-200">
                     <Headphones className="h-4 w-4" aria-hidden />
-                    Voice is switched off for this account
+                    {t("Voice is switched off for this account")}
                   </p>
                   <p className="mt-1.5 text-xs leading-relaxed text-white/75">
-                    Calling needs your permission to use the microphone. Turn it on in Settings —
-                    you can turn it off again any time, and typing works everywhere.
+                    {t(
+                      "Calling needs your permission to use the microphone. Turn it on in Settings — you can turn it off again any time, and typing works everywhere.",
+                    )}
                   </p>
                   <Link
                     href="/app/settings"
                     className="mt-3 inline-flex rounded-full bg-brand px-4 py-2 text-xs font-semibold text-white"
                   >
-                    Open Settings
+                    {t("Open Settings")}
                   </Link>
                 </div>
               ) : (
                 <p className="rounded-card border border-red-400/30 bg-red-500/10 p-4 text-xs leading-relaxed text-white/85">
-                  {MIC_ERROR_TEXT[micProblem ?? "unknown"]}
+                  {t(MIC_ERROR_TEXT[micProblem ?? "unknown"])}
                 </p>
               )}
             </div>
@@ -538,18 +550,18 @@ export default function VoiceCallPage() {
             <div className="w-full max-w-md rounded-card border border-amber-400/40 bg-amber-400/10 p-4 text-left">
               <p className="flex items-center gap-2 text-sm font-semibold text-amber-200">
                 <AlertTriangle className="h-4 w-4" aria-hidden />
-                Your safety comes first
+                {t("Your safety comes first")}
               </p>
               <p className="mt-1.5 text-xs leading-relaxed text-white/80">
-                Please tell a trusted adult right away — a parent, relative, teacher or school
-                counsellor. In India you can call <strong>Childline 1098</strong>, free, any time.
+                {t("Please tell a trusted adult right away — a parent, relative, teacher or school counsellor.")}{" "}
+                {t("In India you can call a free helpline any time:")} <strong>Childline 1098</strong>.
               </p>
               <button
                 type="button"
                 onClick={() => setSafety(false)}
                 className="mt-2 text-xs font-medium text-white/70 underline"
               >
-                I have read this
+                {t("I have read this")}
               </button>
             </div>
           ) : null}
@@ -562,13 +574,15 @@ export default function VoiceCallPage() {
             <p className="max-w-md text-xs leading-relaxed text-white/60">
               {/localhost|127\.0\.0\.1/.test(BACKEND_URL) ? (
                 <>
-                  The CareerGuide server is not reachable on port 8000. Start it with
-                  <code className="mx-1 rounded bg-white/10 px-1.5 py-0.5">uvicorn app.main:app --reload</code>
-                  and try again.
+                  {t("The CareerGuide server is not reachable on port 8000.")}{" "}
+                  {t("Start it with this command:")}
+                  <code className="mx-1 rounded bg-white/10 px-1.5 py-0.5">uvicorn app.main:app --reload</code>{" "}
+                  {t("Then try again.")}
                 </>
               ) : (
-                "The CareerGuide server is not reachable just now. Your call was not recorded. " +
-                  "Try again in a moment, or switch to text."
+                t(
+                  "The CareerGuide server is not reachable just now. Your call was not recorded. Try again in a moment, or switch to text.",
+                )
               )}
             </p>
           ) : null}
@@ -581,7 +595,7 @@ export default function VoiceCallPage() {
           >
             {captions.length === 0 ? (
               <p className="text-xs text-white/45">
-                Captions appear here as you speak, so you can always follow along in text.
+                {t("Captions appear here as you speak, so you can always follow along in text.")}
               </p>
             ) : (
               captions.map((item) => (
@@ -597,10 +611,12 @@ export default function VoiceCallPage() {
                     </p>
                     {item.from === "guide" ? (
                       <div className="mt-1 flex flex-wrap items-center gap-1.5 justify-start">
-                        {item.demo ? <Badge tone="warning">Demo guide</Badge> : null}
+                        {item.demo ? <Badge tone="warning">{t("Demo guide")}</Badge> : null}
                         {item.themes?.map((theme) => (
                           <Badge key={theme} tone="teal">
-                            {THEME_LABELS[theme as ThemeKey] ?? theme}
+                            {THEME_LABELS[theme as ThemeKey]
+                              ? t(THEME_LABELS[theme as ThemeKey])
+                              : theme}
                           </Badge>
                         ))}
                       </div>
@@ -617,7 +633,7 @@ export default function VoiceCallPage() {
             <Button
               variant="secondary"
               size="icon"
-              aria-label={state === "paused" ? "Resume the voice" : "Pause the voice"}
+              aria-label={state === "paused" ? t("Resume the voice") : t("Pause the voice")}
               onClick={() => {
                 if (stateRef.current === "paused") {
                   player.toggle();
@@ -655,7 +671,7 @@ export default function VoiceCallPage() {
           </button>
 
           {state !== "ready" && state !== "ended" ? (
-            <Button variant="danger" size="icon" aria-label="End the call" onClick={() => void endCall()}>
+            <Button variant="danger" size="icon" aria-label={t("End the call")} onClick={() => void endCall()}>
               <PhoneOff className="h-4 w-4" aria-hidden />
             </Button>
           ) : null}
@@ -666,7 +682,7 @@ export default function VoiceCallPage() {
         <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
           <Button variant="ghost" size="sm" className="text-white/70 hover:bg-white/10 hover:text-white" onClick={speakAgain}>
             <RefreshCw className="h-3.5 w-3.5" aria-hidden />
-            Say that again
+            {t("Say that again")}
           </Button>
           <Button
             variant="ghost"
@@ -681,14 +697,14 @@ export default function VoiceCallPage() {
             }}
           >
             <CircleStop className="h-3.5 w-3.5" aria-hidden />
-            Stop voice
+            {t("Stop voice")}
           </Button>
           <Link
             href="/app/chat"
             className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-white/70 hover:bg-white/10 hover:text-white"
           >
             <Keyboard className="h-3.5 w-3.5" aria-hidden />
-            Chat by typing instead
+            {t("Chat by typing instead")}
           </Link>
         </div>
 
@@ -702,20 +718,19 @@ export default function VoiceCallPage() {
           <input
             value={typed}
             onChange={(event) => setTyped(event.target.value)}
-            placeholder="Or type your answer here…"
-            aria-label="Type your answer"
+            placeholder={t("Or type your answer here…")}
+            aria-label={t("Type your answer")}
             className="min-h-[46px] flex-1 rounded-card border border-white/15 bg-white/10 px-4 py-2.5 text-sm text-white outline-none placeholder:text-white/40 focus:border-brand-light"
           />
-          <Button type="submit" size="icon" aria-label="Send your message" disabled={!typed.trim() || busy}>
+          <Button type="submit" size="icon" aria-label={t("Send your message")} disabled={!typed.trim() || busy}>
             <Send className="h-4 w-4" aria-hidden />
           </Button>
         </form>
 
         <p className="mt-4 pb-6 text-center text-[11px] leading-relaxed text-white/40">
-          The microphone only records while the call screen is listening — never in the background,
-          and raw audio is not stored. Speech recognition is your browser&apos;s, spoken replies come
-          from the server&apos;s speech service over the internet (Settings names which one), and this
-          is not full-duplex streaming: one voice speaks at a time.
+          {t(
+            "The microphone only records while the call screen is listening — never in the background, and raw audio is not stored. Speech recognition is your browser's, spoken replies come from the server's speech service over the internet (Settings names which one), and this is not full-duplex streaming: one voice speaks at a time.",
+          )}
         </p>
       </div>
     </div>

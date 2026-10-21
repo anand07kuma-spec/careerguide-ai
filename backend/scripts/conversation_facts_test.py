@@ -27,6 +27,7 @@ if DB_PATH.exists():
     DB_PATH.unlink()
 os.environ["DATABASE_URL"] = f"sqlite:///{DB_PATH.as_posix()}"
 os.environ["AI_PROVIDER"] = "demo"
+os.environ["RATE_LIMIT_ENABLED"] = "false"  # throttles are proved in security_test.py
 
 from fastapi.testclient import TestClient  # noqa: E402
 
@@ -63,7 +64,7 @@ with TestClient(app) as client:
         profile,
     )
 
-    started = client.post("/api/conversations", json={"mode": "chat"}, headers=headers)
+    started = client.post("/api/conversations", json={"kind": "chat"}, headers=headers)
     check("a conversation starts", started.status_code == 201, started.text[:200])
     session_id = started.json()["id"]
 
@@ -98,7 +99,7 @@ with TestClient(app) as client:
     check("it is on the profile", stored["class_level"] == "class-8", stored)
     check("the age band follows the class", stored["age_range"] == "11-12", stored)
 
-    noise = say("class 3 hours of study daily is too much")
+    noise = say("class 9 hours of study daily is too much")
     check("a stray number teaches nothing", noise["profile_updates"] == {}, noise["profile_updates"])
     check("and cannot overwrite the answer", current_profile()["class_level"] == "class-8", current_profile())
 
@@ -152,7 +153,7 @@ with TestClient(app) as client:
         },
     )
     arav = {"Authorization": f"Bearer {second.json()['token']}"}
-    second_session = client.post("/api/conversations", json={"mode": "chat"}, headers=arav).json()["id"]
+    second_session = client.post("/api/conversations", json={"kind": "chat"}, headers=arav).json()["id"]
 
     def say2(message: str) -> dict:
         response = client.post(
@@ -168,7 +169,7 @@ with TestClient(app) as client:
 
     check(
         "a duration is never read as a class, even in a first-person sentence",
-        say2("Main roz class 3 hours padhai karta hoon, mujhe cricket pasand hai")["profile_updates"] == {},
+        say2("Main roz class 9 hours padhai karta hoon, mujhe cricket pasand hai")["profile_updates"] == {},
         arav_profile(),
     )
     check(
@@ -193,14 +194,76 @@ with TestClient(app) as client:
     check("Devanagari self-statement counts", stated("class_level", "मैं कक्षा ८ में हूँ और मुझे चित्रकारी पसंद है") == "class-8")
     check(
         "an age volunteered mid-sentence sets the band",
-        profile_facts.applicable_facts("Mujhe football pasand hai, meri age 13 hai", {}) == {"age_range": "adult"},
+        profile_facts.applicable_facts("Mujhe football pasand hai, meri age 13 hai", {})
+        == {"age": 13, "age_range": "adult"},
     )
-    check("class 3 hours never becomes a class", profile_facts.detect_class_level("class 3 hours of study") is None)
+    # The same sentence read two ways: the number is what the student said, and the band
+    # is the guide's own framework derived from it. Neither is asked of the student.
+    check("a stated age is kept as the number", profile_facts.detect_age_years("meri age 13 hai") == 13)
+    check("…including the Hindi way of saying it", profile_facts.detect_age_years("main 14 saal ka hoon") == 14)
+    check("…and Devanagari digits", profile_facts.detect_age_years("उम्र १५ वर्ष है") == 15)
+    check("a number that means nothing else is still not an age",
+          profile_facts.detect_age_years("main 14 rupaye ka pencil lata hoon") is None)
+    check("an age outside the range the app can speak to is ignored, not stored",
+          profile_facts.detect_age_years("meri age 2 hai") is None)
+    check("…and the two ends of the range itself are kept, inclusive",
+          [profile_facts.detect_age_years(f"meri age {n} hai") for n in (3, 99)] == [3, 99],
+          [profile_facts.detect_age_years(f"meri age {n} hai") for n in (3, 99)])
+    check(
+        "and the band it implies is never handed back as the student's own answer",
+        profile_facts.detect_age_range("meri age 13 hai") == "adult",
+    )
+    check(
+        "each band boundary is derived from the number, not chosen beside it",
+        [profile_facts.band_for_age(years) for years in (5, 6, 8, 9, 10, 11, 12, 13, 40)]
+        == ["3-5", "6-8", "6-8", "9-10", "9-10", "11-12", "11-12", "adult", "adult"],
+        [profile_facts.band_for_age(years) for years in (5, 6, 8, 9, 10, 11, 12, 13, 40)],
+    )
+    check("class 9 hours never becomes a class", profile_facts.detect_class_level("class 9 hours of study") is None)
+    check(
+        "a class below six states nothing this app can serve",
+        profile_facts.detect_class_level("main class 3 mein hoon") is None,
+    )
     check("'My class is 8' is read", profile_facts.detect_class_level("My class is 8 and I like drawing") == "class-8")
     check(
         "a third-person sentence states nothing",
         stated("class_level", "mere papa class 12 mein the aur mere bhai ne bhi wahi liya tha") is None,
     )
+
+    # The same fact typed into the profile field, from the other direction: the number
+    # is stored as stated, the band is never accepted from the client, and a number the
+    # server refuses changes nothing at all.
+    def patch_age(body: object):
+        return client.patch("/api/auth/profile", json=body, headers=headers)
+
+    typed = patch_age({"age": 14})
+    check("a student types their real age instead of choosing a band", typed.status_code == 200, typed.text[:200])
+    check("…stored as the number they typed", typed.json()["age"] == 14, typed.json())
+    check("…and the band the guide works in follows it", typed.json()["age_range"] == "adult", typed.json())
+
+    second_age = patch_age({"age": 13})
+    check("a second number replaces the first instead of being added to it",
+          (second_age.json()["age"], second_age.json()["age_range"]) == (13, "adult"), second_age.json())
+
+    check("…and it survives a reload", (client.get("/api/auth/me", headers=headers).json()["profile"])["age"] == 13)
+
+    stale_band = patch_age({"age_range": "3-5"})
+    check("a client cannot hand back a band the number says otherwise",
+          stale_band.status_code == 200
+          and (stale_band.json()["age"], stale_band.json()["age_range"]) == (13, "adult"),
+          stale_band.json() if stale_band.status_code == 200 else stale_band.text[:200])
+
+    for rejected in (2, 100, "fourteen", 14.5):
+        refused = patch_age({"age": rejected})
+        check(f"an age of {rejected!r} is refused, not stored", refused.status_code == 422, refused.text[:200])
+        check(f"…and the age that was already there is untouched",
+              client.get("/api/auth/me", headers=headers).json()["profile"]["age"] == 13)
+
+    cleared = patch_age({"age": None})
+    check("clearing the field takes the number back", cleared.status_code == 200 and cleared.json()["age"] is None,
+          cleared.text[:200])
+    check("…and the band that existed only because of it goes with it, falling back to the class",
+          cleared.json()["age_range"] == "11-12", cleared.json())
 
 print(f"\n{len(PASS)} passed, {len(FAIL)} failed")
 if FAIL:

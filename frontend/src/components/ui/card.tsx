@@ -1,6 +1,7 @@
 "use client";
 
 import type { HTMLAttributes, ReactNode } from "react";
+import { useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 export function Card({ className, ...rest }: HTMLAttributes<HTMLDivElement>) {
@@ -20,6 +21,7 @@ export function CardHeader({
   icon?: ReactNode;
   className?: string;
 }) {
+  const t = useT();
   return (
     <div className={cn("flex items-start justify-between gap-3", className)}>
       <div className="flex min-w-0 items-start gap-3">
@@ -29,9 +31,13 @@ export function CardHeader({
           </span>
         ) : null}
         <div className="min-w-0">
-          <h2 className="text-base font-semibold leading-tight text-ink">{title}</h2>
+          <h2 className="text-base font-semibold leading-tight text-ink">
+            {typeof title === "string" ? t(title) : title}
+          </h2>
           {description ? (
-            <p className="mt-1 text-sm leading-relaxed text-muted">{description}</p>
+            <p className="mt-1 text-sm leading-relaxed text-muted">
+              {typeof description === "string" ? t(description) : description}
+            </p>
           ) : null}
         </div>
       </div>
@@ -54,13 +60,18 @@ export function SectionHeading({
   id?: string;
   className?: string;
 }) {
+  const t = useT();
   return (
     <div className={cn("flex flex-wrap items-end justify-between gap-3", className)}>
       <div className="min-w-0">
         <h2 id={id} className="text-lg font-semibold tracking-tight text-ink sm:text-xl">
-          {title}
+          {typeof title === "string" ? t(title) : title}
         </h2>
-        {description ? <p className="mt-1 text-sm text-muted">{description}</p> : null}
+        {description ? (
+          <p className="mt-1 text-sm text-muted">
+            {typeof description === "string" ? t(description) : description}
+          </p>
+        ) : null}
       </div>
       {action}
     </div>

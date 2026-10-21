@@ -27,6 +27,7 @@ import { EmptyState, ErrorState, LoadingPanel } from "@/components/ui/feedback";
 import { useToast } from "@/components/ui/toast";
 import { api, ApiError } from "@/lib/api";
 import { useSession } from "@/lib/session";
+import { useT, useTf } from "@/lib/i18n";
 import { messageFor, useResource } from "@/lib/use-resource";
 import { THEME_LABELS, type Career, type ThemeKey } from "@/lib/types";
 import { categoryTint, cn } from "@/lib/utils";
@@ -78,6 +79,8 @@ export default function CareerDetail() {
   const slug = params?.slug ? decodeURIComponent(params.slug) : "";
   const { status: sessionStatus } = useSession();
   const { toast } = useToast();
+  const t = useT();
+  const tf = useTf();
 
   // A bookmark made on this screen, kept separate from the server's saved list
   // so the button can show it before that list is read again.
@@ -152,7 +155,7 @@ export default function CareerDetail() {
         action={
           <LinkButton href="/app/careers" variant="outline" size="sm">
             <ArrowLeft className="h-4 w-4" aria-hidden />
-            Back to explorer
+            {t("Back to explorer")}
           </LinkButton>
         }
       >
@@ -162,7 +165,7 @@ export default function CareerDetail() {
           onRetry={notFound ? undefined : detail.reload}
           extra={
             <LinkButton href="/app/careers" size="sm">
-              Browse all careers
+              {t("Browse all careers")}
             </LinkButton>
           }
         />
@@ -173,7 +176,14 @@ export default function CareerDetail() {
   if (!career) {
     return (
       <Screen title="Career">
-        <EmptyState title="No career to show" action={<LinkButton href="/app/careers">Back to explorer</LinkButton>} />
+        <EmptyState
+          title="No career to show"
+          action={
+            <LinkButton href="/app/careers">
+              {t("Back to explorer")}
+            </LinkButton>
+          }
+        />
       </Screen>
     );
   }
@@ -181,7 +191,7 @@ export default function CareerDetail() {
   const isSaved = savedHere ?? (saved.data ?? []).some((entry) => entry.career.id === career.id);
   const relatedCareers = related.data ?? [];
   const hasList = (arr: string[]) => Array.isArray(arr) && arr.length > 0;
-  const themes = career.interest_themes.filter((t): t is ThemeKey => t in THEME_LABELS);
+  const themes = career.interest_themes.filter((key): key is ThemeKey => key in THEME_LABELS);
 
   return (
     <Screen
@@ -197,7 +207,7 @@ export default function CareerDetail() {
         <div className="flex items-center gap-2">
           <LinkButton href="/app/careers" variant="ghost" size="sm">
             <ArrowLeft className="h-4 w-4" aria-hidden />
-            Back
+            {t("Back")}
           </LinkButton>
           <button
             type="button"
@@ -212,7 +222,7 @@ export default function CareerDetail() {
             )}
           >
             <Bookmark className={cn("h-4 w-4", isSaved && "fill-current")} aria-hidden />
-            {isSaved ? "Saved" : "Save career"}
+            {isSaved ? t("Saved") : t("Save career")}
           </button>
         </div>
       }
@@ -224,8 +234,9 @@ export default function CareerDetail() {
             <div className="flex items-start gap-2.5 rounded-2xl border border-warning/30 bg-warning-mist/60 px-4 py-3 text-sm text-amber-900">
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" aria-hidden />
               <p>
-                The details on this page are a helpful starting point, but the numbers and rules here
-                still need checking against official sources before you rely on them.
+                {t(
+                  "The details on this page are a helpful starting point, but the numbers and rules here still need checking against official sources before you rely on them.",
+                )}
               </p>
             </div>
           ) : null}
@@ -293,9 +304,9 @@ export default function CareerDetail() {
             <p className="text-sm leading-relaxed text-ink">{career.costs_and_alternatives}</p>
             <p className="mt-3 flex items-start gap-1.5 rounded-xl bg-teal-mist/60 px-3 py-2 text-xs leading-relaxed text-teal">
               <HeartHandshake className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
-              If one route costs more than your family can spend, look at government and state
-              colleges, scholarships, skill-based entry and self-study — many careers have more than
-              one way in.
+              {t(
+                "If one route costs more than your family can spend, look at government and state colleges, scholarships, skill-based entry and self-study — many careers have more than one way in.",
+              )}
             </p>
           </Section>
 
@@ -318,7 +329,7 @@ export default function CareerDetail() {
             <div className="mt-4">
               <LinkButton href="/app/plans" size="sm">
                 <GraduationCap className="h-4 w-4" aria-hidden />
-                Turn these into a study plan
+                {t("Turn these into a study plan")}
               </LinkButton>
             </div>
           </Section>
@@ -328,11 +339,11 @@ export default function CareerDetail() {
             <div className="flex items-start gap-2.5">
               <Info className="mt-0.5 h-4 w-4 shrink-0 text-brand-dark" aria-hidden />
               <div className="text-sm leading-relaxed text-ink">
-                <p className="font-semibold text-brand-dark">What this page can and can&apos;t do</p>
+                <p className="font-semibold text-brand-dark">{t("What this page can and can't do")}</p>
                 <p className="mt-1 text-muted">
-                  This page does not guarantee admission, a salary or success. Costs, exams and entry
-                  rules change over time, so please confirm anything important using the official
-                  links on this page before you make a decision.
+                  {t(
+                    "This page does not guarantee admission, a salary or success. Costs, exams and entry rules change over time, so please confirm anything important using the official links on this page before you make a decision.",
+                  )}
                 </p>
               </div>
             </div>
@@ -343,23 +354,28 @@ export default function CareerDetail() {
         <aside className="space-y-5">
           <Card className="space-y-4">
             <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-muted">Interest themes</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-muted">{t("Interest themes")}</p>
               {themes.length > 0 ? (
                 <div className="mt-2 flex flex-wrap gap-2">
-                  {themes.map((t) => (
-                    <LinkButton key={t} href={`/app/careers?theme=${t}`} variant="outline" size="sm">
-                      {THEME_LABELS[t]}
+                  {themes.map((themeKey) => (
+                    <LinkButton
+                      key={themeKey}
+                      href={`/app/careers?theme=${themeKey}`}
+                      variant="outline"
+                      size="sm"
+                    >
+                      {t(THEME_LABELS[themeKey])}
                     </LinkButton>
                   ))}
                 </div>
               ) : (
-                <p className="mt-1 text-sm text-muted">No themes tagged for this career.</p>
+                <p className="mt-1 text-sm text-muted">{t("No themes tagged for this career.")}</p>
               )}
             </div>
             <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-muted">Good to know</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-muted">{t("Good to know")}</p>
               <p className="mt-1 text-sm text-ink">
-                You can start exploring this from <span className="font-semibold">class {career.min_class}</span>.
+                {tf("You can start exploring this from class {n}.", { n: career.min_class })}
               </p>
             </div>
           </Card>
@@ -385,7 +401,7 @@ export default function CareerDetail() {
 
           {relatedCareers.length > 0 ? (
             <Card>
-              <p className="mb-3 text-sm font-semibold text-ink">Related careers</p>
+              <p className="mb-3 text-sm font-semibold text-ink">{t("Related careers")}</p>
               <div className="space-y-2">
                 {relatedCareers.map((r) => (
                   <LinkButton
@@ -395,7 +411,7 @@ export default function CareerDetail() {
                     size="sm"
                     className="flex h-auto w-full flex-col items-start gap-1 rounded-xl bg-canvas/60 px-3 py-2.5 text-left hover:bg-canvas"
                   >
-                    <span className="font-semibold text-ink">{r.title}</span>
+                    <span className="font-semibold text-ink">{t(r.title)}</span>
                     <Badge className={cn("pointer-events-none", categoryTint(r.category))}>{r.category}</Badge>
                   </LinkButton>
                 ))}

@@ -4,11 +4,12 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..database import get_db
+from ..middleware.rate_limit import chat_limit
 from ..models import (
     ConsentRecord,
     ConversationSession,
@@ -27,7 +28,7 @@ from ..schemas import (
     SessionStartIn,
 )
 from ..security import ensure_settings, get_current_user, require_student
-from ..services import ai_provider, profile_facts, tts
+from ..services import ai_provider, entitlements, profile_facts, tts
 from ..services.language import detect as detect_language
 from ..services.recommender import build_recommendations
 from .auth import CLASS_TO_AGE
@@ -61,7 +62,9 @@ def _load_session(db: Session, session_id: int, student_id: int) -> Conversation
 
 
 @router.post("", response_model=SessionOutInfo, status_code=201)
+@chat_limit
 def start_session(
+    request: Request,
     payload: SessionStartIn,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -97,7 +100,9 @@ def start_session(
 
 
 @router.post("/{session_id}/messages", response_model=ChatOut)
+@chat_limit
 async def send_message(
+    request: Request,
     session_id: int,
     payload: ChatIn,
     user: User = Depends(get_current_user),
@@ -115,6 +120,12 @@ async def send_message(
     text = payload.message.strip()
     if not text:
         raise HTTPException(status_code=422, detail="Please write or say something first.")
+
+    # The plan limit, and it is checked here rather than in the browser because a
+    # child's remaining chats are a server fact. Inside the guard, before any counting,
+    # is the rule that matters more than the money: words that read as a disclosure of
+    # danger are answered whatever plan the student is on.
+    entitlements.guard_chat(db, user, text)
 
     # Answer in the language the student just used, not the one the session
     # started in: switching between English and Hindi mid-call is normal, and the
@@ -134,6 +145,7 @@ async def send_message(
     # is about — see profile_facts.
     current_profile = {
         "class_level": profile.class_level if profile else None,
+        "age": profile.age if profile else None,
         "age_range": profile.age_range if profile else None,
         "education_context": profile.education_context if profile else None,
         "financial_context": profile.financial_context if profile else None,
@@ -142,7 +154,11 @@ async def send_message(
     if profile and learned:
         for key, value in learned.items():
             setattr(profile, key, value)
-        if "class_level" in learned and not profile.age_range:
+        if "age" in learned:
+            # The number they just spoke outranks a band an earlier class answer
+            # implied, which is the same rule the profile route follows.
+            profile.age_range = profile_facts.band_for_age(learned["age"])
+        elif "class_level" in learned and not profile.age_range:
             profile.age_range = CLASS_TO_AGE.get(learned["class_level"])
 
     ctx = ai_provider.GuideContext(

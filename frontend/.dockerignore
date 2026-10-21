@@ -1,0 +1,45 @@
+# What never belongs in a build of this frontend.
+#
+# `frontend/Dockerfile` copies by name — `public`, `src`, the three config files — so
+# nothing in this list would have reached the image anyway. It still matters, for two
+# reasons that are about the build rather than the layer:
+#
+#  * `docker build` ships the whole context to the daemon before it reads a single line
+#    of the Dockerfile. `node_modules` and `.next` between them are hundreds of MB, and
+#    `.next` is the previous build on this machine: the cache that makes a stage rebuild
+#    when nothing in it changed stop doing so.
+#  * `.env.local` holds this project's live values. The Dockerfile never reads it, but a
+#    context is a copy of a directory, and there is no reason to hand a copy of a secrets
+#    file to a build daemon — or to anyone who can inspect the build cache afterwards.
+
+.git/
+.gitignore
+.git-scaffold-backup/
+**/.git-scaffold-backup/
+.vercel/
+.vercelignore
+
+# Local secrets. The image is built from `NEXT_PUBLIC_*` build arguments and gets nothing
+# else; a browser bundle has no private values in it, which is exactly why `NEXT_PUBLIC_`
+# may never be used for one.
+.env
+.env.*
+
+# Dependencies and build output, re-created inside the image.
+node_modules/
+.next/
+out/
+build/
+coverage/
+*.tsbuildinfo
+next-env.d.ts
+
+# Things that are nobody's business inside an image.
+*.log
+.DS_Store
+Thumbs.db
+*.db
+*.db-journal
+*.db.bak
+*.sqlite
+*.sqlite3

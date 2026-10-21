@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="512" height="512">
+  <!-- The existing mark from src/components/brand.tsx (BrandMark, brand tone):
+       a guide robot under a graduation cap. A solid white rounded backing is
+       added because launchers composite transparent icons on unpredictable
+       surfaces, and the navy face would vanish on a dark one. -->
+  <rect width="48" height="48" rx="10" fill="#FFFFFF"/>
+  <path d="M24 3 6 11l18 8 14-6.2V21h4V11L24 3Z" fill="#2563EB"/>
+  <path d="M10 20.5V28c0 4.4 6.3 8 14 8s14-3.6 14-8v-7.5l-14 6-14-6Z" fill="#2563EB"/>
+  <rect x="12" y="27" width="24" height="16" rx="6" fill="#0B1730"/>
+  <circle cx="19.5" cy="35" r="2.4" fill="#60A5FA"/>
+  <circle cx="28.5" cy="35" r="2.4" fill="#60A5FA"/>
+  <rect x="21.6" y="40" width="4.8" height="1.8" rx="0.9" fill="#60A5FA" opacity="0.75"/>
+  <rect x="8" y="24" width="3.5" height="8" rx="1.75" fill="#2563EB" opacity="0.7"/>
+  <rect x="36.5" y="24" width="3.5" height="8" rx="1.75" fill="#2563EB" opacity="0.7"/>
+  <path d="M38 26v6c0 1.5 2.5 2.6 5 2.6" stroke="#2563EB" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <circle cx="43" cy="35.5" r="2" fill="#14B8A6"/>
+</svg>

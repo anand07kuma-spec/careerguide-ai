@@ -1,0 +1,68 @@
+{#
+  Assessment result. Context: `name`, `instrument` ("interest" | "personality" |
+  "aptitude", which picks the label above the heading), `instrument_label` (that
+  same questionnaire named in the reader's language), `completed_on` (a date
+  string), `traits` — a list of `{label, percent}` already named in the reader's
+  language, as the scoring service names them — and `result_url`.
+
+  What is deliberately absent: the answers. A questionnaire result is a summary of
+  tendencies; the individual responses are the part that would embarrass a fourteen-
+  year-old sitting in front of a shared family mailbox, and a mail forwarder does not
+  ask permission. So this message shows the shaped result and links to the whole
+  thing, which the account has to be opened to reach.
+#}
+{% extends "base.html" %}
+
+{% block title %}{{ txt("Your result is in", "आपका परिणाम आ गया है") }}{% endblock %}
+{% block preheader %}{{ txt("A summary of the questionnaire, not the answers", "प्रश्नावली का सारांश, उत्तर नहीं") }}{% endblock %}
+
+{% block eyebrow %}
+  {% if instrument == "aptitude" %}{{ txt("Puzzle set", "पहेली सेट") }}
+  {% elif instrument == "personality" %}{{ txt("Habits questionnaire", "आदतों की प्रश्नावली") }}
+  {% else %}{{ txt("Interest questionnaire", "रुचि की प्रश्नावली") }}
+  {% endif %}
+{% endblock %}
+
+{% block heading %}
+  {{ txt("Here is what came out of it.", "इससे जो निकला, वह ये है।") }}
+{% endblock %}
+
+{% block body %}
+  <p style="margin:0 0 18px;">
+    {% if name %}
+      {{ txt(name ~ ", you finished the " ~ instrument_label ~ " on " ~ completed_on ~ ". This is the summary — the strongest lines out of the whole set, the way the app shows them on screen.", name ~ ", आपने " ~ completed_on ~ " को " ~ instrument_label ~ " पूरी की। यह उसका सारांश है — पूरे सेट में सबसे मज़बूत पंक्तियाँ, बिल्कुल वैसा ही जैसा ऐप स्क्रीन पर दिखाता है।") }}
+    {% else %}
+      {{ txt("You finished the " ~ instrument_label ~ " on " ~ completed_on ~ ". This is the summary — the strongest lines out of the whole set, the way the app shows them on screen.", completed_on ~ " को " ~ instrument_label ~ " पूरी की गई। यह उसका सारांश है — पूरे सेट में सबसे मज़बूत पंक्तियाँ, बिल्कुल वैसा ही जैसा ऐप स्क्रीन पर दिखाता है।") }}
+    {% endif %}
+  </p>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 18px;">
+    {% for trait in traits %}
+    <tr>
+      <td style="padding:0 0 12px;font-family:Arial,'Noto Sans',sans-serif;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="font-size:14px;line-height:20px;color:#26334c;">{{ trait.label }}</td>
+            <td align="right" width="52" style="width:52px;font-size:14px;line-height:20px;color:#61748f;">{{ trait.percent }}%</td>
+          </tr>
+        </table>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:5px;">
+          <tr>
+            <td width="{{ trait.percent }}%" style="height:8px;background:#4f7ae0;border-radius:4px;font-size:0;line-height:0;">&nbsp;</td>
+            <td style="height:8px;background:#e8eefb;border-radius:4px;font-size:0;line-height:0;">&nbsp;</td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+
+  <p style="margin:0 0 16px;">
+    <a href="{{ result_url }}" style="color:#3f6fe0;font-weight:600;text-decoration:underline;">{{ txt("Open the full result", "पूरा परिणाम खोलें") }}</a>
+    {{ txt(" — that needs the account, so it only opens on a device that is already using it.", " — इसके लिए खाता चाहिए, इसलिए यह केवल उसी डिवाइस पर खुलेगा जो पहले से उसका उपयोग कर रहा है।") }}
+  </p>
+
+  <p style="margin:0;padding:14px 16px;background:#f4f7fd;border-radius:12px;color:#41536e;">
+    {{ txt("These are the questions a person answered, nothing more. They are not a score of ability, they do not say what to become, and they will not be handed to anyone else without that account choosing to share them.", "ये केवल एक व्यक्ति ने जवाब दिए गए सवाल हैं, इससे बढ़कर कुछ नहीं। ये काबिलियत का स्कोर नहीं हैं, यह नहीं बताते कि बनना क्या है, और खाता खुद साझा करने की अनुमति दिए बिना ये किसी और को नहीं दिए जाएँगे।") }}
+  </p>
+{% endblock %}

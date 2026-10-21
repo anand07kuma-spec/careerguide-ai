@@ -48,7 +48,7 @@ export default function InterestsPage() {
   const { profile, settings, saveProfile } = useSession();
   const { toast } = useToast();
 
-  // Classes 3-8 (and the young age bands) get shorter, more concrete sentences.
+  // Classes 6-8 (and the young age bands) get shorter, more concrete sentences.
   const simple = useMemo(() => {
     const classNumber = /^class-(\d+)$/.exec(profile?.class_level ?? "")?.[1];
     if (classNumber) return Number(classNumber) <= 8;

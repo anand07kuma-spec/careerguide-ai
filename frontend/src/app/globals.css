@@ -1,7 +1,12 @@
 @import "tailwindcss";
 
 /* CareerGuide AI design tokens.
-   Light theme everywhere except the active call screen, which uses the navy ramp. */
+   Light theme everywhere except the active call screen, which uses the navy ramp.
+   `--color-heading` is the ink a title uses; it is its own token rather than
+   `--color-ink` because the navy it has always been is darker than body text, and
+   because the dark theme below has to flip headings without changing the colour
+   of a paragraph. `--color-navy` is never flipped: it is the call screen, the
+   sidebar and the dark button, and those are meant to stay dark in both themes. */
 @theme {
   --color-navy: #0b1730;
   --color-navy-700: #12233f;
@@ -14,6 +19,7 @@
   --color-teal-mist: #ccfbf1;
   --color-canvas: #f5f8ff;
   --color-surface: #ffffff;
+  --color-heading: #0b1730;
   --color-ink: #172033;
   --color-muted: #64748b;
   --color-line: #e2e8f5;
@@ -35,6 +41,9 @@
 @layer base {
   html {
     -webkit-text-size-adjust: 100%;
+    /* The theme store raises this to `dark`, and native controls, scrollbars and
+       form autofill then match the screen instead of fighting it. */
+    color-scheme: light;
   }
 
   body {
@@ -83,6 +92,73 @@ html[data-high-contrast="true"] {
 
 html[data-high-contrast="true"] .cg-card {
   border-color: #475569;
+}
+
+/* Dark theme.
+   One block is the whole theme: every colour in this app is a token, and
+   Tailwind compiles a utility to `var(--color-…)`, so overriding the variable
+   here reaches every place that asks for a surface, a border or a heading
+   without one of them naming a theme. The two families below the app tokens are
+   Tailwind's own defaults, used directly by the badges, notice chips and skeletons
+   — a notice is `bg-warning-mist` plus `text-amber-800`, so the deep mist and the
+   light text have to move together or a warning becomes a black box with black
+   writing in it.
+
+   `--color-navy` is deliberately absent: the call screen, the sidebar and the
+   dark button are meant to stay dark in both themes.
+
+   Wrapped in `@media screen` because the reports and the assessment result print
+   from this same page: a student pressing print should get ink on paper, not the
+   theme they happen to be reading on. */
+@media screen {
+  html[data-theme="dark"] {
+    color-scheme: dark;
+
+    --color-canvas: #080f1c;
+    --color-surface: #101a2b;
+    --color-heading: #eaf0fb;
+    --color-ink: #e8eefb;
+    --color-muted: #9fb0c8;
+    --color-line: #26344f;
+
+    /* A saturated brand blue on a dark surface is loud enough; the two steps
+       below it exist to be read *on* a dark surface, so they move up the ramp. */
+    --color-brand: #3b82f6;
+    --color-brand-dark: #60a5fa;
+    --color-brand-light: #93c5fd;
+    --color-brand-mist: #172a49;
+    --color-teal: #2dd4bf;
+    --color-teal-mist: #0c2b28;
+
+    --color-success: #4ade80;
+    --color-success-mist: #102a1c;
+    --color-warning: #fbbf24;
+    --color-warning-mist: #2d2411;
+    --color-danger: #f87171;
+    --color-danger-mist: #34171b;
+
+    --color-slate-50: #0f1828;
+    --color-slate-100: #17223a;
+    --color-slate-200: #212f4a;
+    /* The off state of a switch: still clearly a track, still clearly not on. */
+    --color-slate-300: #3d4d6b;
+    --color-slate-500: #9fb0c8;
+    --color-slate-600: #b7c4da;
+    --color-slate-700: #d2dcee;
+
+    --color-amber-600: #fbbf24;
+    --color-amber-700: #fcd34d;
+    --color-amber-800: #fde68a;
+    --color-amber-900: #fef3c7;
+    --color-green-900: #bbf7d0;
+    --color-red-900: #fca5a5;
+
+    /* Category tints in `lib/utils.ts`. */
+    --color-indigo-100: #1b2346;
+    --color-indigo-700: #c7d2fe;
+    --color-fuchsia-100: #2d1334;
+    --color-fuchsia-700: #f5d0fe;
+  }
 }
 
 @utility cg-scrollbar {
@@ -137,4 +213,20 @@ html[data-high-contrast="true"] .cg-card {
 .cg-wave-bar {
   animation: cg-wave 1s ease-in-out infinite;
   transform-origin: center;
+}
+
+/* The storage notice slides up as it mounts. An animation on mount rather than
+   a state flip in an effect, so the first paint never shows it already in
+   place and nothing has to be settled twice. */
+@keyframes cg-rise {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.cg-rise {
+  animation: cg-rise 260ms ease-out;
 }

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox, Input } from "@/components/ui/field";
 import { useSession } from "@/lib/session";
+import { useT, useTf } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import type { Role } from "@/lib/types";
 
@@ -28,6 +29,8 @@ import type { Role } from "@/lib/types";
 export default function OnboardingPage() {
   const router = useRouter();
   const { status, isParent, completeOnboarding } = useSession();
+  const t = useT();
+  const tf = useTf();
 
   const [role, setRole] = useState<Role | null>(null);
   const [displayName, setDisplayName] = useState("");
@@ -46,11 +49,13 @@ export default function OnboardingPage() {
   async function submit() {
     setSubmitError(null);
     if (!role) {
-      setErrors({ role: "Please choose who is using the app." });
+      setErrors({ role: t("Please choose who is using the app.") });
       return;
     }
     if (!consentProfile || !guardianOk) {
-      setErrors({ consent: "Both confirmations are needed before we can store a profile." });
+      setErrors({
+        consent: t("Both confirmations are needed before we can store a profile."),
+      });
       return;
     }
 
@@ -59,7 +64,8 @@ export default function OnboardingPage() {
       await completeOnboarding({
         role,
         // A name is friendly, not required: the field is optional and defaults
-        // to the role, so this screen still asks exactly one question.
+        // to the role, so this screen still asks exactly one question. The two
+        // defaults below are stored on the profile, so they stay in English.
         display_name: displayName.trim() || (role === "parent" ? "Parent" : "Student"),
         // The guide opens in Hinglish and then follows whichever language the
         // student actually uses. Anyone who prefers otherwise can change it in
@@ -78,7 +84,7 @@ export default function OnboardingPage() {
       setSubmitError(
         error instanceof Error
           ? error.message
-          : "Something went wrong while saving. Please try again.",
+          : t("Something went wrong while saving. Please try again."),
       );
     } finally {
       setSubmitting(false);
@@ -89,14 +95,14 @@ export default function OnboardingPage() {
     {
       value: "student",
       icon: UserRound,
-      title: "I am a student",
-      body: "Talk to the guide, explore careers, and keep track of your own progress.",
+      title: t("I am a student"),
+      body: t("Talk to the guide, explore careers, and keep track of your own progress."),
     },
     {
       value: "parent",
       icon: Users,
-      title: "I am a parent or guardian",
-      body: "See what a child is exploring and get practical guidance for the family.",
+      title: t("I am a parent or guardian"),
+      body: t("See what a child is exploring and get practical guidance for the family."),
     },
   ];
 
@@ -105,13 +111,13 @@ export default function OnboardingPage() {
       <Card className="overflow-hidden p-0 sm:p-0">
         <div className="border-b border-line bg-navy px-5 py-5 text-white sm:px-7">
           <p className="text-xs font-semibold uppercase tracking-wider text-white/60">
-            One question before we start
+            {t("One question before we start")}
           </p>
-          <h1 className="mt-1 text-lg font-semibold sm:text-xl">Who is using CareerGuide AI?</h1>
+          <h1 className="mt-1 text-lg font-semibold sm:text-xl">{t("Who is using CareerGuide AI?")}</h1>
           <p className="mt-2 max-w-xl text-sm leading-relaxed text-white/70">
-            Nothing else is asked here. No email, no password, nothing to verify. Your class, your
-            interests and your family situation come out naturally while you talk with the guide,
-            one at a time.
+            {t(
+              "Nothing else is asked here. No email, no password, nothing to verify. Your class, your interests and your family situation come out naturally while you talk with the guide, one at a time.",
+            )}
           </p>
         </div>
 
@@ -120,7 +126,7 @@ export default function OnboardingPage() {
             <div
               className="grid gap-3 sm:grid-cols-2"
               role="radiogroup"
-              aria-label="Who is using CareerGuide AI?"
+              aria-label={t("Who is using CareerGuide AI?")}
             >
               {roleChoices.map((option) => {
                 const Icon = option.icon;
@@ -158,9 +164,11 @@ export default function OnboardingPage() {
             </div>
             {errors.role ? <p className="mt-2 text-sm text-danger">{errors.role}</p> : null}
             <p className="mt-2 text-xs leading-relaxed text-muted">
-              A parent account sees only what a child has agreed to share. To link your own child,
-              ask them for the <span className="font-medium text-ink">sharing code</span> shown on
-              their Settings page.
+              {t(
+                "A parent account sees only what a child has agreed to share. To link your own child, ask them for the",
+              )}{" "}
+              <span className="font-medium text-ink">{t("sharing code")}</span>{" "}
+              {t("shown on their Settings page.")}
             </p>
           </div>
 
@@ -175,19 +183,35 @@ export default function OnboardingPage() {
           <div className="flex items-start gap-3 rounded-card bg-brand-mist p-4">
             <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-brand-dark" aria-hidden />
             <div className="text-sm leading-relaxed text-brand-dark">
-              <p className="font-semibold">What we store, in plain words</p>
+              <p className="font-semibold">{t("What we store, in plain words")}</p>
               <ul className="mt-2 list-disc space-y-1 pl-5 text-xs">
-                <li>Your nickname and whether you are a student or a parent.</li>
-                <li>What you write in the conversation, so the guide can continue where you left off.</li>
+                <li>{t("Your nickname and whether you are a student or a parent.")}</li>
                 <li>
-                  When the guide learns something like your class, it stores a short fixed note
-                  {" ("}Studies at a government school{")"}, not your exact sentence.
+                  {t(
+                    "What you write in the conversation, so the guide can continue where you left off.",
+                  )}
                 </li>
-                <li>Nothing else. No email, phone number, photo, address, school name, or documents.</li>
-                <li>Raw microphone audio is never saved. Speech-to-text happens in your browser.</li>
-                <li>Voice is off to start with. Turn it on in Settings if you want calls.</li>
-                <li>You can switch history off, delete conversations, and leave at any time.</li>
-                <li>We do not sell personal data, and no institution can pay to change a recommendation.</li>
+                <li>
+                  {tf(
+                    "When the guide learns something like your class, it stores a short fixed note ({example}), not your exact sentence.",
+                    { example: t("Studies at a government school") },
+                  )}
+                </li>
+                <li>
+                  {t("Nothing else. No email, phone number, photo, address, school name, or documents.")}
+                </li>
+                <li>
+                  {t("Raw microphone audio is never saved. Speech-to-text happens in your browser.")}
+                </li>
+                <li>{t("Voice is off to start with. Turn it on in Settings if you want calls.")}</li>
+                <li>
+                  {t("You can switch history off, delete conversations, and leave at any time.")}
+                </li>
+                <li>
+                  {t(
+                    "We do not sell personal data, and no institution can pay to change a recommendation.",
+                  )}
+                </li>
               </ul>
             </div>
           </div>
@@ -214,8 +238,9 @@ export default function OnboardingPage() {
             {consentProfile && guardianOk ? (
               <p className="flex items-center gap-2 text-xs text-muted">
                 <Mic className="h-3.5 w-3.5" aria-hidden />
-                The browser will ask for microphone permission only if you turn voice on and press
-                the talk button.
+                {t(
+                  "The browser will ask for microphone permission only if you turn voice on and press the talk button.",
+                )}
               </p>
             ) : null}
             {errors.consent ? <p className="text-sm text-danger">{errors.consent}</p> : null}
@@ -224,20 +249,17 @@ export default function OnboardingPage() {
           <div className="rounded-card bg-canvas p-4 text-xs leading-relaxed text-muted">
             <p className="flex items-center gap-2 font-semibold text-ink">
               <Sparkles className="h-3.5 w-3.5" aria-hidden />
-              One honest thing before you begin
+              {t("One honest thing before you begin")}
             </p>
             <p className="mt-2">
-              This guide explores careers with you. It does not predict results, does not guarantee
-              admission, jobs or salary, and never says a child is suited or unsuited to a
-              profession. Career information here is sample data until it has been checked against
-              official sources, so always verify fees, exams and dates yourself.
+              {t(
+                "This guide explores careers with you. It does not predict results, does not guarantee admission, jobs or salary, and never says a child is suited or unsuited to a profession. Career information here is sample data until it has been checked against official sources, so always verify fees, exams and dates yourself.",
+              )}
             </p>
             <p className="mt-2">
-              This is a prototype, so there is no login. Your progress is tied to this browser by a
-              random id it keeps for itself. Coming back on the same phone or laptop resumes the same
-              conversation. Clearing this site&apos;s data, using a private window, or switching
-              device starts a fresh student — there is nothing to recover it with. Don&apos;t use a
-              shared or public computer, and use Settings to start over when you are done.
+              {t(
+                "This is a prototype, so there is no login. Your progress is tied to this browser by a random id it keeps for itself. Coming back on the same phone or laptop resumes the same conversation. Clearing this site's data, using a private window, or switching device starts a fresh student — there is nothing to recover it with. Don't use a shared or public computer, and use Settings to start over when you are done.",
+              )}
             </p>
           </div>
 
@@ -249,9 +271,9 @@ export default function OnboardingPage() {
         </div>
 
         <div className="flex items-center justify-between gap-3 border-t border-line bg-canvas px-5 py-4 sm:px-7">
-          <Badge tone="neutral">No email, no password</Badge>
+          <Badge tone="neutral">{t("No email, no password")}</Badge>
           <Button onClick={() => void submit()} loading={submitting}>
-            {role === "parent" ? "Open the parent dashboard" : "Start talking with the guide"}
+            {role === "parent" ? t("Open the parent dashboard") : t("Start talking with the guide")}
           </Button>
         </div>
       </Card>
@@ -261,12 +283,13 @@ export default function OnboardingPage() {
 
 /** The frame the single step sits in: a quiet header and one centred column. */
 function Frame({ children }: { children: ReactNode }) {
+  const t = useT();
   return (
     <div className="min-h-dvh bg-canvas">
       <header className="border-b border-line bg-surface/80 px-4 py-4 sm:px-6">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-3">
           <Wordmark />
-          <span className="text-xs font-medium text-muted">Prototype</span>
+          <span className="text-xs font-medium text-muted">{t("Prototype")}</span>
         </div>
       </header>
       <main className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6 sm:py-10">{children}</main>

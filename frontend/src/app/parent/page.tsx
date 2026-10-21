@@ -34,6 +34,7 @@ import { Input, Textarea } from "@/components/ui/field";
 import { Modal } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
 import { api, ApiError } from "@/lib/api";
+import { useT, useTf } from "@/lib/i18n";
 import { useSession } from "@/lib/session";
 import { useResource } from "@/lib/use-resource";
 import type {
@@ -45,6 +46,8 @@ import type {
 import { THEME_LABELS } from "@/lib/types";
 import { classLabel, relativeTime } from "@/lib/utils";
 
+/** Both sinks of this text — the field's error line and the toast — look the
+ * string up themselves, so the fallback here stays in the source language. */
 function messageFor(error: unknown): string {
   if (error instanceof ApiError) return error.message;
   return "Something went wrong loading this part of the dashboard.";
@@ -69,6 +72,8 @@ function groupObservations(observations: Observation[]) {
 export default function ParentDashboard() {
   const { status, user, isParent } = useSession();
   const { toast } = useToast();
+  const t = useT();
+  const tf = useTf();
 
   const enabled = status === "ready" && isParent;
   const loadChildren = useCallback(() => api.parentChildren(), []);
@@ -161,7 +166,9 @@ export default function ParentDashboard() {
     }
   }, [removeTarget, toast, reloadChildren, reloadGuardians]);
 
-  const name = user?.display_name?.trim() || "there";
+  // A family-typed display name is data; only the greeting around it is interface text.
+  const displayName = user?.display_name?.trim();
+  const greeting = displayName ? tf("Welcome, {name}", { name: displayName }) : t("Welcome");
   const sum = summary.data;
 
   /* ---------------------------------------------------------- link onboarding */
@@ -172,7 +179,7 @@ export default function ParentDashboard() {
       <Screen
         title="Parent Dashboard"
         description="A calm summary of what your child has been exploring."
-        badge={<Badge tone="brand" icon={<ShieldCheck className="h-3.5 w-3.5" aria-hidden />}>For parents</Badge>}
+        badge={<Badge tone="brand" icon={<ShieldCheck className="h-3.5 w-3.5" aria-hidden />}>{t("For parents")}</Badge>}
       >
         <ErrorState
           title={forbidden ? "This dashboard is for parent accounts" : "Could not load your linked children"}
@@ -184,7 +191,7 @@ export default function ParentDashboard() {
           onRetry={reloadChildren}
           extra={
             <LinkButton href="/app" variant="outline" size="sm">
-              Go to my home
+              {t("Go to my home")}
             </LinkButton>
           }
         />
@@ -195,9 +202,9 @@ export default function ParentDashboard() {
   if (childrenRes.state === "loading") {
     return (
       <Screen
-        title={`Welcome, ${name}`}
+        title={greeting}
         description="Loading your family dashboard…"
-        badge={<Badge tone="brand" icon={<ShieldCheck className="h-3.5 w-3.5" aria-hidden />}>Parent dashboard</Badge>}
+        badge={<Badge tone="brand" icon={<ShieldCheck className="h-3.5 w-3.5" aria-hidden />}>{t("Parent dashboard")}</Badge>}
       >
         <div className="grid gap-3 lg:grid-cols-2">
           <SkeletonCard />
@@ -210,9 +217,9 @@ export default function ParentDashboard() {
   if (kids.length === 0) {
     return (
       <Screen
-        title={`Welcome, ${name}`}
+        title={greeting}
         description="Before you can see anything, your child links you themselves — nothing here works by guessing ids."
-        badge={<Badge tone="brand" icon={<ShieldCheck className="h-3.5 w-3.5" aria-hidden />}>Parent dashboard</Badge>}
+        badge={<Badge tone="brand" icon={<ShieldCheck className="h-3.5 w-3.5" aria-hidden />}>{t("Parent dashboard")}</Badge>}
       >
         <div className="space-y-5">
           <Card className="bg-gradient-to-br from-brand-mist/60 via-surface to-teal-mist/40">
@@ -220,23 +227,26 @@ export default function ParentDashboard() {
               <span className="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl bg-brand text-white">
                 <Link2 className="h-5 w-5" aria-hidden />
               </span>
-              <h2 className="text-lg font-semibold tracking-tight text-ink">Link your child</h2>
+              <h2 className="text-lg font-semibold tracking-tight text-ink">{t("Link your child")}</h2>
               <p className="mt-1.5 text-sm leading-relaxed text-muted">
-                Ask your child to open <strong className="font-medium text-ink">Settings → Family access</strong> on
-                their device and read out the 6-character code on their screen. Type it below.
+                {t("Ask your child to open")}{" "}
+                <strong className="font-medium text-ink">
+                  {t("Settings")} → {t("Family access")}
+                </strong>{" "}
+                {t("on their device and read out the 6-character code on their screen. Type it below.")}
               </p>
               <ul className="mt-3 space-y-1.5 text-sm text-muted">
                 <li className="flex gap-2">
                   <Lock className="mt-0.5 h-4 w-4 shrink-0 text-teal" aria-hidden />
-                  The code is generated by your child, and sharing is their choice.
+                  {t("The code is generated by your child, and sharing is their choice.")}
                 </li>
                 <li className="flex gap-2">
                   <EyeOff className="mt-0.5 h-4 w-4 shrink-0 text-teal" aria-hidden />
-                  You will see a summary of what they have been exploring — not their conversations.
+                  {t("You will see a summary of what they have been exploring — not their conversations.")}
                 </li>
                 <li className="flex gap-2">
                   <Users className="mt-0.5 h-4 w-4 shrink-0 text-teal" aria-hidden />
-                  Either of you can end the link at any time — they can revoke it from their Settings.
+                  {t("Either of you can end the link at any time — they can revoke it from their Settings.")}
                 </li>
               </ul>
               <form
@@ -259,7 +269,7 @@ export default function ParentDashboard() {
                 />
                 <Button type="submit" className="mt-3" loading={linking}>
                   <Link2 className="h-4 w-4" aria-hidden />
-                  Link my child
+                  {t("Link my child")}
                 </Button>
               </form>
             </div>
@@ -269,7 +279,7 @@ export default function ParentDashboard() {
             <CardHeader
               icon={<Info className="h-4 w-4" aria-hidden />}
               title="Guidance is free for families"
-              description="CareerGuide AI does not charge students or parents, and it never recommends a course, coaching class or institution because it benefits the platform. Sponsored listings, where they exist, are labelled elsewhere in the app."
+              description="Every career, stream, exam, resource, scholarship and institute is free on every plan, and a payment never changes what a child is suggested. A paid plan adds conversation volume, repeat questionnaires, a printed report and this view — and until the operator switches plan limits on, all of them still work without paying."
             />
           </Card>
         </div>
@@ -285,13 +295,15 @@ export default function ParentDashboard() {
 
   return (
     <Screen
-      title={`What ${selectedChild?.label ?? "your child"} has been exploring`}
+      title={tf("What {name} has been exploring", {
+        name: selectedChild?.label ?? t("your child"),
+      })}
       description="A summary, not surveillance: themes, saved careers and progress — never a report card."
-      badge={<Badge tone="brand" icon={<ShieldCheck className="h-3.5 w-3.5" aria-hidden />}>Parent dashboard</Badge>}
+      badge={<Badge tone="brand" icon={<ShieldCheck className="h-3.5 w-3.5" aria-hidden />}>{t("Parent dashboard")}</Badge>}
       action={
         <LinkButton href="/app/settings" variant="outline" size="sm">
           <Settings className="h-4 w-4" aria-hidden />
-          Settings
+          {t("Settings")}
         </LinkButton>
       }
     >
@@ -299,7 +311,7 @@ export default function ParentDashboard() {
         {/* Child selector */}
         {kids.length > 1 ? (
           <Card className="p-4">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">Viewing</p>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">{t("Viewing")}</p>
             <div className="cg-scrollbar flex gap-2 overflow-x-auto pb-1">
               {kids.map((kid) => {
                 const active = kid.student_id === selectedId;
@@ -375,7 +387,7 @@ export default function ParentDashboard() {
                     )
                   }
                 >
-                  {sum.share_transcripts ? "Conversation text shared" : "Conversation text private"}
+                  {sum.share_transcripts ? t("Conversation text shared") : t("Conversation text private")}
                 </Badge>
               </div>
             </Card>
@@ -383,16 +395,19 @@ export default function ParentDashboard() {
             {/* What they're exploring */}
             <section>
               <h2 className="mb-3 text-lg font-semibold tracking-tight text-ink">
-                What they have been exploring
+                {t("What they have been exploring")}
               </h2>
               {!hasExplored ? (
                 <EmptyState
                   icon={Compass}
                   title="Not much explored yet"
-                  description={`${sum.student.display_name} has just started. A friendly nudge to try one conversation with the guide is enough — pressure tends to close these conversations down.`}
+                  description={tf(
+                    "{name} has just started. A friendly nudge to try one conversation with the guide is enough — pressure tends to close these conversations down.",
+                    { name: sum.student.display_name },
+                  )}
                   action={
                     <LinkButton href="/app/settings" size="sm" variant="outline">
-                      Read the family access notes
+                      {t("Read the family access notes")}
                     </LinkButton>
                   }
                 />
@@ -409,7 +424,7 @@ export default function ParentDashboard() {
                         {themes.map(([theme, quotes]) => (
                           <li key={theme} className="rounded-xl bg-canvas p-3.5">
                             <p className="text-sm font-semibold text-ink">
-                              {THEME_LABELS[theme] ?? theme}
+                              {THEME_LABELS[theme] ? t(THEME_LABELS[theme]) : theme}
                             </p>
                             {quotes.slice(0, 3).map((quote) => (
                               <p
@@ -465,7 +480,7 @@ export default function ParentDashboard() {
                               <p className="truncate text-xs text-muted">{item.career.category}</p>
                             </div>
                             <span className="shrink-0 text-xs text-muted">
-                              saved {relativeTime(item.saved_at)}
+                              {tf("saved {time}", { time: relativeTime(item.saved_at) })}
                             </span>
                           </li>
                         ))}
@@ -494,8 +509,14 @@ export default function ParentDashboard() {
                     />
                     <p className="mt-2 text-xs text-muted">
                       {sum.journey.activities_total === 0
-                        ? "No activities started yet — that is completely fine at the beginning."
-                        : `${sum.journey.activities_completed} of ${sum.journey.activities_total} small exploration activities done. Stopping and starting is normal.`}
+                        ? t("No activities started yet — that is completely fine at the beginning.")
+                        : tf(
+                            "{done} of {total} small exploration activities done. Stopping and starting is normal.",
+                            {
+                              done: sum.journey.activities_completed,
+                              total: sum.journey.activities_total,
+                            },
+                          )}
                     </p>
                   </Card>
                 </div>
@@ -508,16 +529,17 @@ export default function ParentDashboard() {
                 <CardHeader
                   icon={<MessagesSquare className="h-4 w-4" aria-hidden />}
                   title="A career exploration report exists"
-                  description={`Generated ${relativeTime(
-                    sum.latest_report.generated_at,
-                  )} from what your child chose to explore. It describes interests, not a destiny — and it belongs to their account, so the full version stays with them.`}
+                  description={tf(
+                    "Generated {time} from what your child chose to explore. It describes interests, not a destiny — and it belongs to their account, so the full version stays with them.",
+                    { time: relativeTime(sum.latest_report.generated_at) },
+                  )}
                   action={
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => setReportOpen((open) => !open)}
                     >
-                      {reportOpen ? "Hide the summary" : "See a short summary"}
+                      {reportOpen ? t("Hide the summary") : t("See a short summary")}
                     </Button>
                   }
                 />
@@ -529,7 +551,7 @@ export default function ParentDashboard() {
                     {sum.latest_report.content.recommendations.length > 0 ? (
                       <div>
                         <p className="text-xs font-semibold uppercase tracking-wide text-brand-dark">
-                          Directions the report mentions
+                          {t("Directions the report mentions")}
                         </p>
                         <ul className="mt-1 space-y-1.5">
                           {sum.latest_report.content.recommendations.map((item) => (
@@ -543,7 +565,7 @@ export default function ParentDashboard() {
                     {sum.latest_report.content.next_steps.length > 0 ? (
                       <div>
                         <p className="text-xs font-semibold uppercase tracking-wide text-brand-dark">
-                          Gentle next steps it suggests
+                          {t("Gentle next steps it suggests")}
                         </p>
                         <ul className="mt-1 space-y-1">
                           {sum.latest_report.content.next_steps.map((step) => (
@@ -556,7 +578,7 @@ export default function ParentDashboard() {
                       </div>
                     ) : null}
                     <p className="text-xs text-muted">
-                      Only your child can open the full report, from their own Reports screen.
+                      {t("Only your child can open the full report, from their own Reports screen.")}
                     </p>
                   </div>
                 ) : null}
@@ -579,12 +601,13 @@ export default function ParentDashboard() {
                   key={example}
                   type="button"
                   onClick={() => {
-                    setConcern(example);
+                    // The chip's own words go into the box, so a Hindi parent types what they read.
+                    setConcern(t(example));
                     setGuidance(null);
                   }}
                   className="shrink-0 rounded-full border border-line bg-canvas px-3.5 py-1.5 text-sm text-muted transition-colors hover:border-brand-light hover:text-ink"
                 >
-                  {example}
+                  {t(example)}
                 </button>
               ))}
             </div>
@@ -601,7 +624,7 @@ export default function ParentDashboard() {
               disabled={selectedId == null || concern.trim().length < 3}
             >
               <Send className="h-4 w-4" aria-hidden />
-              Get a considered answer
+              {t("Get a considered answer")}
             </Button>
             {guidanceLoading ? <LoadingPanel label="Thinking carefully about your concern…" /> : null}
 
@@ -622,11 +645,11 @@ export default function ParentDashboard() {
                 ) : null}
                 <div className="rounded-xl border border-teal/30 bg-teal-mist/50 p-3.5">
                   <p className="text-xs font-semibold uppercase tracking-wide text-teal">
-                    A sentence you could actually use
+                    {t("A sentence you could actually use")}
                   </p>
                   <p className="mt-1.5 text-sm leading-relaxed text-ink">“{guidance.discussion_prompt}”</p>
                   <p className="mt-1.5 text-xs text-muted">
-                    Their own words matter more than any answer on this screen.
+                    {t("Their own words matter more than any answer on this screen.")}
                   </p>
                 </div>
                 <GuidanceSection title="Where else to seek help" body={guidance.seek_help_from} />
@@ -667,19 +690,21 @@ export default function ParentDashboard() {
                           <span className="ml-2 text-xs font-normal text-muted">{link.relationship}</span>
                         ) : null}
                       </p>
-                      <p className="mt-0.5 text-xs text-muted">Linked {relativeTime(link.linked_at)}</p>
+                      <p className="mt-0.5 text-xs text-muted">
+                        {tf("Linked {time}", { time: relativeTime(link.linked_at) })}
+                      </p>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
-                      <Badge tone={link.can_see_summary ? "brand" : "neutral"}>Sees summary</Badge>
+                      <Badge tone={link.can_see_summary ? "brand" : "neutral"}>{t("Sees summary")}</Badge>
                       <Badge tone={link.can_see_transcripts ? "warning" : "success"}>
-                        {link.can_see_transcripts ? "Sees conversation text" : "Conversation text private"}
+                        {link.can_see_transcripts ? t("Sees conversation text") : t("Conversation text private")}
                       </Badge>
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => setRemoveTarget(link)}
                       >
-                        Remove access
+                        {t("Remove access")}
                       </Button>
                     </div>
                   </li>
@@ -698,26 +723,25 @@ export default function ParentDashboard() {
           <ul className="mt-3 space-y-2 text-sm leading-relaxed text-muted">
             <li className="flex gap-2">
               <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-teal" aria-hidden />
-              Curiosity works better than pressure: ask what they enjoyed about an activity, not what they achieved.
+              {t("Curiosity works better than pressure: ask what they enjoyed about an activity, not what they achieved.")}
             </li>
             <li className="flex gap-2">
               <Compass className="mt-0.5 h-4 w-4 shrink-0 text-teal" aria-hidden />
-              Career interests change — most people&apos;s have, several times. Nothing on this screen is a decision being made today.
+              {t("Career interests change — most people's have, several times. Nothing on this screen is a decision being made today.")}
             </li>
             <li className="flex gap-2">
               <Info className="mt-0.5 h-4 w-4 shrink-0 text-teal" aria-hidden />
-              Almost every expensive route has a lower-cost alternative (government colleges, polytechnics, scholarships). Cost alone never rules a dream out.
+              {t("Almost every expensive route has a lower-cost alternative (government colleges, polytechnics, scholarships). Cost alone never rules a dream out.")}
             </li>
             <li className="flex gap-2">
               <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-teal" aria-hidden />
-              This app never charges families, and its guidance is not influenced by paid institutions or coaching services.
+              {t("This app never charges families, and its guidance is not influenced by paid institutions or coaching services.")}
             </li>
           </ul>
           {health.state === "ready" && health.data?.demo_mode ? (
             <p className="mt-4 flex items-start gap-1.5 rounded-xl bg-warning-mist/60 px-3.5 py-2.5 text-xs leading-relaxed text-ink">
               <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-700" aria-hidden />
-              Heads-up: the AI guide is running in demo mode — its answers come from a built-in scripted
-              guide until an AI key is configured on the server. The exploration data shown here is real.
+              {t("Heads-up: the AI guide is running in demo mode — its answers come from a built-in scripted guide until an AI key is configured on the server. The exploration data shown here is real.")}
             </p>
           ) : null}
         </Card>
@@ -730,24 +754,25 @@ export default function ParentDashboard() {
         title="Remove this link?"
         description={
           removeTarget
-            ? `${removeTarget.name} will no longer appear on your dashboard.`
+            ? tf("{name} will no longer appear on your dashboard.", { name: removeTarget.name })
             : undefined
         }
         footer={
           <>
             <Button variant="outline" onClick={() => setRemoveTarget(null)} disabled={removing}>
-              Keep the link
+              {t("Keep the link")}
             </Button>
             <Button variant="danger" onClick={() => void confirmRemove()} loading={removing}>
-              Remove access
+              {t("Remove access")}
             </Button>
           </>
         }
       >
         <p className="text-sm leading-relaxed text-muted">
-          Removing access is quiet and reversible in one direction only: {removeTarget?.name ?? "your child"}{" "}
-          would need to share a new code with you if they ever wanted you to see their summary again. That
-          choice stays entirely theirs.
+          {tf(
+            "Removing access is quiet and reversible in one direction only: {name} would need to share a new code with you if they ever wanted you to see their summary again. That choice stays entirely theirs.",
+            { name: removeTarget?.name ?? t("your child") },
+          )}
         </p>
       </Modal>
     </Screen>
@@ -755,18 +780,20 @@ export default function ParentDashboard() {
 }
 
 function GuidanceSection({ title, body }: { title: string; body: string }) {
+  const t = useT();
   return (
     <div>
-      <p className="text-xs font-semibold uppercase tracking-wide text-brand-dark">{title}</p>
+      <p className="text-xs font-semibold uppercase tracking-wide text-brand-dark">{t(title)}</p>
       <p className="mt-1 text-sm leading-relaxed text-ink">{body}</p>
     </div>
   );
 }
 
 function GuidanceList({ title, items }: { title: string; items: string[] }) {
+  const t = useT();
   return (
     <div>
-      <p className="text-xs font-semibold uppercase tracking-wide text-brand-dark">{title}</p>
+      <p className="text-xs font-semibold uppercase tracking-wide text-brand-dark">{t(title)}</p>
       <ul className="mt-1 space-y-1">
         {items.map((item) => (
           <li key={item} className="flex gap-2 text-sm leading-relaxed text-ink">

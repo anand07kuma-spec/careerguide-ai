@@ -1,0 +1,50 @@
+# What never belongs in an image of this backend.
+#
+# The first block is the one that matters: `careerguide.db` holds real conversations,
+# and a `docker build` that swept it in would ship a family's chat history inside an
+# image layer — where deleting it from the working tree afterwards changes nothing,
+# because the layer still holds it and anyone with the image can read it.
+
+.venv/
+venv/
+__pycache__/
+**/__pycache__/
+*.py[cod]
+
+*.db
+*.db-journal
+*.db.bak
+*.sqlite
+*.sqlite3
+careerguide.db*
+
+# Generated speech from when audio files were written to disk. The app now returns
+# speech as a data URL and writes nothing here, but the exclusion stays so an old
+# working-tree `media/` directory can never ride into an image — it is private by the
+# same argument as the database.
+media/
+
+# Where `scripts/backup_db.sh` writes by default. A custom-format dump is the whole
+# database in one file, and the default destination is inside this build context, so
+# without this line `docker build ./backend` would put every child's answers into an
+# image layer — where the file is readable by anyone who can pull the image, long after
+# it was deleted from the working tree.
+backups/
+*.dump
+
+# Local secrets. The container is given its environment at run time; an image that
+# carries a `.env` carries it to everyone who can pull it.
+.env
+.env.*
+
+# The pristine create-next-app history parked beside the project, and anything else
+# version-control-shaped.
+.git/
+.gitignore
+**/.git-scaffold-backup/
+
+# Not needed at runtime, and large.
+*.log
+.pytest_cache/
+.vercel/
+next-env.d.ts

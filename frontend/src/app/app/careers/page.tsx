@@ -12,6 +12,7 @@ import { PillGroup } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/toast";
 import { api } from "@/lib/api";
 import { useSession } from "@/lib/session";
+import { useT, useTf } from "@/lib/i18n";
 import { messageFor, useResource } from "@/lib/use-resource";
 import { THEME_LABELS, type CareerSummary, type Category, type ThemeKey } from "@/lib/types";
 import { categoryTint, cn } from "@/lib/utils";
@@ -35,6 +36,8 @@ function linkedFilters(): { category: string; theme: string } {
 export default function CareerExplorer() {
   const { status: sessionStatus } = useSession();
   const { toast } = useToast();
+  const t = useT();
+  const tf = useTf();
 
   const [link] = useState(linkedFilters);
   const [search, setSearch] = useState("");
@@ -130,8 +133,8 @@ export default function CareerExplorer() {
   };
 
   const chips = useMemo(
-    () => [{ value: "", label: "All fields" }, ...(categories.data ?? []).map((c) => ({ value: c.name, label: `${c.name} (${c.count})` }))],
-    [categories.data],
+    () => [{ value: "", label: t("All fields") }, ...(categories.data ?? []).map((c) => ({ value: c.name, label: `${c.name} (${c.count})` }))],
+    [categories.data, t],
   );
 
   return (
@@ -140,7 +143,7 @@ export default function CareerExplorer() {
       description="Browse careers across every field. These describe possibilities to look into, not predictions about you."
       action={
         <LinkButton href="/app/interests" variant="outline" size="sm">
-          Personalise by interest
+          {t("Personalise by interest")}
         </LinkButton>
       }
     >
@@ -157,15 +160,15 @@ export default function CareerExplorer() {
                 type="search"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search careers, e.g. data, nurse, pilot"
-                aria-label="Search careers"
+                placeholder={t("Search careers, e.g. data, nurse, pilot")}
+                aria-label={t("Search careers")}
                 className="pl-9 pr-9"
               />
               {search ? (
                 <button
                   type="button"
                   onClick={() => setSearch("")}
-                  aria-label="Clear search"
+                  aria-label={t("Clear search")}
                   className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-1.5 text-muted hover:bg-canvas hover:text-ink"
                 >
                   <X className="h-4 w-4" aria-hidden />
@@ -177,8 +180,8 @@ export default function CareerExplorer() {
               value={theme}
               onChange={(e) => setTheme(e.target.value)}
               options={THEME_OPTIONS}
-              placeholder="All interest themes"
-              aria-label="Filter by interest theme"
+              placeholder={t("All interest themes")}
+              aria-label={t("Filter by interest theme")}
             />
           </div>
 
@@ -186,7 +189,7 @@ export default function CareerExplorer() {
             <div>
               <p className="mb-1.5 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted">
                 <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden />
-                Field
+                {t("Field")}
               </p>
               <PillGroup items={chips} value={category} onChange={setCategory} />
             </div>
@@ -200,7 +203,7 @@ export default function CareerExplorer() {
                 onChange={(e) => setSavedOnly(e.target.checked)}
                 className="h-4.5 w-4.5 rounded-md border-line accent-brand"
               />
-              Saved only
+              {t("Saved only")}
             </label>
             {hasFilters ? (
               <button
@@ -209,7 +212,7 @@ export default function CareerExplorer() {
                 className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-brand-dark hover:bg-brand-mist"
               >
                 <X className="h-3.5 w-3.5" aria-hidden />
-                Clear filters
+                {t("Clear filters")}
               </button>
             ) : null}
           </div>
@@ -218,8 +221,9 @@ export default function CareerExplorer() {
         {/* Honest framing above results */}
         <p className="flex items-start gap-1.5 text-xs leading-relaxed text-muted">
           <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
-          Careers here describe what the work is really like. Entry requirements, costs and exams
-          change often — always verify them with the official sources on each career page.
+          {t(
+            "Careers here describe what the work is really like. Entry requirements, costs and exams change often — always verify them with the official sources on each career page.",
+          )}
         </p>
 
         {/* Results */}
@@ -234,11 +238,11 @@ export default function CareerExplorer() {
         ) : visible.length === 0 ? (
           <EmptyState
             icon={Search}
-            title={hasFilters ? "No careers match these filters" : "No careers found yet"}
+            title={hasFilters ? t("No careers match these filters") : t("No careers found yet")}
             description={
               savedOnly && careers.length > 0
-                ? "You haven't saved any career in this view yet. Try turning off 'Saved only'."
-                : "Try a different search term, or clear the filters to see everything."
+                ? t("You haven't saved any career in this view yet. Try turning off 'Saved only'.")
+                : t("Try a different search term, or clear the filters to see everything.")
             }
             action={
               hasFilters ? (
@@ -248,7 +252,7 @@ export default function CareerExplorer() {
                   className="inline-flex items-center gap-1.5 rounded-xl bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-dark"
                 >
                   <X className="h-4 w-4" aria-hidden />
-                  Clear filters
+                  {t("Clear filters")}
                 </button>
               ) : undefined
             }
@@ -256,9 +260,10 @@ export default function CareerExplorer() {
         ) : (
           <>
             <p className="text-sm text-muted" aria-live="polite">
-              Showing <span className="font-semibold text-ink">{visible.length}</span>{" "}
-              {visible.length === 1 ? "career" : "careers"}
-              {hasFilters ? " with your filters" : ""}.
+              {visible.length === 1
+                ? tf("Showing 1 career", { n: 1 })
+                : tf("Showing {n} careers", { n: visible.length })}
+              {hasFilters ? ` ${t("with your filters")}` : ""}.
             </p>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {visible.map((career) => {
@@ -285,15 +290,17 @@ export default function CareerExplorer() {
                       </button>
                     </div>
 
-                    <h3 className="mt-2.5 text-base font-semibold leading-tight text-ink">{career.title}</h3>
+                    <h3 className="mt-2.5 text-base font-semibold leading-tight text-ink">
+                      {t(career.title)}
+                    </h3>
                     <p className="mt-1.5 flex-1 text-sm leading-relaxed text-muted">{career.summary}</p>
 
                     <div className="mt-3 flex items-center justify-between gap-2">
                       <span className="text-xs font-medium text-teal">
-                        Explorable from class {career.min_class}
+                        {tf("Explorable from class {n}", { n: career.min_class })}
                       </span>
                       <LinkButton href={`/app/careers/${career.slug}`} variant="ghost" size="sm" className="px-0 text-brand-dark hover:bg-transparent">
-                        View details
+                        {t("View details")}
                       </LinkButton>
                     </div>
                   </Card>

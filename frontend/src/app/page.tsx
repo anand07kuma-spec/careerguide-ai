@@ -10,10 +10,34 @@ import {
   Sparkles,
   Users,
 } from "lucide-react";
+import Link from "next/link";
 import { Wordmark } from "@/components/brand";
 import { Badge } from "@/components/ui/badge";
 import { LinkButton } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import type { Metadata } from "next";
+
+import { DEFAULT_DESCRIPTION, pageMeta } from "@/lib/site";
+
+/**
+ * The landing page is the one URL a stranger arrives at without context, so it
+ * gets the canonical tag, the OpenGraph card and the Twitter card explicitly
+ * rather than inheriting the root layout's defaults — an unset `og:url` is what
+ * makes a shared link look like a different site to a validator.
+ */
+export const metadata: Metadata = pageMeta({
+  title: "CareerGuide AI — Explore careers, one conversation at a time",
+  absoluteTitle: true,
+  path: "/",
+  description: DEFAULT_DESCRIPTION,
+  keywords: [
+    "career guidance for students",
+    "career explorer India",
+    "Hindi career guidance",
+    "parent career dashboard",
+    "study plan",
+  ],
+});
 
 const FEATURES = [
   {
@@ -91,6 +115,9 @@ export default function LandingPage() {
             <a className="hover:text-ink" href="#safety">
               Safety and privacy
             </a>
+            <Link className="hover:text-ink" href="/pricing">
+              Pricing
+            </Link>
           </nav>
           <div className="flex items-center gap-2">
             {/* There is no sign-in to offer: this device is the account, so the only
@@ -113,9 +140,9 @@ export default function LandingPage() {
           <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-14 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:py-20">
             <div>
               <Badge tone="teal" className="mb-5">
-                For students in class 3 to 12, and the parents who support them
+                For students in class 6 to 12, and the parents who support them
               </Badge>
-              <h1 className="text-balance text-4xl font-bold leading-[1.1] tracking-tight text-navy sm:text-5xl">
+              <h1 className="text-balance text-4xl font-bold leading-[1.1] tracking-tight text-heading sm:text-5xl">
                 Career guidance that feels like a conversation, not an examination.
               </h1>
               <p className="mt-5 max-w-xl text-lg leading-relaxed text-muted">
@@ -182,7 +209,7 @@ export default function LandingPage() {
 
         {/* Features */}
         <section className="mx-auto max-w-6xl px-4 pb-4 sm:px-6">
-          <h2 className="text-2xl font-bold tracking-tight text-navy sm:text-3xl">
+          <h2 className="text-2xl font-bold tracking-tight text-heading sm:text-3xl">
             Everything a first conversation should do
           </h2>
           <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -191,7 +218,7 @@ export default function LandingPage() {
                 <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-brand-mist text-brand">
                   <item.icon className="h-5 w-5" aria-hidden />
                 </span>
-                <h3 className="mt-4 text-base font-semibold text-navy">{item.title}</h3>
+                <h3 className="mt-4 text-base font-semibold text-heading">{item.title}</h3>
                 <p className="mt-1.5 text-sm leading-relaxed text-muted">{item.body}</p>
               </Card>
             ))}
@@ -207,7 +234,7 @@ export default function LandingPage() {
                   <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-navy text-sm font-semibold text-white">
                     {index + 1}
                   </span>
-                  <h3 className="mt-4 text-base font-semibold text-navy">{step.title}</h3>
+                  <h3 className="mt-4 text-base font-semibold text-heading">{step.title}</h3>
                   <p className="mt-1.5 text-sm leading-relaxed text-muted">{step.body}</p>
                 </div>
               ))}
@@ -222,7 +249,7 @@ export default function LandingPage() {
               <Badge tone="brand" className="mb-4">
                 For parents and guardians
               </Badge>
-              <h2 className="text-2xl font-bold tracking-tight text-navy sm:text-3xl">
+              <h2 className="text-2xl font-bold tracking-tight text-heading sm:text-3xl">
                 Help without pressure
               </h2>
               <p className="mt-4 leading-relaxed text-muted">
@@ -331,7 +358,7 @@ export default function LandingPage() {
         <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
           <Card className="flex flex-col items-start gap-6 p-8 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="text-xl font-bold tracking-tight text-navy sm:text-2xl">
+              <h2 className="text-xl font-bold tracking-tight text-heading sm:text-2xl">
                 Begin with one conversation
               </h2>
               <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted">
@@ -348,16 +375,6 @@ export default function LandingPage() {
           </Card>
         </section>
       </main>
-
-      <footer className="border-t border-line bg-surface">
-        <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-8 text-sm text-muted sm:flex-row sm:items-center sm:justify-between sm:px-6">
-          <Wordmark compact />
-          <p className="max-w-md text-xs leading-relaxed">
-            CareerGuide AI supports exploration. It is not a replacement for a qualified career
-            counsellor, teacher or doctor.
-          </p>
-        </div>
-      </footer>
     </div>
   );
 }

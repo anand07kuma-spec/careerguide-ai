@@ -19,6 +19,17 @@ type Status = "loading" | "new-device" | "ready" | "offline";
  * leave the student under "Checking your account…" with no way out. */
 const CHECK_TIMEOUT_MS = 12000;
 
+/**
+ * How often an open page asks the server to keep its session going.
+ *
+ * A session ends after a day of quiet and a month of use, whichever comes first. Without
+ * asking, a child who leaves the questionnaire open on a second monitor gets signed out
+ * by a clock they cannot see; asking every few seconds would be a request per tab with
+ * nothing to show for it. An hour sits between: six asks a day, each one moving an expiry
+ * that would otherwise have run out.
+ */
+const RENEW_EVERY_MS = 60 * 60 * 1000;
+
 function withDeadline<T>(work: Promise<T>, ms: number): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const timer = setTimeout(
@@ -88,31 +99,34 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const reload = useCallback(async () => {
-    const stored = api.readStoredToken();
-    if (stored) {
-      setAuthToken(stored);
-      try {
-        apply(await withDeadline(api.me(), CHECK_TIMEOUT_MS));
-      } catch (error) {
-        if (isOffline(error)) {
-          // The stored token *is* the account: there is no password to type again.
-          // A network that is merely down or slow must not throw the only copy away.
-          setStatus("offline");
-          return;
-        }
-        // A token the server refuses is genuinely stale. Ask the device again
-        // rather than assuming a stranger is sitting at this keyboard.
-        api.rememberToken(null);
-      }
+    // Ask who this browser is using only what a browser offers on its own: the session
+    // cookie the server wrote. Nothing is read out of storage, because nothing was ever
+    // put there — a token a script could read is a token a script could hand over.
+    try {
+      apply(await withDeadline(api.me(), CHECK_TIMEOUT_MS));
       return;
+    } catch (error) {
+      if (isOffline(error)) {
+        // The cookie *is* the account: there is no password to type again. A network
+        // that is merely down or slow must not throw away a session that still works.
+        setStatus("offline");
+        return;
+      }
+      // 401, or a shape this page cannot read. Either way the server has refused what
+      // this tab was holding, including any header it minted for itself a minute ago.
+      setAuthToken(null);
     }
 
-    // No token in this browser. The device id alone decides whether this is the
-    // same student coming back or somebody who has never been here.
+    // Nothing was accepted. Two different situations look identical from here, and the
+    // device id tells them apart: a browser that has never been here, and a browser —
+    // Safari and Firefox in strict mode — that will not keep a cookie set by a
+    // cross-site request, so it has a valid account and no way to show it.
     try {
       const answer: GuestResult = await withDeadline(api.guest(deviceId()), CHECK_TIMEOUT_MS);
       if (answer.known && answer.session) {
-        api.rememberToken(answer.session.token);
+        // In-memory only. On reload the cookie answers again where it is allowed to, and
+        // this call answers where it is not; neither survives the tab being closed.
+        setAuthToken(answer.session.token);
         apply(answer.session);
         return;
       }
@@ -128,13 +142,40 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
   }, [apply]);
 
-  // On mount, reconcile this device's stored token with the server. This cannot
-  // be derived during render: localStorage only exists in the browser, so the
-  // server's first paint has to show the same "checking your account" state.
+  // On mount, find out whether this browser already has an account. This cannot be
+  // derived during render: a cookie only exists in the browser, so the server's first
+  // paint has to show the same "checking your account" state.
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void reload();
   }, [reload]);
+
+  // Keep a session that is actually in use from expiring underneath the child. A tab
+  // that is hidden is the interesting case — an hour of quiet is exactly what the TTL
+  // counts, and the tab coming back is the moment that has just happened.
+  useEffect(() => {
+    if (status !== "ready") return;
+    if (typeof document === "undefined") return;
+    const renew = () => {
+      void api
+        .refresh()
+        // `extended: false` is the monthly ceiling answering, not an error: this session
+        // ends when it says it will. A fresh sign-in from the same device is a fresh
+        // session, which is what a ceiling is for rather than a way around it.
+        .catch((error: unknown) => {
+          if (error instanceof ApiError && error.status === 401) void reload();
+        });
+    };
+    const onVisible = () => {
+      if (document.visibilityState === "visible") renew();
+    };
+    const timer = setInterval(renew, RENEW_EVERY_MS);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [status, reload]);
 
   // Accessibility choices must reach CSS before first paint of the next route.
   useEffect(() => {
@@ -149,7 +190,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       // The device is the account: this id is the only handle the server keeps
       // for finding the work again on the next visit from this browser.
       const next = await api.onboarding({ ...payload, device_id: deviceId() });
-      api.rememberToken(next.token);
+      setAuthToken(next.token);
       apply(next);
       return next;
     },
@@ -162,9 +203,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     } catch {
       setAuthToken(null);
     }
-    // Revoking the token is not enough: the device id would still be recognised on
+    // Revoking the session is not enough: the device id would still be recognised on
     // the next page load and the same student would silently come back.
-    api.rememberToken(null);
+    setAuthToken(null);
     rotateDeviceId();
     clear();
   }, [clear]);

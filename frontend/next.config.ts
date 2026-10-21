@@ -4,6 +4,22 @@ const nextConfig: NextConfig = {
   /* config options here */
   cacheComponents: true,
   partialPrefetching: true,
+  // Only a container asks for this. `next start` inside an image needs a self-contained
+  // build (`standalone`) or it also wants `node_modules` copied wholesale; Vercel does
+  // not use `next start` at all, and it is not a given that an extra output mode
+  // interacts cleanly with `cacheComponents` — so the live deployment keeps building
+  // exactly the config it always had, and this line changes behaviour only where the
+  // value is deliberately set. `frontend/Dockerfile` sets it.
+  ...(process.env.NEXT_DOCKER_STANDALONE === "1" ? { output: "standalone" as const } : {}),
+  // The blog and `/sitemap.xml` read their markdown off the filesystem at
+  // request time. A serverless deployment only ships files the import graph
+  // touched, and a `.md` opened with `fs` is not an import — without this, the
+  // pages would build fine locally and 404 every post in production.
+  outputFileTracingIncludes: {
+    "/blog": ["./src/content/blog/*.md"],
+    "/blog/[slug]": ["./src/content/blog/*.md"],
+    "/sitemap.xml": ["./src/content/blog/*.md"],
+  },
   // The dev server's live-reload socket only accepts origins it knows, and in dev
   // Turbopack the page's module graph arrives over that socket — so a rejected
   // origin renders the server HTML and then never hydrates. Every button looks

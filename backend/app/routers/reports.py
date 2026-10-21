@@ -30,6 +30,7 @@ from ..schemas import (
     UserOut,
 )
 from ..security import linked_student_ids, require_parent, require_student, resolve_child
+from ..services import entitlements
 from ..services import report as report_service
 from ..services.recommender import build_recommendations
 
@@ -91,6 +92,11 @@ def delete_report(
 def children(
     parent: User = Depends(require_parent), db: Session = Depends(get_db)
 ) -> list[dict]:
+    # A guardian's view of progress is the paid part of this product (see /pricing).
+    # What is *not* gated: a student's own screens, the whole careers catalogue, and
+    # every consent and delete control — a family that stops paying loses a view, not
+    # control of their data.
+    entitlements.guard_feature(db, parent, "parent_dashboard", "The parent dashboard")
     ids = linked_student_ids(db, parent.id)
     out = []
     for student_id in ids:
@@ -114,6 +120,7 @@ def parent_summary(
     parent: User = Depends(require_parent),
     db: Session = Depends(get_db),
 ) -> ParentSummaryOut:
+    entitlements.guard_feature(db, parent, "parent_dashboard", "The parent dashboard")
     # The requested id is checked against this parent's own links, so changing
     # the number in a request cannot reach another family's data.
     child_id = resolve_child(db, parent, student_id)
@@ -231,6 +238,10 @@ def parent_guidance(
     db: Session = Depends(get_db),
 ) -> dict:
     """Structured, non-pressuring replies to the worries families actually raise."""
+    # Deliberately not gated behind a plan, unlike the dashboard routes above. This is
+    # the answer a parent gets when they are worried about a child being pushed into
+    # medicine at fourteen; putting that behind a paywall would be charging for help in
+    # the one moment the product exists to give it.
     child_id = resolve_child(db, parent, student_id)
     lowered = concern.lower()
     payload, signals = build_recommendations(db, child_id, limit=3)

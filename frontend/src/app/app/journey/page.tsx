@@ -17,7 +17,7 @@ import { Screen } from "@/components/layout/app-shell";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { LinkButton } from "@/components/ui/button";
-import { Tabs } from "@/components/ui/tabs";
+import { Tabs, tabpanelProps } from "@/components/ui/tabs";
 import {
   EmptyState,
   ErrorState,
@@ -247,11 +247,20 @@ export default function JourneyPage() {
             ) : (
               <>
                 {tabs.length > 1 ? (
-                  <Tabs items={tabs} value={kindFilter} onChange={setKindFilter} />
+                  <Tabs
+                    items={tabs}
+                    value={kindFilter}
+                    onChange={setKindFilter}
+                    idBase="journey-kind"
+                    label="Filter the journal by"
+                  />
                 ) : null}
 
                 {filtered.length === 0 ? (
-                  <div className="mt-4">
+                  <div
+                    className="mt-4"
+                    {...(tabs.length > 1 ? tabpanelProps("journey-kind", kindFilter) : {})}
+                  >
                     <EmptyState
                       title="Nothing of this type yet"
                       description="Try another filter, or go explore something new."
@@ -267,7 +276,10 @@ export default function JourneyPage() {
                     />
                   </div>
                 ) : (
-                  <div className="mt-5 space-y-6">
+                  <div
+                    className="mt-5 space-y-6"
+                    {...(tabs.length > 1 ? tabpanelProps("journey-kind", kindFilter) : {})}
+                  >
                     {days.map((day) => (
                       <section key={day.key} aria-label={day.label}>
                         <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">

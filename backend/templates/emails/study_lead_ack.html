@@ -1,0 +1,96 @@
+{#
+  The acknowledgement, sent to the person who typed their address into a public form.
+
+  Context: `name`, `country_name`, `service_name`, `stage_label`, `received_at`,
+  `study_abroad_url`, `contact_url`.
+
+  Two sentences here exist to stop the form meaning something it does not. The call to
+  action on the page says "book", and this mail says plainly that nothing is booked: no
+  slot in a calendar, no place at a university, no visa, no promise about whether a
+  reply will come or what it will say. A family who reads "your consultation is booked"
+  in a mail and then finds nobody expecting them has been lied to by an automated
+  message, and no template gets to do that.
+
+  The other thing this mail has to get right is the address. It is not confirmed, not
+  attached to an account, and will never be used for anything else — so the footer says
+  that instead of the usual "turn it off in your settings", which would point at a
+  settings page this person does not have.
+#}
+{% extends "base.html" %}
+
+{% block title %}{{ txt("We have your enquiry", "हमें आपकी पूछताछ मिल गई है") }}{% endblock %}
+{% block preheader %}{{ txt("What this form did and did not do", "यह फ़ॉर्म ने क्या किया और क्या नहीं किया") }}{% endblock %}
+
+{% block eyebrow %}{{ txt("Your enquiry", "आपकी पूछताछ") }}{% endblock %}
+
+{% block heading %}
+  {{ txt("Thank you — your enquiry is with us", "धन्यवाद — आपकी पूछताछ हम तक पहुँच गई है") }}
+{% endblock %}
+
+{% block body %}
+  <p style="margin:0 0 16px;">
+    {% if name %}{{ name ~ "," }}{% endif %}
+    {{ txt("someone on our team will read what you wrote. This mail is only to tell you it arrived, because the", " — हमारी टीम में से कोई आपके लिखे को पढ़ेगा। यह संदेश केवल इतना बताने के लिए है कि वह पहुँच गया, क्योंकि") }}
+    <strong style="color:#0b1730;">{{ site_name }}</strong>
+    {{ txt("page did not say so itself.", " की पेज ने खुद नहीं बताया।") }}
+  </p>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 18px;">
+    <tr>
+      <td style="padding:16px 18px;background:#f4f7fd;border-radius:12px;font-family:Arial,'Noto Sans',sans-serif;font-size:14px;line-height:22px;color:#41536e;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+          {% if country_name %}
+          <tr>
+            <td style="padding:0 0 6px;">{{ txt("Country", "देश") }}: <strong style="color:#0b1730;">{{ country_name }}</strong></td>
+          </tr>
+          {% endif %}
+          {% if service_name %}
+          <tr>
+            <td style="padding:0 0 6px;">{{ txt("What you asked about", "आपने किस बारे में पूछा") }}: {{ service_name }}</td>
+          </tr>
+          {% endif %}
+          {% if stage_label %}
+          <tr>
+            <td style="padding:0 0 6px;">{{ txt("Stage", "कक्षा/अवस्था") }}: {{ stage_label }}</td>
+          </tr>
+          {% endif %}
+          <tr>
+            <td style="padding:0;">{{ txt("Received", "पहुँचा") }}: {{ received_at }}</td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 18px;">
+    <tr>
+      <td style="padding:16px 18px;background:#fff8e8;border:1px solid #f0dcae;border-radius:12px;font-family:Arial,'Noto Sans',sans-serif;font-size:14px;line-height:22px;color:#4a3a12;">
+        <p style="margin:0 0 8px;font-weight:700;color:#0b1730;">{{ txt("What this form did not do", "इस फ़ॉर्म ने क्या नहीं किया") }}</p>
+        <p style="margin:0 0 6px;">• {{ txt("Nothing is booked. No date or time has been set aside for anyone.", "कुछ भी बुक नहीं हुआ है। किसी के लिए कोई दिन या समय आरक्षित नहीं किया गया है।") }}</p>
+        <p style="margin:0 0 6px;">• {{ txt("No place at a university, no visa and no outcome has been promised, and we cannot promise one.", "किसी विश्वविद्यालय में सीट, कोई वीज़ा या कोई परिणाम का वादा नहीं किया गया है, और हम वादा नहीं कर सकते।") }}</p>
+        <p style="margin:0;">• {{ txt("If a reply comes, it will come to this address. If it does not, nothing has been agreed.", "अगर उत्तर आता है तो इसी पते पर आएगा। अगर नहीं आया, तो कुछ तय नहीं हुआ।") }}</p>
+      </td>
+    </tr>
+  </table>
+
+  <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 18px;">
+    <tr>
+      <td style="border-radius:12px;background:#1f4ed0;">
+        <a href="{{ study_abroad_url }}" style="display:inline-block;padding:12px 22px;font-family:Arial,'Noto Sans',sans-serif;font-size:15px;font-weight:600;line-height:20px;color:#ffffff;text-decoration:none;">{{ txt("The study abroad pages", "विदेश में अध्ययन के पेज") }}</a>
+      </td>
+    </tr>
+  </table>
+
+  <p style="margin:0;padding:14px 16px;background:#f4f7fd;border-radius:12px;color:#41536e;">
+    {{ txt("Meanwhile, the directory is open to anyone and needs no account:", "इस बीच, हमारी सूची सबसे के लिए खुली है और उसमें खाते की ज़रूरत नहीं:") }}
+    <a href="{{ study_abroad_url }}" style="color:#3f6fe0;text-decoration:underline;">{{ txt("countries and universities", "देश और विश्वविद्यालय") }}</a>{{ txt(", and", ", और") }}
+    <a href="{{ contact_url }}" style="color:#3f6fe0;text-decoration:underline;">{{ txt("how to reach us", "हमसे संपर्क कैसे करें") }}</a>.
+  </p>
+{% endblock %}
+
+{% block stop_line %}
+<p style="margin:0 0 10px;">
+  {{ txt("You are getting this because somebody typed this address into an enquiry form on our site and asked to be contacted. There is no account behind this address and nothing is stored about you except that enquiry, which can be deleted by writing to", "यह संदेश आपको इसलिए मिला है क्योंकि किसी ने हमारी साइट पर पूछताछ फ़ॉर्म में यह पता लिखा और संपर्क करने को कहा। इस पते से कोई खाता जुड़ा नहीं है, और आपके बारे में कुछ नहीं सहेजा जाता सिवाय उस पूछताछ के — जिसे लिखकर हटाया जा सकता है:") }}
+  <a href="{{ contact_url }}" style="color:#3f6fe0;text-decoration:underline;">{{ txt("us", "हमसे") }}</a>.
+</p>
+{% endblock %}

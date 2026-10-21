@@ -1,0 +1,79 @@
+{#
+  The frame every message is built on.
+
+  Table layout and inline styles are not a style choice: a mail client ignores a
+  stylesheet, and half of them ignore `class` attributes entirely. Anything defined
+  here has to survive Outlook, Gmail's clipping of long messages, and a phone screen.
+
+  `{% block body %}` is where a message puts its paragraphs. `eyebrow` is the small
+  line above the heading that names the kind of message, so a family scanning a
+  inbox can tell a receipt from a summary without opening either.
+
+  The footer is not decoration and not a marketing block. Two sentences there are
+  the reason this frame exists in one file rather than six: the address how to stop
+  these messages, and the app's own disclaimer, have to appear in every message
+  without anyone remembering to paste them.
+
+  The first of those is `{% block stop_line %}` for one reason: it claims an account
+  you control asked for this mail. That is true of every message a signed-in person
+  can trigger and false of the ones sent to somebody with no account at all — an
+  enquiry from a public page, an invitation. A message that cannot say "your
+  settings" says what actually happened instead, and the footer keeps the rest.
+#}
+<!doctype html>
+<html lang="{{ lang }}">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light">
+    <title>{% block title %}{{ site_name }}{% endblock %}</title>
+  </head>
+  <body style="margin:0;padding:0;background:#eef2fa;-webkit-text-size-adjust:100%;">
+    <div style="display:none;max-height:0;overflow:hidden;opacity:0;">{% block preheader %}{% endblock %}</div>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;background:#eef2fa;">
+      <tr>
+        <td align="center" style="padding:28px 14px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border:1px solid #dce4f4;border-radius:18px;">
+            <tr>
+              <td style="padding:26px 30px 0;">
+                <table role="presentation" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td width="38" height="38" align="center" valign="middle" style="width:38px;height:38px;background:#5b8cff;border-radius:11px;text-align:center;font-family:Arial,'Noto Sans',sans-serif;font-size:20px;font-weight:700;line-height:38px;color:#0b1730;">C</td>
+                    <td style="padding-left:12px;font-family:Arial,'Noto Sans',sans-serif;font-size:17px;font-weight:600;line-height:22px;color:#0b1730;">{{ site_name }}</td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:24px 30px 8px;font-family:Arial,'Noto Sans',sans-serif;">
+                <p style="margin:0 0 10px;font-size:12px;font-weight:600;line-height:16px;letter-spacing:0.08em;text-transform:uppercase;color:#4f7ae0;">{% block eyebrow %}{% endblock %}</p>
+                <h1 style="margin:0 0 16px;font-size:25px;font-weight:700;line-height:32px;color:#0b1730;">{% block heading %}{% endblock %}</h1>
+                <div style="font-size:15px;line-height:24px;color:#26334c;">
+                  {% block body %}{% endblock %}
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:22px 30px 26px;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #e4eaf6;">
+                  <tr>
+                    <td style="padding-top:18px;font-family:Arial,'Noto Sans',sans-serif;font-size:12px;line-height:18px;color:#61748f;">
+                      {% block stop_line %}
+                      <p style="margin:0 0 10px;">
+                        {{ txt("You are getting this because an account you control asked to be written to at this address. Any of these messages can be turned off, and the address can be removed altogether, from", "यह संदेश आपको इसलिए मिला है क्योंकि किसी खाते ने इस पते पर लिखे जाने की अनुमति दी थी। ये सभी संदेश बंद किए जा सकते हैं, और यह पता पूरी तरह हटाया भी जा सकता है —") }}
+                        <a href="{{ site_url }}/app/settings" style="color:#3f6fe0;text-decoration:underline;">{{ txt("the account's settings", "खाते की सेटिंग्स") }}</a>.
+                      </p>
+                      {% endblock %}
+                      <p style="margin:0 0 10px;">{{ txt("CareerGuide AI is a guide for students and the families who help them. It is not an aptitude test and it does not predict a future.", "CareerGuide AI छात्रों और उनकी सहायता करने वाले परिवारों के लिए एक मार्गदर्शक है। यह कोई एप्टिट्यूड टेस्ट नहीं है और भविष्य नहीं बताता।") }}</p>
+                      <p style="margin:0;"><a href="{{ site_url }}" style="color:#3f6fe0;text-decoration:none;">{{ site_url|replace("https://", "") }}</a></p>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

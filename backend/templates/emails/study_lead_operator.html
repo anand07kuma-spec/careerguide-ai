@@ -1,0 +1,111 @@
+{#
+  The enquiry notification, sent to whoever runs the site.
+
+  Context: `lead_name`, `lead_email`, `lead_phone`, `stage_label`, `country_name`,
+  `service_name`, `message`, `source_url`, `received_at`, `admin_url`.
+
+  Nothing is summarised, ranked or scored here. The mail carries the words somebody
+  typed, to the one address configured on the server, because that is the whole
+  purpose: a human reads it and decides. `LEAD_NOTIFY_EMAIL` is deliberately not
+  editable from any screen — a public form whose destination can be changed by an
+  account would be a way to forward every family's name and phone number to any
+  mailbox in the world.
+
+  This is the only message in the system whose recipient is neither the account owner
+  nor an address the account confirmed. Its limit is that it carries one person's
+  enquiry and no other student's data, which is why the lead row has no `user_id` and
+  nothing here joins to a conversation.
+
+  The footer's usual sentence is replaced here as it is in the acknowledgement, for the
+  same reason in mirror: it would tell the operator that an account they control asked
+  for this mail, when what actually happened is that a server setting names this mailbox.
+#}
+{% extends "base.html" %}
+
+{% block title %}{{ txt("A study abroad enquiry", "विदेश में अध्ययन संबंधी एक पूछताछ") }} — {{ site_name }}{% endblock %}
+{% block preheader %}{{ txt(lead_name ~ " asked about " ~ (country_name or "studying abroad"), lead_name ~ " ने " ~ (country_name or "विदेश में अध्ययन") ~ " के बारे में पूछा") }}{% endblock %}
+
+{% block eyebrow %}{{ txt("New enquiry", "नई पूछताछ") }}{% endblock %}
+
+{% block heading %}
+  {{ txt("Someone wants to talk about studying abroad", "कोई व्यक्ति विदेश में अध्ययन के बारे में बात करना चाहता है") }}
+{% endblock %}
+
+{% block body %}
+  <p style="margin:0 0 16px;">
+    {{ txt("This arrived from the", "यह हमारे") }}
+    <strong style="color:#0b1730;">{{ site_name }}</strong>
+    {{ txt("study abroad pages.", " की विदेश-अध्ययन पेजों से आया है।") }}
+  </p>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 18px;">
+    <tr>
+      <td style="padding:16px 18px;background:#f4f7fd;border-radius:12px;font-family:Arial,'Noto Sans',sans-serif;font-size:14px;line-height:22px;color:#41536e;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="padding:0 0 8px;font-weight:700;color:#0b1730;font-size:16px;">{{ lead_name }}</td>
+          </tr>
+          <tr>
+            <td style="padding:0 0 6px;">
+              <a href="mailto:{{ lead_email }}" style="color:#3f6fe0;text-decoration:underline;">{{ lead_email }}</a>
+              {% if lead_phone %}<span style="color:#61748f;"> · {{ lead_phone }}</span>{% endif %}
+            </td>
+          </tr>
+          {% if stage_label %}
+          <tr>
+            <td style="padding:0 0 6px;">{{ txt("Where they are", "वे कहाँ हैं") }}: {{ stage_label }}</td>
+          </tr>
+          {% endif %}
+          {% if country_name %}
+          <tr>
+            <td style="padding:0 0 6px;">{{ txt("Country asked about", "किस देश के बारे में पूछा") }}: {{ country_name }}</td>
+          </tr>
+          {% endif %}
+          {% if service_name %}
+          <tr>
+            <td style="padding:0 0 6px;">{{ txt("Service asked about", "किस सेवा के बारे में पूछा") }}: {{ service_name }}</td>
+          </tr>
+          {% endif %}
+          <tr>
+            <td style="padding:0;">{{ txt("Received", "मिला") }}: {{ received_at }}</td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+
+  {% if message %}
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 18px;">
+    <tr>
+      <td style="padding:16px 18px;background:#ffffff;border:1px solid #dce4f4;border-radius:12px;font-family:Arial,'Noto Sans',sans-serif;font-size:15px;line-height:24px;color:#26334c;">
+        <p style="margin:0 0 8px;font-size:12px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#4f7ae0;">{{ txt("Their own words", "उनके अपने शब्द") }}</p>
+        <p style="margin:0;white-space:pre-wrap;">{{ message }}</p>
+      </td>
+    </tr>
+  </table>
+  {% endif %}
+
+  <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 18px;">
+    <tr>
+      <td style="border-radius:12px;background:#1f4ed0;">
+        <a href="{{ admin_url }}" style="display:inline-block;padding:12px 22px;font-family:Arial,'Noto Sans',sans-serif;font-size:15px;font-weight:600;line-height:20px;color:#ffffff;text-decoration:none;">{{ txt("Open the enquiry list", "पूछताछ की सूची खोलें") }}</a>
+      </td>
+    </tr>
+  </table>
+
+  <p style="margin:0;padding:14px 16px;background:#f4f7fd;border-radius:12px;color:#41536e;">
+    {{ txt("Answer from your own mailbox if you can. This address is on the site for one purpose — this enquiry — and it is not used for anything else, including nothing at all once the entry is deleted.", "अगर संभव हो तो अपने मेलबॉक्स से उत्तर दें। यह पता साइट पर एक ही काम के लिए है — यह पूछताछ — और उसके सिवा किसी और काम में नहीं लगाया जाता, प्रविष्टि हटने के बाद तो बिल्कुल नहीं।") }}
+  </p>
+
+  {% if source_url %}
+  <p style="margin:14px 0 0;font-size:12px;color:#61748f;">
+    {{ txt("Sent from", "इस पेज से भेजा गया") }}: <a href="{{ source_url }}" style="color:#3f6fe0;text-decoration:underline;">{{ source_url }}</a>
+  </p>
+  {% endif %}
+{% endblock %}
+
+{% block stop_line %}
+<p style="margin:0 0 10px;">
+  {{ txt("You are getting this because whoever runs this site set your address as the one study abroad enquiries are sent to. It is a setting on the server, not something a form can choose, and no other message is mailed to it.", "यह संदेश आपको इसलिए मिला है क्योंकि इस साइट को चलाने वाले ने अपना पता विदेश-अध्ययन पूछताछ भेजने का पता बनाया है। यह सर्वर पर एक सेटिंग है, जिसे कोई फ़ॉर्म नहीं चुन सकता, और इस पर और कोई संदेश भेजा नहीं जाता।") }}
+</p>
+{% endblock %}

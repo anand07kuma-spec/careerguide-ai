@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import secrets
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..database import get_db
+from ..middleware.rate_limit import auth_limit, guest_limit
 from ..models import (
     AuthToken,
     ConsentRecord,
@@ -30,6 +31,7 @@ from ..schemas import (
     OnboardingIn,
     ProfileIn,
     ProfileOut,
+    RefreshOut,
     SessionOut,
     SettingsIn,
     SettingsOut,
@@ -37,26 +39,33 @@ from ..schemas import (
     TranscriptSharingIn,
     UserOut,
 )
+from ..services.profile_facts import band_for_age
 from ..security import (
     CODE_ALPHABET,
+    attach_session_cookie,
+    clear_session_cookie,
+    device_hash_of,
+    device_owner,
     ensure_settings,
     find_account_by_code,
     format_code,
+    get_current_session,
     get_current_user,
     get_raw_token,
     issue_token,
+    renew_session,
     require_parent,
+    revoke_session,
     set_code_for,
+    session_cookie_value,
 )
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 # Must stay inside the consent age bands the frontend offers, so a class choice
-# and a stored age range are the same vocabulary.
+# and a stored age range are the same vocabulary. Classes 6 to 12 only: below that
+# there is nothing in this app to serve, and a legacy row simply keeps the age it has.
 CLASS_TO_AGE = {
-    "class-3": "9-10",
-    "class-4": "9-10",
-    "class-5": "9-10",
     "class-6": "11-12",
     "class-7": "11-12",
     "class-8": "11-12",
@@ -87,6 +96,36 @@ def _settings_payload(db: Session, user_id: int) -> SettingsOut:
     return SettingsOut.model_validate(ensure_settings(db, user_id))
 
 
+def start_session(request: Request, response: Response, db: Session, user: User) -> str:
+    """Mint a session and give it to this browser in a cookie the page cannot read.
+
+    Issuing and attaching live in one function, deliberately. A token that only ever
+    arrives in a body is a token the page must keep somewhere it can reach, which is the
+    thing that used to be `localStorage`; splitting the two steps is how the fourth
+    minting route forgets the cookie and that browser then has no session on reload.
+    """
+    token = issue_token(db, user.id)
+    attach_session_cookie(request, response, token)
+    return token
+
+
+def session_for(db: Session, user: User, token: str) -> SessionOut:
+    """The one shape every signed-in response takes.
+
+    `token` is passed in rather than issued here, because the three callers are
+    genuinely different: a device arriving for the first time and a come-back code
+    each deserve a new session, while `GET /me` re-reads a session that already
+    exists and must not quietly mint a second token nobody asked for.
+    """
+    student_id = _linked_student_id(db, user)
+    return SessionOut(
+        token=token,
+        user=UserOut.model_validate(user),
+        profile=_profile_payload(db, student_id) if student_id else None,
+        settings=_settings_payload(db, user.id),
+    )
+
+
 def _linked_student_id(db: Session, user: User) -> int:
     """Whose profile this account acts on: a student's own, a parent's one child."""
     if user.role != "parent":
@@ -98,38 +137,42 @@ def _linked_student_id(db: Session, user: User) -> int:
 
 
 @router.post("/guest", response_model=GuestOut)
-def guest(payload: GuestIn, db: Session = Depends(get_db)) -> GuestOut:
+@guest_limit
+def guest(
+    request: Request,
+    response: Response,
+    payload: GuestIn,
+    db: Session = Depends(get_db),
+) -> GuestOut:
     """Hand this device back the account it used before, if there is one.
 
     There is no password to type: the browser holds a random id it made for
-    itself, and the server answers with an ordinary bearer token for the account
-    that id created. Everything past this point is authorised by that token, not
-    by the device id, so a stolen token behaves like a stolen token and a guessed
-    id only reaches an account whose id the guesser already has.
+    itself, and the server answers with an ordinary session for the account that id
+    created. Everything past this point is authorised by that session, not by the device
+    id, so a stolen credential behaves like a stolen credential and a guessed id only
+    reaches an account whose id the guesser already has.
+
+    The id is compared as a digest, so this route is the only place the plaintext ever
+    stands: a database read is not a list of ids that open accounts.
     """
-    user = db.scalars(
-        select(User)
-        .where(User.device_id == payload.device_id, User.is_active.is_(True))
-        .order_by(User.id)
-        .limit(1)
-    ).first()
+    user = device_owner(db, payload.device_id, active_only=True)
     if user is None:
         return GuestOut(known=False)
 
-    student_id = _linked_student_id(db, user)
     return GuestOut(
         known=True,
-        session=SessionOut(
-            token=issue_token(db, user.id),
-            user=UserOut.model_validate(user),
-            profile=_profile_payload(db, student_id) if student_id else None,
-            settings=_settings_payload(db, user.id),
-        ),
+        session=session_for(db, user, start_session(request, response, db, user)),
     )
 
 
 @router.post("/onboarding", response_model=SessionOut)
-def onboarding(payload: OnboardingIn, db: Session = Depends(get_db)) -> SessionOut:
+@auth_limit
+def onboarding(
+    request: Request,
+    response: Response,
+    payload: OnboardingIn,
+    db: Session = Depends(get_db),
+) -> SessionOut:
     if not payload.consent_profile:
         raise HTTPException(
             status_code=400,
@@ -143,9 +186,7 @@ def onboarding(payload: OnboardingIn, db: Session = Depends(get_db)) -> SessionO
     # browser would leave two accounts sharing an id, and the device would quietly
     # reopen the older one every time.
     if payload.device_id:
-        claimed = db.scalars(
-            select(User).where(User.device_id == payload.device_id).limit(1)
-        ).first()
+        claimed = device_owner(db, payload.device_id)
         if claimed is not None:
             raise HTTPException(
                 status_code=409,
@@ -217,13 +258,13 @@ def onboarding(payload: OnboardingIn, db: Session = Depends(get_db)) -> SessionO
         db.add(ConsentRecord(user_id=user.id, scope="voice", granted=True))
     db.add(UserSettings(user_id=user.id, language=payload.preferred_language))
     if payload.device_id:
-        user.device_id = payload.device_id
+        user.device_hash = device_hash_of(payload.device_id)
     db.commit()
 
     # No come-back code is minted here: this account is reached by the device that
     # made it, which is the point of running without a password.
     return SessionOut(
-        token=issue_token(db, user.id),
+        token=start_session(request, response, db, user),
         user=UserOut.model_validate(user),
         profile=_profile_payload(db, student_id),
         settings=_settings_payload(db, user.id),
@@ -231,43 +272,92 @@ def onboarding(payload: OnboardingIn, db: Session = Depends(get_db)) -> SessionO
 
 
 @router.post("/login", response_model=SessionOut)
-def login(payload: LoginIn, db: Session = Depends(get_db)) -> SessionOut:
+@auth_limit
+def login(
+    request: Request,
+    response: Response,
+    payload: LoginIn,
+    db: Session = Depends(get_db),
+) -> SessionOut:
     """Sign an existing account back in with its come-back code.
 
-    Without this, signing out — or simply switching browser or phone — left no
-    way back into an account that still held a child's profile on the server.
+    Without this, signing out — or simply switching browser or phone — left no way
+    back into an account that still held a child's profile on the server.
     """
     user = find_account_by_code(db, payload.code)
-
-    student_id = _linked_student_id(db, user)
-
-    return SessionOut(
-        token=issue_token(db, user.id),
-        user=UserOut.model_validate(user),
-        profile=_profile_payload(db, student_id) if student_id else None,
-        settings=_settings_payload(db, user.id),
-    )
+    # A code is how a device that has never been here joins an account, so it also
+    # binds that device — which is what makes the next page load a return rather than a
+    # second typing-out of a fifteen-character code. A device that already has its own
+    # account is left alone: taking it over would silently move somebody else's child.
+    if payload.device_id and user.device_hash is None:
+        claim = device_owner(db, payload.device_id)
+        if claim is None:
+            user.device_hash = device_hash_of(payload.device_id)
+    return session_for(db, user, start_session(request, response, db, user))
 
 
 @router.get("/me", response_model=SessionOut)
 def me(user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> SessionOut:
-    student_id = _linked_student_id(db, user)
+    # An empty token on purpose: this reads the session that is already in the cookie or
+    # the header, it does not hand out a second one.
+    return session_for(db, user, "")
 
-    return SessionOut(
-        token="",
-        user=UserOut.model_validate(user),
-        profile=_profile_payload(db, student_id) if student_id else None,
-        settings=_settings_payload(db, user.id),
+
+@router.post("/refresh", response_model=RefreshOut)
+def refresh(
+    request: Request,
+    response: Response,
+    record: AuthToken = Depends(get_current_session),
+    db: Session = Depends(get_db),
+) -> RefreshOut:
+    """Extend this session's expiry, up to the ceiling that sign-in was given.
+
+    It is not a way to get a session — it needs one to work, and it returns the token
+    unchanged, because minting a fresh token here would leave the old one either live or
+    revoked by accident, and both of those are worse than a boring answer. The point is
+    that a page which is open for a long time can ask, quietly, and the child keeps
+    working; a page that stops asking loses the session a day later.
+
+    The cookie is written again with whatever expiry the session ended up with. A session
+    that rolls while its cookie stays put is one the browser stops presenting at the very
+    moment the server decided to keep it, and the child would be signed out by a clock
+    nobody can see.
+    """
+    before = record.expires_at
+    renewed = renew_session(db, record)
+    # Only a browser that authenticates by cookie has a jar to keep in step. A caller that
+    # named its credential in a header is not being signed out by an expiry it can see.
+    held = session_cookie_value(request)
+    if held is not None:
+        attach_session_cookie(request, response, held, expires_at=renewed.expires_at)
+    # `expires_at` is what a screen reads when it wants to warn about a sign-in running
+    # out. `extended` is compared against the expiry as it was *before* the call, because
+    # `renew_session` hands back the same row it was given: asking the object whether it
+    # moved always answers no. At the ceiling `extended` is the whole answer — nothing
+    # happened, and the app should say so rather than pretending the session is fresh.
+    return RefreshOut(
+        expires_at=renewed.expires_at,
+        extended=renewed.expires_at > before,
+        session_started_at=renewed.created_at,
     )
 
 
 @router.post("/logout", status_code=204)
-def logout(token: str = Depends(get_raw_token), db: Session = Depends(get_db)) -> None:
-    """Sign out really ends the session on the server, not only in the browser."""
-    record = db.get(AuthToken, token)
-    if record is not None:
-        db.delete(record)
-        db.commit()
+def logout(
+    request: Request,
+    response: Response,
+    token: str = Depends(get_raw_token),
+    db: Session = Depends(get_db),
+) -> None:
+    """Sign out really ends the session on the server, not only in the browser.
+
+    Both halves are needed and neither is enough alone. Deleting the row means the
+    credential cannot be used again by anybody, even its owner; expiring the cookie means
+    this browser stops offering it, so a later stranger at the same keyboard is not handed
+    a token that only just stopped working.
+    """
+    revoke_session(db, token)
+    clear_session_cookie(request, response)
 
 
 @router.get("/comeback-code", response_model=ComebackStatusOut)
@@ -337,7 +427,19 @@ def update_profile(
             data.pop("display_name")
     for key, value in data.items():
         setattr(profile, key, value)
-    if profile.class_level and not profile.age_range:
+    if profile.age is not None:
+        # The band follows the number rather than the other way round. `age_range`
+        # is what the guide's framework and a portal's summary read, so it has to
+        # say the same thing about this child that the child said themselves.
+        profile.age_range = band_for_age(profile.age)
+    elif "age" in data:
+        # The number was taken back, so anything derived only from it goes too. The
+        # class is the one other thing a band may legitimately come from, so a student
+        # who answers both keeps the band their class implies rather than a stray one.
+        profile.age_range = (
+            CLASS_TO_AGE.get(profile.class_level) if profile.class_level else None
+        )
+    elif profile.class_level and not profile.age_range:
         profile.age_range = CLASS_TO_AGE.get(profile.class_level)
     db.commit()
     db.refresh(profile)
@@ -458,7 +560,9 @@ def revoke_share_code(
 
 
 @router.post("/link-child", response_model=list[GuardianOut])
+@auth_limit
 def link_child(
+    request: Request,
     payload: LinkChildIn,
     user: User = Depends(require_parent),
     db: Session = Depends(get_db),

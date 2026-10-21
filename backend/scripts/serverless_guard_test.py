@@ -32,6 +32,7 @@ ORIGIN = "https://careerguide-web.vercel.app"
 
 os.environ["DATABASE_URL"] = f"sqlite:///{DB_PATH.as_posix()}"
 os.environ["AI_PROVIDER"] = "demo"
+os.environ["RATE_LIMIT_ENABLED"] = "false"  # throttles are proved in security_test.py
 os.environ["CORS_ORIGINS"] = ORIGIN
 # The signal that this is serverless hosting rather than someone's laptop.
 os.environ["VERCEL"] = "1"
@@ -90,6 +91,7 @@ if db.exists():
     db.unlink()
 os.environ["DATABASE_URL"] = "sqlite:///" + db.as_posix()
 os.environ["AI_PROVIDER"] = "demo"
+os.environ["RATE_LIMIT_ENABLED"] = "false"  # throttles are proved in security_test.py
 from fastapi.testclient import TestClient
 from app.main import app
 with TestClient(app) as c:

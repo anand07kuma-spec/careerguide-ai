@@ -1,0 +1,70 @@
+{#
+  Parent invitation. Context: `parent_name`, `student_name`, `share_code`,
+  `sees_transcripts` (bool, straight from the guardianship row), `accept_url`.
+
+  The sentence this template exists to get right is the one about what the adult will
+  see. A parent who opens a link believing they are about to read their child's
+  conversations, and finds a summary instead, is a family argument; a child who
+  believed they were sharing a progress bar and finds their private questions being
+  read over dinner is a broken promise, and the whole feature stops being worth
+  building at that point. So the scope is stated in the mail, in both languages,
+  before anybody clicks.
+
+  The address itself never lands in the database: this is the one message sent to a
+  stranger to the schema, and it is used for nothing after it is delivered.
+#}
+{% extends "base.html" %}
+
+{% block title %}{{ txt(student_name ~ " invited you to their CareerGuide AI", student_name ~ " ने आपको अपने CareerGuide AI में आमंत्रित किया") }}{% endblock %}
+{% block preheader %}{{ txt("What they chose to share, and how they can stop it", "उन्होंने क्या साझा करने चुना, और वह कैसे रोका जा सकता है") }}{% endblock %}
+
+{% block eyebrow %}{{ txt("An invitation", "आमंत्रण") }}{% endblock %}
+
+{% block heading %}
+  {{ txt(student_name ~ " wants you to see their progress", student_name ~ " चाहते/चाहती हैं कि आप उनकी प्रगति देखें") }}
+{% endblock %}
+
+{% block body %}
+  <p style="margin:0 0 16px;">
+    {% if parent_name %}{{ parent_name ~ "," }}{% endif %}
+    {{ txt(" the account for " ~ student_name ~ " in", " — " ~ student_name ~ " के खाते ने") }}
+    <strong style="color:#0b1730;">{{ site_name }}</strong>
+    {{ txt("has sent you this invitation. Nothing has changed yet; the link is what does that.", "यह आमंत्रण भेजता है। अभी कुछ बदला नहीं है; यह लिंक है जो बदलेगा।") }}
+  </p>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 18px;">
+    <tr>
+      <td style="padding:16px 18px;background:#f4f7fd;border-radius:12px;font-family:Arial,'Noto Sans',sans-serif;font-size:14px;line-height:22px;color:#41536e;">
+        <p style="margin:0 0 8px;font-weight:700;color:#0b1730;">{{ txt("If you accept, you will see", "अगर आप स्वीकार करेंगे तो आपको दिखेगा") }}</p>
+        <p style="margin:0 0 6px;">• {{ txt("which careers have been looked at, and which have been saved", "किन करियर को देखा गया और किन को सहेजा गया") }}</p>
+        <p style="margin:0 0 6px;">• {{ txt("the summaries of any finished questionnaire", "पूरी हुई किसी भी प्रश्नावली का सारांश") }}</p>
+        <p style="margin:0 0 6px;">• {{ txt("study plans, and how much of the free plan has been used", "अध्ययन योजनाएँ, और मुफ़्त योजना का कितना हिस्सा इस्तेमाल हुआ") }}</p>
+        {% if sees_transcripts %}
+        <p style="margin:0;">• {{ txt("the words of the conversations themselves — because that account chose to share them", "बातचीत के असल शब्द — क्योंकि उस खाते ने उन्हें साझा करने चुना है") }}</p>
+        {% else %}
+        <p style="margin:0;">• {{ txt("You will not see the conversations themselves. That account has not agreed to share them, and this mail cannot agree on its behalf.", "आपको बातचीत के शब्द नहीं दिखेंगे। उस खाते ने उन्हें साझा करने की अनुमति नहीं दी, और यह संदेश उसकी ओर से अनुमति नहीं दे सकता।") }}</p>
+        {% endif %}
+      </td>
+    </tr>
+  </table>
+
+  <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 18px;">
+    <tr>
+      <td style="border-radius:12px;background:#1f4ed0;">
+        <a href="{{ accept_url }}" style="display:inline-block;padding:12px 22px;font-family:Arial,'Noto Sans',sans-serif;font-size:15px;font-weight:600;line-height:20px;color:#ffffff;text-decoration:none;">{{ txt("Accept the invitation", "आमंत्रण स्वीकार करें") }}</a>
+      </td>
+    </tr>
+  </table>
+
+  <p style="margin:0 0 16px;">
+    {{ txt("Accepting needs an account of your own, and the code below. It is the only way any second account can ever attach itself to", "स्वीकार करने के लिए आपका अपना खाता चाहिए और नीचे दिया कोड। यह एकमात्र तरीका है जिससे दूसरा खाता") }}
+    <strong style="color:#0b1730;">{{ student_name }}</strong>
+    {{ txt(": this", " के खाते से जुड़ सकता है:") }}
+    <code style="font-family:'Courier New',monospace;background:#f4f7fd;padding:2px 8px;border-radius:6px;color:#0b1730;font-weight:700;">{{ share_code }}</code>.
+    {{ txt("That account can revoke the code at any moment, which disconnects you immediately and needs nothing from you.", "वह खाता इस कोड को किसी भी समय निरस्त कर सकता है, जिससे आपका जुड़ाव तुरंत टूट जाएगा और आपसे कुछ माँगा नहीं जाएगा।") }}
+  </p>
+
+  <p style="margin:0;padding:14px 16px;background:#f4f7fd;border-radius:12px;color:#41536e;">
+    {{ txt("Your own address is not stored on their account. It was used to send this one message and nothing else. If you did not expect this invitation, do nothing — the code does not work without the person who owns it typing it in.", "आपका अपना पता उनके खाते में सहेजा नहीं गया। यह केवल यह एक संदेश भेजने के लिए इस्तेमाल हुआ, उसके सिवा और कुछ नहीं। अगर आपको यह आमंत्रण की उम्मीद नहीं थी, तो कुछ मत करें — कोड बिना उस मालिक के टाइप किए काम नहीं करता।") }}
+  </p>
+{% endblock %}

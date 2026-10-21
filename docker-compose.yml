@@ -1,0 +1,233 @@
+# CareerGuide AI, locally and completely: the web app, the API, Postgres and Redis.
+#
+# `docker compose up` after copying the variables you actually have:
+#
+#     cp backend/.env.example .env          # then fill in what you own
+#     docker compose up
+#
+# The app runs without this file — `uvicorn` and `next dev` on a laptop are still the
+# documented way to work on it (README §1). This is for the case where you want the
+# whole stack, on Postgres rather than SQLite, reachable from a phone on the same
+# network, or on a machine that is not your own.
+#
+# What each of the four services is for, because two of them are optional in a way the
+# other two are not:
+#
+#   web      the Next app. Nothing else serves a page.
+#   api      FastAPI. Nothing else reads or writes the data.
+#   postgres the database. Required here, and this is the stack that finally answers the
+#            question the SQLite default has been leaving open: what happens under real
+#            concurrent writes.
+#   redis    the rate-limit counters. See `RATE_LIMIT_REDIS_URL` below — it is wired, and
+#            without it the api container would be running limits that are per-process
+#            while this file is telling you the process count.
+
+name: careerguide
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    # No default password, on purpose. `${VAR:?message}` makes compose refuse to start
+    # rather than bring up a database everybody can guess into — and the day somebody
+    # runs this on a host with a published port, a silent default is exactly how that
+    # database ends up in a scanner.
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env — this stack will not start with a guessed database password}
+      POSTGRES_DB: ${POSTGRES_DB:-careerguide}
+      POSTGRES_USER: ${POSTGRES_USER:-careerguide}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      # `pg_isready` answers "can a connection be made", which is the only question the
+      # api container cares about before it runs migrations against this host.
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-careerguide} -d ${POSTGRES_DB:-careerguide}"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    restart: unless-stopped
+    # Commented rather than removed: the database is the one service here that should
+    # never be reachable from outside the machine unless you mean it to be.
+    # ports:
+    #   - "5432:5432"
+
+  redis:
+    image: redis:7-alpine
+    # `--save '' --appendonly no` — the counters in here are windowed totals with a TTL
+    # on every key. Persisting them means a restart brings back yesterday's buckets, so
+    # a student who hit the limit before the deploy is still locked out after it. An
+    # empty Redis on boot is the correct state for this use.
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 6
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ./backend
+    # Not `scale`d, and there is nothing to scale for: generated speech returns to the
+    # browser inside the API's own reply as a data URL (`app/services/tts.py`), so no
+    # replica ever needs a shared file directory. Adding containers is a rate-limiter
+    # question, answered by `RATE_LIMIT_REDIS_URL` below, not a volume question.
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-careerguide}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-careerguide}
+      # The one line that makes the limits on `/app/admin/settings` true. Without it,
+      # every worker process counts its own requests and "20 per minute" is a statement
+      # about one worker rather than about the site.
+      RATE_LIMIT_REDIS_URL: redis://redis:6379/0
+      # Alembic owns the schema in this stack: the entrypoint runs `upgrade head` and
+      # seeds from the JSON files in `backend/data`, then starts uvicorn with
+      # DB_AUTO_SETUP=false so no cold start ever runs DDL.
+      DB_AUTO_SETUP: "false"
+      RUN_MIGRATIONS: "1"
+      # Which browser origins may call this API. The compose default is the laptop plus
+      # the tenant host (`<school>.careerguide.localhost` pages are served from
+      # careerguide.localhost itself and call the API from that origin). Matching is
+      # exact — see `.env.example` for listing individual portal origins.
+      #
+      # The `WEB_PORT` origin is appended rather than assumed, because the two are the
+      # same knob: a laptop with a dev server on 3000 needs `WEB_PORT=3001` to start this
+      # stack at all, and the web container then serves the pages that call this API from
+      # `http://localhost:3001` — an origin that is not in the list above. Every screen
+      # still renders, every number on it stays empty, and the only trace is a blocked
+      # request in the console. Setting CORS_ORIGINS by hand overrides the whole line.
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000,http://careerguide.localhost:3000},http://localhost:${WEB_PORT:-3000}
+      PUBLIC_SITE_URL: ${PUBLIC_SITE_URL:-http://localhost:3000}
+      # Everything below passes through from `.env` when you have it and stays empty
+      # when you do not — the app answers "not configured" rather than pretending, so a
+      # stack started without AI keys is a working stack in demo mode, not a broken one.
+      AI_PROVIDER: ${AI_PROVIDER:-demo}
+      AI_API_KEY: ${AI_API_KEY:-}
+      AI_MODEL: ${AI_MODEL:-}
+      AI_BASE_URL: ${AI_BASE_URL:-https://api.openai.com/v1}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      TTS_PROVIDER: ${TTS_PROVIDER:-auto}
+      AZURE_SPEECH_KEY: ${AZURE_SPEECH_KEY:-}
+      AZURE_SPEECH_REGION: ${AZURE_SPEECH_REGION:-}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      FROM_EMAIL: ${FROM_EMAIL:-}
+      RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID:-}
+      RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET:-}
+      RAZORPAY_WEBHOOK_SECRET: ${RAZORPAY_WEBHOOK_SECRET:-}
+      CLERK_SECRET_KEY: ${CLERK_SECRET_KEY:-}
+      CLERK_WEBHOOK_SIGNING_SECRET: ${CLERK_WEBHOOK_SIGNING_SECRET:-}
+      PLAN_LIMITS_ENFORCED: ${PLAN_LIMITS_ENFORCED:-false}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "${API_PORT:-8000}:8000"
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./frontend
+      args:
+        # Baked into the client bundle at build time, which is why it is a build arg and
+        # not an environment entry below. Change it, and the image has to be rebuilt —
+        # this is the one thing about a containerised Next app that surprises people.
+        NEXT_PUBLIC_BACKEND_URL: ${NEXT_PUBLIC_BACKEND_URL:-http://localhost:8000}
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost:3000}
+        NEXT_PUBLIC_TENANT_BASE_DOMAIN: ${NEXT_PUBLIC_TENANT_BASE_DOMAIN:-careerguide.localhost}
+    environment:
+      # Read at run time by the server side of the app: `site.ts` and the SSR fetches need
+      # the same value the bundle was built with, and an internal docker-network address
+      # here would be a page that renders while the browser on the other side of it cannot
+      # reach anything.
+      NEXT_PUBLIC_BACKEND_URL: ${NEXT_PUBLIC_BACKEND_URL:-http://localhost:8000}
+      # …with one exception, and this is it. A server render inside this container
+      # cannot use `localhost:8000`, because `localhost` is this container, so the
+      # read-half of the app gets the service name. It is not `NEXT_PUBLIC_`, so it
+      # never reaches the browser, and `/careers` and `/blog` stop rendering
+      # "could not be reached" next to a backend that is answering fine.
+      BACKEND_INTERNAL_URL: ${BACKEND_INTERNAL_URL:-http://api:8000}
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost:3000}
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:-}
+    depends_on:
+      # A page that loads and prints "could not reach the server" is not a started stack,
+      # so the API has to be answering its health check before this comes up.
+      api:
+        condition: service_healthy
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    restart: unless-stopped
+
+  # Not started by `docker compose up`. It is a separate container because it is separate
+  # work — a loop that drains the mail queue — and because running it on every boot of a
+  # laptop would be a background process nobody asked for.
+  #
+  #     docker compose run --rm email-worker
+  #
+  # With no RESEND_API_KEY the worker drains the queue and sends nothing, which is the
+  # same honesty the API uses: it reports "not configured" rather than reporting a delivery.
+  email-worker:
+    build:
+      context: ./backend
+    profiles: ["mail"]
+    command: ["python", "scripts/email_worker.py"]
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-careerguide}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-careerguide}
+      DB_AUTO_SETUP: "false"
+      RUN_MIGRATIONS: "0"
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      FROM_EMAIL: ${FROM_EMAIL:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  # Also not started by `docker compose up`, and for the same reason: it is work that has a
+  # schedule, not a service that has a port.
+  #
+  #     docker compose run --rm db-backup                      # one dump, into the volume
+  #
+  # The image is Postgres's own because the one thing this needs is `pg_dump`, and the api
+  # image (slim Python) does not have it. The script inside takes the libpq route described at
+  # the top of `backend/scripts/backup_db.sh`: `PGHOST=postgres` is the same database the api
+  # container writes to, so the backup cannot quietly point at a different one.
+  #
+  # Scheduling it daily — a crontab line on the host, which is the honest place for it since
+  # compose has no clock of its own:
+  #
+  #     17 2 * * * cd /srv/careerguide && docker compose run --rm db-backup >> /var/log/careerguide-backup.log 2>&1
+  #
+  # README §"Backing up the database" has the same line with the `BACKUP_KEEP` and off-machine
+  # copies, and why 02:17 UTC rather than midnight.
+  db-backup:
+    image: postgres:17-alpine
+    profiles: ["backup"]
+    # `:ro` because this container writes the archive into the *volume*, never into the repo,
+    # and a job that can edit the script it runs is a job that edits itself.
+    volumes:
+      - ./backend/scripts:/scripts:ro
+      - db-backups:/backups
+    environment:
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGUSER: ${POSTGRES_USER:-careerguide}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      PGDATABASE: ${POSTGRES_DB:-careerguide}
+      BACKUP_DIR: /backups
+      BACKUP_KEEP: ${BACKUP_KEEP:-14}
+    # The image's own entrypoint expects to start a server, so both halves are replaced with
+    # the one command this container exists to run.
+    entrypoint: ["/bin/sh"]
+    command: ["/scripts/backup_db.sh"]
+    # Root, and only because a named volume that does not exist in the image is created
+    # owned by root, which leaves the image's `postgres` user unable to write the archive.
+    # Nothing else runs in this container: no server, no port, and the mount is read-only.
+    user: "0"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+volumes:
+  postgres-data:
+  # The dumps live here rather than in `backend/backups`, so `docker compose down` (which
+  # removes containers, not named volumes) cannot take the last backup with the stack.
+  db-backups:

@@ -1,4 +1,8 @@
-"""Career catalogue for CareerGuide AI: exploration-first entries for Indian students (classes 3-12)."""
+"""Career catalogue for CareerGuide AI: exploration-first entries for Indian students.
+
+Entries are labelled with the class a career is worth raising from, and no entry is
+labelled below class 6, because the app serves classes 6 to 12.
+"""
 
 CAREERS = [
     {
@@ -646,7 +650,7 @@ CAREERS = [
         ],
         "related_slugs": ["sports-coaching", "sports-science", "esports-player"],
         "interest_themes": ["physical_activity_sports", "organization_leadership"],
-        "min_class": 3,
+        "min_class": 6,
         "needs_verification": True,
     },
     {

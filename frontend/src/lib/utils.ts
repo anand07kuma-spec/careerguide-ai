@@ -1,14 +1,12 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { translate } from "@/lib/i18n";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
 const CLASS_LABELS: Record<string, string> = {
-  "class-3": "Class 3",
-  "class-4": "Class 4",
-  "class-5": "Class 5",
   "class-6": "Class 6",
   "class-7": "Class 7",
   "class-8": "Class 8",
@@ -20,7 +18,9 @@ const CLASS_LABELS: Record<string, string> = {
 
 export function classLabel(value: string | null | undefined) {
   if (!value) return null;
-  return CLASS_LABELS[value] ?? value.replace(/-/g, " ");
+  // Deliberately keeps the digits: a caller parses them back out to match a
+  // resource against a class band.
+  return translate(CLASS_LABELS[value] ?? value.replace(/-/g, " "));
 }
 
 export function initials(name: string | null | undefined) {
@@ -33,17 +33,24 @@ export function initials(name: string | null | undefined) {
     .join("");
 }
 
+/** A relative time is interface copy, not data: every screen that shows one reads
+ * it out in the visitor's language. `{n}` stays in the key so the Hindi entry can
+ * put the number where Hindi grammar wants it. */
+function when(en: string, n: number) {
+  return translate(en).replace("{n}", String(n));
+}
+
 export function relativeTime(iso: string | null | undefined) {
   if (!iso) return "";
   const then = new Date(iso).getTime();
   if (Number.isNaN(then)) return "";
   const minutes = Math.round((Date.now() - then) / 60000);
-  if (minutes < 1) return "just now";
-  if (minutes < 60) return `${minutes} min ago`;
+  if (minutes < 1) return translate("just now");
+  if (minutes < 60) return when("{n} min ago", minutes);
   const hours = Math.round(minutes / 60);
-  if (hours < 24) return `${hours} hr ago`;
+  if (hours < 24) return when("{n} hr ago", hours);
   const days = Math.round(hours / 24);
-  if (days < 30) return `${days} day${days === 1 ? "" : "s"} ago`;
+  if (days < 30) return when(days === 1 ? "{n} day ago" : "{n} days ago", days);
   return new Date(iso).toLocaleDateString();
 }
 
@@ -57,7 +64,7 @@ export function clockText(totalSeconds: number) {
   return `${minutes}:${seconds}`;
 }
 
-/** Turns "AI and Data" into a stable, accent-free key for CSS and analytics. */
+/** Turns a career title into a stable, accent-free key for CSS and analytics. */
 export function slugify(value: string) {
   return value
     .toLowerCase()

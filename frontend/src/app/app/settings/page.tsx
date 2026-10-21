@@ -1,37 +1,48 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Accessibility,
+  BellOff,
   Bookmark,
   Check,
-  ChevronRight,
   Contrast,
   Copy,
+  Download,
   EyeOff,
   Info,
   KeyRound,
   Languages as LanguagesIcon,
   Link2,
+  Mail,
   Mic,
+  Monitor,
+  Moon,
   RotateCcw,
   ShieldCheck,
   Smartphone,
+  Sun,
   Trash2,
   UserRound,
   Volume2,
 } from "lucide-react";
 import { Screen } from "@/components/layout/app-shell";
+import { SettingsRow, SubHeading } from "@/components/settings/settings-section";
 import { Card } from "@/components/ui/card";
 import { Button, LinkButton } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState, ErrorState, LoadingPanel, Skeleton } from "@/components/ui/feedback";
 import { Input, Select, Toggle } from "@/components/ui/field";
 import { Modal } from "@/components/ui/modal";
+import { PillGroup } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/toast";
 import { api, ApiError } from "@/lib/api";
+import { clerkEnabled } from "@/lib/clerk";
+import { setUiLang, useT, useTf, useUiLang } from "@/lib/i18n";
 import { useSession } from "@/lib/session";
+import { setThemeChoice, useThemeChoice } from "@/lib/theme";
 import type {
+  ClerkStatus,
   ConsentRecord,
   ConversationInfo,
   GuardianLink,
@@ -41,7 +52,7 @@ import type {
   StudentProfile,
   VoiceInfo,
 } from "@/lib/types";
-import { AGE_BANDS, CLASS_OPTIONS, INTEREST_OPTIONS, LANGUAGE_OPTIONS } from "@/lib/types";
+import { CLASS_OPTIONS, INTEREST_OPTIONS, LANGUAGE_OPTIONS } from "@/lib/types";
 import { classLabel, cn, initials, relativeTime } from "@/lib/utils";
 import { useAudioPlayer } from "@/lib/voice";
 
@@ -79,6 +90,81 @@ function voiceGroupFor(language: string): string {
   return language === "hi" ? "hi" : "en";
 }
 
+/** Same bounds the server refuses outside of: `AGE_MIN`/`AGE_MAX` in
+ * `backend/app/services/profile_facts.py` and `ge=3, le=99` on `ProfileIn.age`. */
+const AGE_MIN = 3;
+const AGE_MAX = 99;
+
+/**
+ * The student's age, typed.
+ *
+ * This used to be a five-option dropdown of bands, which asked a fourteen-year-old to
+ * decide whether they belonged in "Age 11 to 12" or "Age 13 or above" — and then the
+ * server had no number to check that choice against. Here the number is the input and the
+ * band is what the server works out from it, so the answer can be exactly right.
+ *
+ * The two details that keep it honest: it commits on blur or Enter rather than on every
+ * keystroke, because "1" while somebody is typing fourteen is not a valid age; and an
+ * invalid number is refused here with a message, not sent to be rejected as an opaque 422.
+ */
+function AgeField({
+  age,
+  onCommit,
+}: {
+  age: number | null;
+  onCommit: (years: number | null) => void;
+}) {
+  const [text, setText] = useState(age === null ? "" : String(age));
+  const [error, setError] = useState<string | null>(null);
+
+  // The server's answer wins whenever it changes underneath us — after a successful commit,
+  // or after a failed one that rolled the profile back. Remembering the age last shown is
+  // what lets the field reset while rendering instead of in an effect that copies the prop.
+  const [shown, setShown] = useState(age);
+  if (shown !== age) {
+    setShown(age);
+    setText(age === null ? "" : String(age));
+    setError(null);
+  }
+
+  const commit = () => {
+    const typed = text.trim();
+    if (!typed) {
+      setError(null);
+      onCommit(null);
+      return;
+    }
+    const years = Number(typed);
+    if (!Number.isInteger(years) || years < AGE_MIN || years > AGE_MAX) {
+      setError(`Type your age as a whole number between ${AGE_MIN} and ${AGE_MAX}.`);
+      return;
+    }
+    setError(null);
+    if (years !== age) onCommit(years);
+  };
+
+  return (
+    <form
+      onSubmit={(event) => {
+        event.preventDefault();
+        commit();
+      }}
+    >
+      <Input
+        label="Age"
+        hint="Type it in years, the way it is written on your school card."
+        error={error}
+        inputMode="numeric"
+        autoComplete="off"
+        placeholder="e.g. 14"
+        value={text}
+        onChange={(event) => setText(event.target.value)}
+        onBlur={commit}
+      />
+    </form>
+  );
+}
+
 const CONSENT_SCOPES: {
   scope: "profile" | "voice" | "history_sharing";
   label: string;
@@ -89,7 +175,7 @@ const CONSENT_SCOPES: {
     scope: "profile",
     label: "Store my profile",
     grant:
-      "Lets us keep your class, age band and interests so suggestions fit you. Without it, nothing is personalised.",
+      "Lets us keep your class, age and interests so suggestions fit you. Without it, nothing is personalised.",
     withdraw: "Withdraw any time — we stop using the stored details for suggestions.",
   },
   {
@@ -111,7 +197,7 @@ const CONSENT_SCOPES: {
 const BUILD_NOTES = [
   {
     icon: Bookmark,
-    text: "The AI guide is scripted demo content until an API key is configured on the server — replies are sample conversations, not a live model.",
+    text: "The guide’s replies come from whichever model the server is configured with. Anything written from sample content carries a ‘Demo guide answer’ label on the reply itself, so the answer tells you which one you are reading.",
   },
   {
     icon: ShieldCheck,
@@ -123,7 +209,7 @@ const BUILD_NOTES = [
   },
   {
     icon: EyeOff,
-    text: "There are no payments, courses or paid services anywhere in this app, and guidance is never influenced by partners.",
+    text: "Nothing is sold here except the plans on /pricing, and those are switched off until the operator sets real payment keys. No course, coaching class or institution is sold, and guidance is never influenced by partners or by what a family paid.",
   },
   {
     icon: Smartphone,
@@ -135,56 +221,36 @@ const BUILD_NOTES = [
   },
 ];
 
-type SectionKey = "language" | "profile" | "privacy" | "family" | "device" | "about";
+/**
+ * The two halves of the delete-account dialog, written to match what
+ * `app/routers/users.py::erase_account` actually does — its `_removals` list and its `KEPT`
+ * list. A dialog that promised more than the route removes would be the app lying about an
+ * erasure, and the number that gets believed afterwards is worth more than a reassuring word.
+ */
+const ERASE_GOES = [
+  "Every conversation and every message in it, including anything you asked by voice.",
+  "Your assessments: the sittings, the answers and the results scored from them.",
+  "The reports — the career report and any PDF that was generated from it.",
+  "Study plans, journey counts, interest observations, saved careers and recommendations.",
+  "Your profile, your settings, every consent you recorded, and any family or portal link.",
+  "Every session on every device, so a second laptop signed in to this account stops working too.",
+];
 
-/** One line of the settings list. The detail lives behind it, not on the page. */
-function Row({
-  icon: Icon,
-  tone,
-  title,
-  value,
-  attention,
-  onClick,
-}: {
-  icon: typeof LanguagesIcon;
-  tone: string;
-  title: string;
-  value: ReactNode;
-  attention?: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-canvas focus-visible:bg-canvas"
-    >
-      <span
-        className={cn(
-          "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl",
-          attention ? "bg-warning-mist text-amber-700" : tone,
-        )}
-      >
-        <Icon className="h-4 w-4" aria-hidden />
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="block text-sm font-semibold text-ink">{title}</span>
-        <span className="mt-0.5 block truncate text-xs text-muted">{value}</span>
-      </span>
-      <ChevronRight className="h-4 w-4 shrink-0 text-muted" aria-hidden />
-    </button>
-  );
-}
+const ERASE_KEPT = [
+  "The record of a payment you made or were refunded. A money ledger has to outlive the person it is about.",
+  "The operator log. This erasure is written in it, without your name attached.",
+  "The row that used to be your account, holding nothing but the date it was erased on.",
+];
 
-function SubHeading({ children }: { children: ReactNode }) {
-  return (
-    <p className="text-xs font-semibold uppercase tracking-wide text-muted">{children}</p>
-  );
-}
+type SectionKey = "language" | "profile" | "account" | "privacy" | "family" | "device" | "about";
 
 export default function SettingsScreen() {
   const { user, profile, settings, isStudent, saveSettings, saveProfile, startOver } = useSession();
   const { toast } = useToast();
+  const t = useT();
+  const tf = useTf();
+  const uiLang = useUiLang();
+  const themeChoice = useThemeChoice();
 
   const [voices, setVoices] = useState<Resource<VoiceInfo>>(initial);
   const [health, setHealth] = useState<Resource<Health>>(initial);
@@ -192,6 +258,8 @@ export default function SettingsScreen() {
   const [consent, setConsent] = useState<Resource<ConsentRecord[]>>(initial);
   const [shareCode, setShareCode] = useState<Resource<ShareCode>>(initial);
   const [guardians, setGuardians] = useState<Resource<GuardianLink[]>>(initial);
+  const [clerk, setClerk] = useState<Resource<ClerkStatus>>(initial);
+  const [disconnecting, setDisconnecting] = useState(false);
 
   const [section, setSection] = useState<SectionKey | null>(null);
   const [pendingProfile, setPendingProfile] = useState<Partial<StudentProfile> | null>(null);
@@ -204,6 +272,9 @@ export default function SettingsScreen() {
   const [removing, setRemoving] = useState(false);
   const [resetModal, setResetModal] = useState(false);
   const [resetting, setResetting] = useState(false);
+  const [eraseModal, setEraseModal] = useState(false);
+  const [erasing, setErasing] = useState(false);
+  const [eraseError, setEraseError] = useState<string | null>(null);
   const [voiceTest, setVoiceTest] = useState<{ busy: boolean; ok: boolean; message: string }>({
     busy: false,
     ok: false,
@@ -280,6 +351,14 @@ export default function SettingsScreen() {
     }
   }, []);
 
+  const loadClerk = useCallback(async () => {
+    try {
+      setClerk({ state: "ready", data: await api.clerkStatus(), error: null });
+    } catch (error) {
+      setClerk({ state: "error", data: null, error: messageFor(error) });
+    }
+  }, []);
+
   useEffect(() => {
     // Fetching is the whole purpose of this effect, and every setState inside
     // those loaders happens after an await.
@@ -288,6 +367,7 @@ export default function SettingsScreen() {
     void loadHealth();
     void loadConsent();
     void loadGuardians();
+    void loadClerk();
     if (isStudent) void loadConversations();
     if (isStudent) void loadShareCode();
   }, [
@@ -296,6 +376,7 @@ export default function SettingsScreen() {
     loadHealth,
     loadConsent,
     loadGuardians,
+    loadClerk,
     loadConversations,
     loadShareCode,
   ]);
@@ -332,6 +413,7 @@ export default function SettingsScreen() {
   const view: StudentProfile = useMemo(
     () => ({
       class_level: null,
+      age: null,
       age_range: null,
       interest_areas: [],
       education_context: null,
@@ -496,6 +578,38 @@ export default function SettingsScreen() {
     }
   }, [startOver, toast]);
 
+  /** Erase this account, then do the same teardown "Start over" does. */
+  const doErase = useCallback(async () => {
+    setErasing(true);
+    setEraseError(null);
+    try {
+      await api.deleteAccount();
+      // The server has by now deleted every session on the account and expired the cookie.
+      // What is left is the client's half: stop believing this browser holds a credential,
+      // and drop the device id the erased row was found by, so the next visit is a stranger
+      // rather than a resurrection.
+      await startOver();
+    } catch (error) {
+      // The refusal stays on the dialog, in the server's own words: an account that runs
+      // the site is refused here and closed by another operator instead.
+      setEraseError(messageFor(error));
+      setErasing(false);
+    }
+  }, [startOver]);
+
+  const disconnectEmail = useCallback(async () => {
+    setDisconnecting(true);
+    try {
+      setClerk({ state: "ready", data: await api.clerkUnlink(), error: null });
+      toast("Email disconnected. This browser still opens your work exactly as before.", "success");
+    } catch (error) {
+      toast(messageFor(error), "error");
+      void loadClerk();
+    } finally {
+      setDisconnecting(false);
+    }
+  }, [loadClerk, toast]);
+
   /* -------------------------------------------------------------- derived UI */
 
   const language = settings?.language ?? "en";
@@ -539,7 +653,6 @@ export default function SettingsScreen() {
               } yet. Run the test below to ask it for audio.`;
 
   const classOptions = [...CLASS_OPTIONS].map((option) => ({ ...option }));
-  const ageOptions = AGE_BANDS.map((band) => ({ value: band.value as string, label: band.label }));
 
   const contextSelect = (
     label: string,
@@ -570,7 +683,7 @@ export default function SettingsScreen() {
   return (
     <Screen
       title="Settings"
-      description="Six things you can change. Open one to see what it does."
+      description="Each line opens one part of this account. Everything here is yours to change."
       badge={
         <Badge tone="brand" icon={<ShieldCheck className="h-3.5 w-3.5" aria-hidden />}>
           {isStudent ? "Student account" : "Parent account"}
@@ -610,23 +723,30 @@ export default function SettingsScreen() {
 
         {/* ------------------------------------------------------------ Settings list */}
         <Card className="divide-y divide-line overflow-hidden p-0">
-          <Row
+          <SettingsRow
             icon={LanguagesIcon}
             tone="bg-brand-mist text-brand-dark"
             title="Language and voice"
-            value={`${languageLabel} · ${settings?.speak_responses ? "reads replies aloud" : "silent"} · ${settings?.continuous_conversation ? "hands-free on" : "tap to speak"}`}
+            value={`${languageLabel} · ${
+              settings?.speak_responses ? t("reads replies aloud") : t("silent")
+            } · ${
+              settings?.continuous_conversation ? t("hands-free on") : t("tap to speak")
+            }`}
             onClick={() => setSection("language")}
           />
           {isStudent ? (
-            <Row
+            <SettingsRow
               icon={UserRound}
               tone="bg-teal-mist text-teal"
               title="My profile"
-              value={`${classLabel(profile?.class_level) ?? "Class not set"} · ${interestCount} interest${interestCount === 1 ? "" : "s"}`}
+              value={`${classLabel(profile?.class_level) ?? t("Class not set")} · ${tf(
+                "{count} interests",
+                { count: interestCount },
+              )}`}
               onClick={() => setSection("profile")}
             />
           ) : (
-            <Row
+            <SettingsRow
               icon={UserRound}
               tone="bg-teal-mist text-teal"
               title="My account"
@@ -634,19 +754,37 @@ export default function SettingsScreen() {
               onClick={() => setSection("profile")}
             />
           )}
-          <Row
+          <SettingsRow
+            icon={Mail}
+            tone="bg-brand-mist text-brand-dark"
+            title="Account and email sign-in"
+            value={
+              clerk.state === "loading"
+                ? "Checking whether an email is connected…"
+                : clerk.data?.linked
+                  ? "Connected — this work also opens where you sign in with that email"
+                  : clerkEnabled()
+                    ? "Not connected — this browser is still the only way in"
+                    : "Email sign-in is not switched on for this site"
+            }
+            onClick={() => setSection("account")}
+          />
+          <SettingsRow
             icon={EyeOff}
             tone="bg-brand-mist text-brand-dark"
             title="Privacy, consent and display"
             value={
               consent.state === "loading"
                 ? "Checking your consent…"
-                : `${grantedCount} of ${CONSENT_SCOPES.length} consents given · ${settings?.save_history ? "history saved" : "history not saved"}`
+                : `${tf("{granted} of {total} consents given", {
+                    granted: grantedCount,
+                    total: CONSENT_SCOPES.length,
+                  })} · ${settings?.save_history ? t("history saved") : t("history not saved")}`
             }
             onClick={() => setSection("privacy")}
           />
           {isStudent ? (
-            <Row
+            <SettingsRow
               icon={Link2}
               tone="bg-success-mist text-success"
               title="Family access"
@@ -655,23 +793,25 @@ export default function SettingsScreen() {
                   ? "Checking linked adults…"
                   : guardianCount === 0
                     ? "No adult can see your summary"
-                    : `${guardianCount} adult${guardianCount === 1 ? "" : "s"} can see your summary`
+                    : tf("{count} adults can see your summary", { count: guardianCount })
               }
               onClick={() => setSection("family")}
             />
           ) : null}
-          <Row
+          <SettingsRow
             icon={Smartphone}
             tone="bg-brand-mist text-brand-dark"
             title="This device"
             value="No login — this browser is what remembers your work"
             onClick={() => setSection("device")}
           />
-          <Row
+          <SettingsRow
             icon={Info}
             tone="bg-slate-100 text-slate-600"
             title="About this build"
-            value={`${BUILD_NOTES.length} honest limitations, in plain words`}
+            value={tf("{count} honest limitations, in plain words", {
+              count: BUILD_NOTES.length,
+            })}
             onClick={() => setSection("about")}
           />
         </Card>
@@ -696,6 +836,22 @@ export default function SettingsScreen() {
             </Button>
           </div>
         </Card>
+
+        {/* ------------------------------------------------------ Delete the account */}
+        <Card className="flex flex-wrap items-center justify-between gap-3 border-danger/30 bg-danger-mist/30">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-ink">{t("Delete this account")}</p>
+            <p className="mt-0.5 text-xs leading-relaxed text-muted">
+              {t(
+                "Erases what this account holds on the server — the messages, the assessments and their answers, the reports, the plans, the saved careers, the settings and every session on every device. Not everything goes: the dialog lists, before you press anything, exactly which few records stay and why.",
+              )}
+            </p>
+          </div>
+          <Button variant="danger" size="sm" onClick={() => setEraseModal(true)}>
+            <Trash2 className="h-4 w-4" aria-hidden />
+            {t("Delete account")}
+          </Button>
+        </Card>
       </div>
 
       {/* --------------------------------------------------- Language and voice */}
@@ -707,6 +863,26 @@ export default function SettingsScreen() {
         footer={<Button variant="outline" onClick={closeSection}>Done</Button>}
       >
         <div className="space-y-4">
+          <div className="space-y-2.5 rounded-2xl bg-canvas p-4">
+            <p className="flex items-center gap-1.5 text-sm font-semibold text-ink">
+              <LanguagesIcon className="h-4 w-4 text-brand-dark" aria-hidden />
+              Interface language
+            </p>
+            <PillGroup
+              items={[
+                { value: "en", label: "English" },
+                { value: "hi", label: "हिन्दी" },
+              ]}
+              value={uiLang}
+              onChange={(next) => setUiLang(next === "hi" ? "hi" : "en")}
+            />
+            <p className="text-xs leading-relaxed text-muted">
+              This changes the menus, buttons and page titles on this device, and it stays as you left
+              it. Nothing else switches it — not even a Hindi conversation. Reply language below is a
+              separate thing, and that one does follow how you actually talk.
+            </p>
+          </div>
+
           <Select
             label="Reply language"
             options={[...LANGUAGE_OPTIONS].map((option) => ({ ...option }))}
@@ -831,7 +1007,7 @@ export default function SettingsScreen() {
         description={
           isStudent
             ? "Only coarse details are stored — never your full name at school, address, documents, Aadhaar, bank details or passwords. We do not ask for those, ever."
-            : "You are signed in as a parent, so your profile has no class, age band or interests — those belong to your child's own account."
+            : "You are signed in as a parent, so your profile has no class, age or interests — those belong to your child's own account."
         }
         footer={<Button variant="outline" onClick={closeSection}>Done</Button>}
       >
@@ -846,14 +1022,7 @@ export default function SettingsScreen() {
                 onChange={(event) => void patchProfile({ class_level: event.target.value || null })}
                 hint="Sets how simply the guide explains things."
               />
-              <Select
-                label="Age band"
-                options={ageOptions}
-                placeholder="Not set"
-                value={view.age_range ?? ""}
-                onChange={(event) => void patchProfile({ age_range: event.target.value || null })}
-                hint={AGE_BANDS.find((band) => band.value === view.age_range)?.note}
-              />
+              <AgeField age={view.age ?? null} onCommit={(years) => void patchProfile({ age: years })} />
             </div>
 
             <div>
@@ -914,6 +1083,105 @@ export default function SettingsScreen() {
         )}
       </Modal>
 
+      {/* ------------------------------------------------------------- Account */}
+      <Modal
+        open={section === "account"}
+        onClose={closeSection}
+        title="Account and email sign-in"
+        description="How this account is held, what you can add to it, and what it does not have."
+        footer={<Button variant="outline" onClick={closeSection}>Done</Button>}
+      >
+        <div className="space-y-5">
+          <div className="rounded-2xl bg-canvas p-4">
+            <p className="flex items-center gap-2 text-sm font-semibold text-ink">
+              <Mail className="h-4 w-4 shrink-0 text-brand-dark" aria-hidden />
+              {clerk.data?.linked ? "An email opens this account too" : "This browser is the account"}
+            </p>
+            <p className="mt-1.5 text-xs leading-relaxed text-muted">
+              {clerk.state === "loading"
+                ? "Asking the server whether an email is connected…"
+                : clerk.state === "error"
+                  ? clerk.error
+                  : clerk.data?.note}
+            </p>
+            {clerk.data?.linked && clerk.data.linked_at ? (
+              <p className="mt-1.5 text-xs text-muted">Connected {relativeTime(clerk.data.linked_at)}.</p>
+            ) : null}
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {clerkEnabled() && !clerk.data?.linked ? (
+              <LinkButton href="/account/connect" size="sm">
+                <Mail className="h-4 w-4" aria-hidden />
+                Connect an email
+              </LinkButton>
+            ) : null}
+            {clerk.data?.linked ? (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => void disconnectEmail()}
+                disabled={disconnecting}
+              >
+                <KeyRound className="h-4 w-4" aria-hidden />
+                {disconnecting ? "Disconnecting…" : "Disconnect the email"}
+              </Button>
+            ) : null}
+            <LinkButton href="/app/profile" variant="outline" size="sm">
+              <UserRound className="h-4 w-4" aria-hidden />
+              My profile
+            </LinkButton>
+          </div>
+
+          {!clerkEnabled() ? (
+            <p className="rounded-2xl border border-line p-4 text-xs leading-relaxed text-muted">
+              Email sign-in is not switched on for this site, and that is the operator&apos;s choice, not
+              yours: it needs both <code className="font-mono">CLERK_SECRET_KEY</code> on the backend and{" "}
+              <code className="font-mono">NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY</code> on the frontend, plus a
+              webhook pointed at <code className="font-mono">POST /api/webhooks/clerk</code>. Until then
+              nothing is different here — this browser keeps your work, and there is no email or password
+              that could be lost. The one control that can end this account is the Delete account card at
+              the bottom of this screen, and only you can press it.
+            </p>
+          ) : null}
+
+          <div className="space-y-2">
+            <SubHeading>What this account does not have</SubHeading>
+            <ul className="space-y-2 text-xs leading-relaxed text-muted">
+              <li className="flex gap-2">
+                <BellOff className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-500" aria-hidden />
+                <span>
+                  <strong className="font-semibold text-ink">Notifications.</strong> Nothing in this app
+                  messages you, reminds you or rings you — you come to it when you want to. So there is
+                  no notification switch to offer, and no switch is hiding somewhere else.
+                </span>
+              </li>
+              <li className="flex gap-2">
+                <Download className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-500" aria-hidden />
+                <span>
+                  <strong className="font-semibold text-ink">Export.</strong> The report PDF on your
+                  Reports page is the only export there is today. There is no button yet that hands over
+                  every conversation, every saved career and every answer at once.
+                </span>
+              </li>
+              <li className="flex gap-2">
+                <Trash2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-500" aria-hidden />
+                <span>
+                  <strong className="font-semibold text-ink">Delete account.</strong> The card at the
+                  bottom of this screen erases this account in one step: the conversations and messages, the
+                  assessments with their answers and results, the reports and the PDFs printed from them, the
+                  plans, saved careers, profile, settings and every consent go, and every device signs out.
+                  There is no password, phone number or email to delete, because this account was never made
+                  from one. The dialog lists the few records that stay, and why, before you press anything.
+                  Clearing conversations and starting over on this device still work on their own, for
+                  someone who wants one without the other.
+                </span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </Modal>
+
       {/* -------------------------------------------------- Privacy and consent */}
       <Modal
         open={section === "privacy"}
@@ -954,6 +1222,32 @@ export default function SettingsScreen() {
                 }
                 description="Darker text and stronger borders for easier reading."
               />
+              {/* Appearance, not an account fact: this is the third control on the
+                  device-local pattern next to the two switches above it that do go
+                  to the server. Nothing here is sent, so a family sharing one
+                  account can keep a bright screen and a dark one. */}
+              <div className="space-y-2 border-t border-line pt-3.5">
+                <p className="flex items-center gap-1.5 text-sm font-medium text-ink">
+                  <Sun className="h-4 w-4 text-brand-dark" aria-hidden />
+                  Theme
+                </p>
+                <PillGroup
+                  items={[
+                    { value: "light", label: "Light", icon: <Sun className="h-4 w-4" aria-hidden /> },
+                    { value: "dark", label: "Dark", icon: <Moon className="h-4 w-4" aria-hidden /> },
+                    { value: "system", label: "System", icon: <Monitor className="h-4 w-4" aria-hidden /> },
+                  ]}
+                  value={themeChoice}
+                  onChange={(next) =>
+                    setThemeChoice(next === "dark" || next === "system" ? next : "light")
+                  }
+                />
+                <p className="text-xs leading-relaxed text-muted">
+                  This changes light and dark on this device only, and it stays as you left it. System
+                  follows whatever your phone or browser is set to, including when it changes by itself in
+                  the evening.
+                </p>
+              </div>
             </div>
           </div>
 
@@ -1242,6 +1536,70 @@ export default function SettingsScreen() {
           reachable from this browser again. If the goal is a clean slate for the messages rather than
           a new student, delete the conversation history in the privacy section instead.
         </p>
+      </Modal>
+
+      {/* Delete-account confirm. The whole point of this dialog is that it does not say
+          "everything goes" when three things do not go. */}
+      <Modal
+        open={eraseModal}
+        onClose={() => !erasing && setEraseModal(false)}
+        title="Delete this account for good?"
+        description="There is no undo, and there is no email to confirm with: this browser's session is the only proof of whose account this is. That is why this dialog is the last step."
+        size="lg"
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setEraseModal(false)} disabled={erasing}>
+              {t("Keep my work")}
+            </Button>
+            <Button variant="danger" loading={erasing} onClick={() => void doErase()}>
+              <Trash2 className="h-4 w-4" aria-hidden />
+              {t("Delete it")}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div>
+            <p className="text-sm font-semibold text-ink">{t("Gone from the database")}</p>
+            <ul className="mt-1.5 space-y-1 text-xs leading-relaxed text-muted">
+              {ERASE_GOES.map((line) => (
+                <li key={line} className="flex gap-2">
+                  <Trash2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-danger" aria-hidden />
+                  <span>{t(line)}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div>
+            <p className="text-sm font-semibold text-ink">{t("Stays, and why")}</p>
+            <ul className="mt-1.5 space-y-1 text-xs leading-relaxed text-muted">
+              {ERASE_KEPT.map((line) => (
+                <li key={line} className="flex gap-2">
+                  <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-teal" aria-hidden />
+                  <span>{t(line)}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <p className="rounded-2xl bg-canvas p-3 text-xs leading-relaxed text-muted">
+            {t(
+              "This is the app's own erasure step. Whether it satisfies a particular law is a question for whoever runs the site and their own adviser — a button here cannot claim that answer, and this page does not try to.",
+            )}
+          </p>
+          <p className="text-xs leading-relaxed text-muted">
+            {t(
+              "If this account is the one that runs the site, the server refuses and says why: an operator is closed by another operator, so the log keeps saying who stopped being able to change things.",
+            )}
+          </p>
+
+          {eraseError ? (
+            <p role="alert" className="rounded-card border border-danger/30 bg-danger-mist p-3 text-xs leading-relaxed text-ink">
+              {eraseError}
+            </p>
+          ) : null}
+        </div>
       </Modal>
 
       {/* ------------------------------------------------------- About this build */}

@@ -1,0 +1,72 @@
+{#
+  Weekly progress digest. Context: `name`, `week_label` (e.g. "11–17 October"),
+  `conversations`, `messages`, `careers_saved`, `assessments_finished`,
+  `dashboard_url`.
+
+  This is the only message here that a server ever starts by itself, so it carries
+  the sentence that makes that visible: what it counts, and that a person switched it
+  on. It also decides what it does not do — no streak, no ranking, no "you are
+  falling behind". A weekly note about a child that turns absence into a verdict is
+  how a study tool becomes a source of anxiety, and nothing in the data here would
+  support the claim anyway.
+
+  The caller skips sending this entirely for a week that holds nothing. Silence is
+  not a failure to report on.
+#}
+{% extends "base.html" %}
+
+{% block title %}{{ txt("Your week in " ~ site_name, site_name ~ " में आपका सप्ताह") }}{% endblock %}
+{% block preheader %}{{ txt("A count of what happened, nothing more", "बस इतना हुआ — इससे बढ़कर कुछ नहीं") }}{% endblock %}
+
+{% block eyebrow %}{{ txt("Weekly summary", "सप्ताह का सारांश") }}{% endblock %}
+
+{% block heading %}{{ txt("Week of " ~ week_label, week_label ~ " का सप्ताह") }}{% endblock %}
+
+{% block body %}
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 18px;border-collapse:separate;">
+    <tr>
+      <td width="50%" style="padding:0 6px 12px 0;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f7fd;border-radius:12px;">
+          <tr><td style="padding:14px 16px;font-family:Arial,'Noto Sans',sans-serif;">
+            <p style="margin:0;font-size:22px;font-weight:700;line-height:28px;color:#0b1730;">{{ conversations }}</p>
+            <p style="margin:2px 0 0;font-size:13px;line-height:18px;color:#41536e;">{{ txt("conversations started", "बातें शुरू कीं") }}</p>
+          </td></tr>
+        </table>
+      </td>
+      <td width="50%" style="padding:0 0 12px 6px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f7fd;border-radius:12px;">
+          <tr><td style="padding:14px 16px;font-family:Arial,'Noto Sans',sans-serif;">
+            <p style="margin:0;font-size:22px;font-weight:700;line-height:28px;color:#0b1730;">{{ messages }}</p>
+            <p style="margin:2px 0 0;font-size:13px;line-height:18px;color:#41536e;">{{ txt("messages sent", "संदेश भेजे") }}</p>
+          </td></tr>
+        </table>
+      </td>
+    </tr>
+    <tr>
+      <td width="50%" style="padding:0 6px 0 0;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f7fd;border-radius:12px;">
+          <tr><td style="padding:14px 16px;font-family:Arial,'Noto Sans',sans-serif;">
+            <p style="margin:0;font-size:22px;font-weight:700;line-height:28px;color:#0b1730;">{{ careers_saved }}</p>
+            <p style="margin:2px 0 0;font-size:13px;line-height:18px;color:#41536e;">{{ txt("career profiles saved", "करियर प्रोफ़ाइल सहेजीं") }}</p>
+          </td></tr>
+        </table>
+      </td>
+      <td width="50%" style="padding:0 0 0 6px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f7fd;border-radius:12px;">
+          <tr><td style="padding:14px 16px;font-family:Arial,'Noto Sans',sans-serif;">
+            <p style="margin:0;font-size:22px;font-weight:700;line-height:28px;color:#0b1730;">{{ assessments_finished }}</p>
+            <p style="margin:2px 0 0;font-size:13px;line-height:18px;color:#41536e;">{{ txt("questionnaires finished", "प्रश्नावली पूरी कीं") }}</p>
+          </td></tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+
+  <p style="margin:0 0 16px;">
+    <a href="{{ dashboard_url }}" style="color:#3f6fe0;font-weight:600;text-decoration:underline;">{{ txt("Pick it back up where it stopped", "जहाँ छोड़ा था वहीं से फिर शुरू करें") }}</a>.
+  </p>
+
+  <p style="margin:0;padding:14px 16px;background:#f4f7fd;border-radius:12px;color:#41536e;">
+    {{ txt("Four counts, nothing else. No streak, no score, no comparison with anyone — and no judgment about a week in which nothing was logged. You asked for this note in the account's settings, and the same page switches it off.", "चार गिनतियाँ, इससे बढ़कर कुछ नहीं। न स्ट्रीक, न स्कोर, न किसी से तुलना — और जिस सप्ताह में कुछ दर्ज नहीं हुआ, उस पर कोई फ़ैसला भी नहीं। यह संदेश आपने खाते की सेटिंग्स में माँगा था, और उसी पृष्ठ से बंद भी हो जाता है।") }}
+  </p>
+{% endblock %}

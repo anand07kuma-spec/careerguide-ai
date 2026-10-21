@@ -52,9 +52,8 @@ AZURE_OUTPUT_FORMAT = "audio-24khz-48kbitrate-mono-mp3"
 GEMINI_ENDPOINT = (
     "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 )
-# Gemini reads a bare sentence flatly. Its own documentation asks for a spoken
-# style lead-in, which directs the delivery rather than adding words to say.
-GEMINI_STYLE_LEAD = "Say warmly and naturally, like a friend talking to a student: "
+# No style lead-in. Gemini TTS documentation suggests one, but this model reads it
+# out loud, so every reply started with a sentence about how it should be spoken.
 
 VOICES = {
     "hi": [
@@ -271,7 +270,7 @@ def gemini_body(text: str, voice: str) -> dict:
     anything a student typed.
     """
     return {
-        "contents": [{"parts": [{"text": GEMINI_STYLE_LEAD + text}]}],
+        "contents": [{"parts": [{"text": text}]}],
         "generationConfig": {
             "responseModalities": ["AUDIO"],
             "speechConfig": {"voiceConfig": {"prebuiltVoiceConfig": {"voiceName": voice}}},

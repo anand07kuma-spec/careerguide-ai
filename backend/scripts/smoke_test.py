@@ -25,6 +25,7 @@ if DB_PATH.exists():
     DB_PATH.unlink()
 os.environ["DATABASE_URL"] = f"sqlite:///{DB_PATH.as_posix()}"
 os.environ["AI_PROVIDER"] = "demo"
+os.environ["RATE_LIMIT_ENABLED"] = "false"  # throttles are proved in security_test.py
 
 from fastapi.testclient import TestClient  # noqa: E402
 
@@ -141,6 +142,9 @@ with client:
 
     r = client.get("/api/auth/me", headers=auth(student_token))
     check("me restores the session", r.status_code == 200 and r.json()["user"]["display_name"] == "Aarav")
+    # Empty the jar first: onboarding above handed this client a session cookie, and a
+    # client that holds one is a signed-in browser, not the caller this check is naming.
+    client.cookies.clear()
     r = client.get("/api/auth/me")
     check("me without a token is rejected", r.status_code in (401, 422), r.text[:120])
     r = client.get("/api/auth/me", headers=auth("bogus-token-value"))

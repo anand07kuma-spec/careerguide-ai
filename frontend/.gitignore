@@ -42,3 +42,5 @@ next-env.d.ts
 
 .vercel
 .env*
+# The template is the setup guide: it lists names only, never values.
+!.env.example

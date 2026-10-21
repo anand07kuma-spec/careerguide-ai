@@ -8,6 +8,7 @@ import {
   Bookmark,
   Briefcase,
   Building2,
+  ClipboardList,
   Compass,
   FileText,
   GraduationCap,
@@ -18,12 +19,14 @@ import {
   Settings2,
   ShieldCheck,
   Sparkles,
+  Split,
   Wallet,
   X,
 } from "lucide-react";
 import { GuideAvatar } from "@/components/brand";
 import { Screen } from "@/components/layout/app-shell";
 import { Card, SectionHeading } from "@/components/ui/card";
+import { useT, useTf } from "@/lib/i18n";
 import { Button, LinkButton } from "@/components/ui/button";
 import { Badge, EvidenceBadge } from "@/components/ui/badge";
 import {
@@ -105,6 +108,38 @@ const PLACES: { href: string; label: string; icon: typeof Briefcase; tone: Tone;
       ],
       href: "/app/careers",
       cta: "Open Career Explorer",
+    },
+  },
+  {
+    href: "/app/streams",
+    label: "Streams",
+    icon: Split,
+    tone: "teal",
+    detail: {
+      title: "Choose your stream",
+      icon: <Split className="h-5 w-5" aria-hidden />,
+      lines: [
+        "What Science, Commerce and Humanities are actually like, plus the routes that never appear on the usual list.",
+        "No recommendation and no score. It explains the streams and tells you exactly what to ask your own school.",
+      ],
+      href: "/app/streams",
+      cta: "Read the streams",
+    },
+  },
+  {
+    href: "/app/exams",
+    label: "Exams",
+    icon: ClipboardList,
+    tone: "warning",
+    detail: {
+      title: "Exams & entrances",
+      icon: <ClipboardList className="h-5 w-5" aria-hidden />,
+      lines: [
+        "JEE, NEET, CUET, CLAT, CA Foundation and the others, grouped by what you become through them.",
+        "No dates, fees, cutoffs or eligibility numbers — those change every year, so each entry names the official notification instead.",
+      ],
+      href: "/app/exams",
+      cta: "Open the exams map",
     },
   },
   {
@@ -232,6 +267,7 @@ function Tile({
   tone: Tone;
   onClick: () => void;
 }) {
+  const t = useT();
   return (
     <button
       type="button"
@@ -243,7 +279,7 @@ function Tile({
       >
         <Icon className="h-5 w-5" aria-hidden />
       </span>
-      <span className="text-xs font-medium leading-tight text-ink">{label}</span>
+      <span className="text-xs font-medium leading-tight text-ink">{t(label)}</span>
     </button>
   );
 }
@@ -252,6 +288,8 @@ export default function StudentHome() {
   const router = useRouter();
   const { status, isParent, user, profile } = useSession();
   const { toast } = useToast();
+  const t = useT();
+  const tf = useTf();
 
   const [health, setHealth] = useState<Resource<Health>>(initial);
   const [journey, setJourney] = useState<Resource<Journey>>(initial);
@@ -394,8 +432,8 @@ export default function StudentHome() {
 
   return (
     <Screen
-      title={`Hi ${name}`}
-      badge={<Badge tone="brand" icon={<Sparkles className="h-3.5 w-3.5" aria-hidden />}>Student</Badge>}
+      title={tf("Hi {name}", { name })}
+      badge={<Badge tone="brand" icon={<Sparkles className="h-3.5 w-3.5" aria-hidden />}>{t("Student")}</Badge>}
       action={
         profile?.class_level ? (
           <span className="text-sm text-muted">{classLabel(profile.class_level)}</span>
@@ -403,7 +441,7 @@ export default function StudentHome() {
           // Onboarding no longer asks for a class, so this points at the
           // conversation where the guide asks for it, not at a form.
           <LinkButton href="/app/chat" variant="outline" size="sm">
-            Tell the guide your class
+            {t("Tell the guide your class")}
           </LinkButton>
         )
       }
@@ -414,20 +452,20 @@ export default function StudentHome() {
           <GuideAvatar state="idle" className="h-16 w-16 shrink-0 sm:h-20 sm:w-20" />
           <div className="min-w-0 flex-1">
             <p className="text-sm leading-relaxed text-muted">
-              {isYounger ? "Ready to explore some cool jobs?" : "Pick up where you left off."}
+              {isYounger ? t("Ready to explore some cool jobs?") : t("Pick up where you left off.")}
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
               <LinkButton href="/app/call" size="sm">
                 <Mic className="h-4 w-4" aria-hidden />
-                Voice call
+                {t("Voice call")}
               </LinkButton>
               <LinkButton href="/app/chat" variant="outline" size="sm">
                 <MessagesSquare className="h-4 w-4" aria-hidden />
-                Chat
+                {t("Chat")}
               </LinkButton>
               <LinkButton href="/app/settings" variant="ghost" size="sm">
                 <Settings2 className="h-4 w-4" aria-hidden />
-                Settings
+                {t("Settings")}
               </LinkButton>
             </div>
           </div>
@@ -436,8 +474,9 @@ export default function StudentHome() {
         {health.state === "ready" && health.data?.demo_mode ? (
           <p className="flex items-start gap-1.5 px-1 text-xs leading-relaxed text-muted">
             <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
-            You are using the built-in demo guide, so replies come from a scripted sample until an AI
-            key is configured. It still helps you explore.
+            {t(
+              "You are using the built-in demo guide, so replies come from a scripted sample until an AI key is configured. It still helps you explore.",
+            )}
           </p>
         ) : null}
 
@@ -502,7 +541,7 @@ export default function StudentHome() {
             title="Directions worth exploring"
             action={
               <LinkButton href="/app/careers" variant="outline" size="sm">
-                Browse all
+                {t("Browse all")}
               </LinkButton>
             }
             className="mb-3"
@@ -533,10 +572,10 @@ export default function StudentHome() {
               action={
                 <div className="flex flex-wrap justify-center gap-2">
                   <LinkButton href="/app/chat" size="sm">
-                    Talk to your guide
+                    {t("Talk to your guide")}
                   </LinkButton>
                   <LinkButton href="/app/interests" size="sm" variant="outline">
-                    Answer interest questions
+                    {t("Answer interest questions")}
                   </LinkButton>
                 </div>
               }
@@ -548,7 +587,7 @@ export default function StudentHome() {
                   <Card key={rec.career.id} className="flex flex-col justify-between gap-3 p-4">
                     <div className="flex items-start justify-between gap-2">
                       <h3 className="text-base font-semibold leading-tight text-ink">
-                        {rec.career.title}
+                        {t(rec.career.title)}
                       </h3>
                       <EvidenceBadge level={rec.evidence_level} />
                     </div>
@@ -573,7 +612,7 @@ export default function StudentHome() {
                       }
                     >
                       <Info className="h-4 w-4" aria-hidden />
-                      Why this one
+                      {t("Why this one")}
                     </Button>
                   </Card>
                 ))}
@@ -605,7 +644,7 @@ export default function StudentHome() {
               description="Tap the bookmark on any career to keep it here for later."
               action={
                 <LinkButton href="/app/careers" size="sm">
-                  Find careers to explore
+                  {t("Find careers to explore")}
                 </LinkButton>
               }
             />
@@ -656,9 +695,11 @@ export default function StudentHome() {
                   <ShieldCheck className="h-4 w-4" aria-hidden />
                 </span>
                 <span>
-                  <span className="block text-sm font-semibold text-ink">Privacy, consent and a parent link</span>
+                  <span className="block text-sm font-semibold text-ink">
+                    {t("Privacy, consent and a parent link")}
+                  </span>
                   <span className="mt-0.5 block text-xs text-muted">
-                    What is stored, who may see it, and what this device remembers.
+                    {t("What is stored, who may see it, and what this device remembers.")}
                   </span>
                 </span>
               </span>
@@ -672,17 +713,17 @@ export default function StudentHome() {
       <Modal
         open={detail !== null}
         onClose={() => setDetail(null)}
-        title={detail?.title ?? ""}
+        title={detail ? t(detail.title) : ""}
         size="sm"
         footer={
           <>
             <Button variant="ghost" onClick={() => setDetail(null)}>
               <X className="h-4 w-4" aria-hidden />
-              Close
+              {t("Close")}
             </Button>
             {detail?.href ? (
               <LinkButton href={detail.href} onClick={() => setDetail(null)}>
-                {detail.cta ?? "Open"}
+                {detail.cta ? t(detail.cta) : t("Open")}
                 <ArrowRight className="h-4 w-4" aria-hidden />
               </LinkButton>
             ) : null}
@@ -697,7 +738,7 @@ export default function StudentHome() {
           ) : null}
           <div className="space-y-3 text-sm leading-relaxed text-ink">
             {detail?.lines.map((line) => (
-              <p key={line}>{line}</p>
+              <p key={line}>{t(line)}</p>
             ))}
           </div>
         </div>

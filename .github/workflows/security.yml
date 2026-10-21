@@ -1,0 +1,212 @@
+name: Security
+
+# Three independent things can go wrong between "working" and "exposed", and only one of
+# them is a bug in this repository's own code:
+#
+#  1. a dependency somebody else maintains gets an advisory — fixed by changing a pin, which
+#     is a human decision about a breaking release, not something a robot should do to a
+#     repository on a schedule;
+#  2. a private file gets committed — one `.env` or `.db` in Git is expensive to undo once
+#     pushed, because the history has to be rewritten and the credential rotated;
+#  3. a credential gets pasted into a file that is meant to be a template — the
+#     `.env.example` files ship with the repository and every one of their credential lines
+#     is deliberately blank.
+#
+# So (2) and (3) fail the job. They are deterministic, they are this repository's own
+# behaviour, and there is no honest reason to let either print a warning and pass.
+#
+# (1) reports. Both audits are advisory here, deliberately: a high-severity finding in a
+# package three dependencies deep is real information that this app cannot fix by editing its
+# own source. As of the day this file was written, `npm audit` exits non-zero on this lock
+# file — `braces`, reached through `eslint-config-next`, i.e. build tooling rather than code
+# the browser runs, with only a breaking version change available as a fix. A weekly job that
+# has been red for three months over a decision nobody has made is a job that gets ignored,
+# which is worse than no job. So each audit's output and exit status go into the run summary
+# and are echoed as `::warning::`, and only a manual run with `fail_on_findings` ticked turns
+# a finding into a failure — that switch exists for the day somebody has decided to bump a pin
+# and wants the proof.
+#
+# The audits need network access to PyPI and the npm registry: this is a scan, not a build.
+# Nothing else in CI does — the backend and frontend jobs install packages and run their
+# suites with no secrets, and the suites open no outbound connections of their own.
+#
+# Runs weekly on Monday 03:30 UTC, and manually any time. It is not wired to push or pull
+# request: a dependency's advisory calendar has nothing to do with this week's diff, and a
+# scan that only runs when somebody commits goes a quarter without running.
+
+on:
+  schedule:
+    - cron: "30 3 * * 1"
+  workflow_dispatch:
+    inputs:
+      fail_on_findings:
+        description: "Fail the job if an audit reports a vulnerability (use when closing out a scan)"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  python_version: "3.12"
+
+jobs:
+  dependencies:
+    name: Dependency advisories (reported)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.python_version }}
+
+      - name: Install pip-audit
+        run: python -m pip install --disable-pip-version-check --no-input pip-audit==2.10.1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Audit both ecosystems and put the findings in the summary
+        shell: bash
+        run: |
+          # GitHub runs a bash step under `-e`, which would abort the moment an audit found
+          # something — the exact opposite of what this job is for.
+          set +e
+
+          # Resolves every pin in requirements.txt against PyPI; takes a couple of minutes.
+          # Exit 1 means a finding, exit 2 means the audit itself could not run. Those are
+          # different answers, and both are named below instead of flattened into "failed".
+          pip-audit -r backend/requirements.txt > /tmp/pip.txt 2>&1
+          pip_status=$?
+
+          # `--package-lock-only` reads the lock file instead of an installed tree, so there
+          # is no need to run `npm ci` just to ask what is vulnerable in what is pinned.
+          (cd frontend && npm audit --audit-level=high --package-lock-only) > /tmp/npm.txt 2>&1
+          npm_status=$?
+
+          {
+            echo "Findings are reported here, not blocked. The workflow header says why;"
+            echo "the README says how a pin gets bumped. Exit 1 = a finding,"
+            echo "exit 2 = the audit could not run."
+            echo
+            echo "## backend — pip-audit -r backend/requirements.txt (exit $pip_status)"
+            echo '```'
+            tail -c 40000 /tmp/pip.txt
+            echo '```'
+            echo
+            echo "## frontend — npm audit --package-lock-only (exit $npm_status)"
+            echo '```'
+            tail -c 40000 /tmp/npm.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          echo "pip-audit exit $pip_status | npm audit exit $npm_status"
+          if [ "$pip_status" -ne 0 ]; then
+            echo "::warning::pip-audit exited $pip_status on the backend pins — output in the run summary"
+            tail -30 /tmp/pip.txt
+          fi
+          if [ "$npm_status" -ne 0 ]; then
+            echo "::warning::npm audit exited $npm_status on the frontend lock file — output in the run summary"
+            tail -30 /tmp/npm.txt
+          fi
+
+          if [ "${{ inputs.fail_on_findings }}" = "true" ] && { [ "$pip_status" -ne 0 ] || [ "$npm_status" -ne 0 ]; }; then
+            echo "::error::fail_on_findings was set and an audit reported findings"
+            exit 1
+          fi
+          echo "Reported. Bumping a pin is a human decision; nothing here stopped."
+
+  repository:
+    name: Nothing private is tracked
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Nothing private is tracked
+        shell: bash
+        run: |
+          status=0
+
+          real_env=$(git ls-files | grep -E '(^|/)\.env(\.|$)' | grep -v '\.env\.example$' || true)
+          if [ -n "$real_env" ]; then
+            echo "::error::a live env file is tracked in Git: $real_env"
+            status=1
+          else
+            echo "ok: no tracked .env except the examples"
+          fi
+
+          db_files=$(git ls-files | grep -Ei '\.(db|db-journal|sqlite|sqlite3|bak)$|\.db\.' || true)
+          if [ -n "$db_files" ]; then
+            echo "::error::a database file is tracked in Git: $db_files"
+            status=1
+          else
+            echo "ok: no database file is tracked — the app's data never leaves the machine it runs on"
+          fi
+
+          # `git ls-files` rather than `[ -f ]`, and that distinction is the whole point.
+          # This step runs on a fresh checkout, so a template that is missing here is
+          # missing from the repository — while still sitting on the laptop that wrote it,
+          # which is why nobody notices. The usual cause is a gitignore rule that swallowed
+          # it (`frontend/.gitignore` ignores `.env*` and has to negate the example back),
+          # so the message names the fix instead of just reporting an absence.
+          for f in .env.example backend/.env.example frontend/.env.example; do
+            if ! git ls-files --error-unmatch "$f" >/dev/null 2>&1; then
+              echo "::error::$f is not in the repository, so an operator copying the stack has nothing to copy. Check the .gitignore rules, then \`git add -f $f\`."
+              status=1
+            fi
+          done
+
+          for f in .env.example backend/.env.example frontend/.env.example; do
+            [ -f "$f" ] || continue   # already reported as a tracked-ness error
+            # A credential is a variable whose NAME ENDS IN a secret suffix and whose value
+            # is not blank. The earlier version of this matched the word TOKEN anywhere in
+            # a name, so `SESSION_TOKEN_TTL_HOURS=24` — a setting a template exists to
+            # document, not a key — failed the job. `NEXT_PUBLIC_` names are excluded
+            # because they are inlined into a browser bundle and so cannot hold a secret;
+            # a filled-in publishable key in a template is documentation.
+            filled=$(
+              grep -E '^[A-Za-z0-9_]+=' "$f" \
+                | grep -v '^NEXT_PUBLIC_' \
+                | grep -E '_(API_KEY|SECRET_KEY|SIGNING_SECRET|WEBHOOK_SECRET|PUBLISHABLE_KEY|SECRET|TOKEN|PASSWORD|PASSWD)=' \
+                | grep -vE '=[[:space:]]*$' || true
+            )
+            if [ -n "$filled" ]; then
+              echo "::error::$f has a credential with a value in it:"
+              echo "$filled"
+              status=1
+            else
+              echo "ok: $f — every credential line is blank"
+            fi
+          done
+
+          # Two different places a private file gets published from, and keeping it out of
+          # one does nothing for the other: Git, and the container build context.
+          for f in .gitignore backend/.dockerignore frontend/.dockerignore; do
+            [ -f "$f" ] || { echo "::error::$f is missing"; status=1; continue; }
+            grep -qE '^\.env' "$f" || echo "::warning::$f does not ignore .env"
+            grep -qE '^\*?\.(db|sqlite3?)' "$f" || echo "::warning::$f does not ignore a database file"
+          done
+
+          exit $status
+
+      - name: No credential-shaped strings in source
+        shell: bash
+        run: |
+          hits=$(git grep -nEI \
+            '(sk-[A-Za-z0-9]{24,}|sk_live_[A-Za-z0-9]{20,}|rzp_live_[A-Za-z0-9]{14,}|whsec_[A-Za-z0-9]{20,}|re_[A-Za-z0-9]{30,}|AKIA[0-9A-Z]{16}|AIza[0-9A-Za-z_-]{30,}|ghp_[A-Za-z0-9]{30,})' \
+            -- '.' ':!*requirements*.txt' || true)
+          if [ -n "$hits" ]; then
+            echo "$hits"
+            echo "::error::something in the tracked tree looks like a live credential. Rotate it, then remove it from history — a warning is not enough for this one."
+            exit 1
+          fi
+          echo "ok: no live-shaped keys in the tree"

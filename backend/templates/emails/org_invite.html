@@ -1,0 +1,87 @@
+{#
+  An invitation to join an organisation's portal — a school or a counselling practice.
+
+  Context: `inviter`, `org_name`, `portal_title`, `label`, `role_line`, `sees`,
+  `not_yet`, `expires`, `accept_url`.
+
+  This is the one message in the system that arrives at an address the app has never
+  seen before, from a person who has no account, and that offers to attach them to
+  somebody else's roster. So the two sentences about what joining does and does not
+  reveal are not passed in here: they come from `_JOIN_PROMISE` in
+  `app/services/email_messages.py`, where a reviewer can read them against
+  `client_is_visible` in `app/security.py`. A mail that promised less than the routes
+  deliver would be the kind of over-promise this feature cannot survive; one that
+  promised more would be worse, because the second is what a child discovers at dinner.
+
+  Nothing about a student's work is in this message. No score, no report, no answer, no
+  transcript — a mail that can be forwarded around a staffroom carries only the fact
+  that a seat has been held, who is holding it, and when the hold expires.
+#}
+{% extends "base.html" %}
+
+{% block title %}{{ txt(inviter ~ " invited you to " ~ org_name, inviter ~ " ने आपको " ~ org_name ~ " में आमंत्रित किया") }}{% endblock %}
+{% block preheader %}{{ txt("What joining would let them see — and what it would not", "शामिल होने पर उन्हें क्या दिखेगा — और क्या नहीं") }}{% endblock %}
+
+{% block eyebrow %}{{ txt("An invitation to a portal", "किसी पोर्टल में आमंत्रण") }}{% endblock %}
+
+{% block heading %}
+  {{ txt(org_name ~ " has kept a place for you", org_name ~ " ने आपके लिए एक स्थान रखा है") }}
+{% endblock %}
+
+{% block body %}
+  <p style="margin:0 0 16px;">
+    {% if label %}
+    <strong style="color:#0b1730;">{{ label }}</strong>{{ txt(" — ", " — ") }}
+    {% endif %}
+    <strong style="color:#0b1730;">{{ inviter }}</strong>
+    {{ txt("invited you from their", "ने आपको अपने") }}
+    <strong style="color:#0b1730;">{{ site_name }}</strong>
+    {{ txt("portal,", "पोर्टल से आमंत्रित किया है,") }}
+    {{ role_line }}.
+    {{ txt("Nothing has changed yet; the link below is what does that.", "अभी कुछ बदला नहीं है; नीचे दिया लिंक वह काम करेगा।") }}
+  </p>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 18px;">
+    <tr>
+      <td style="padding:16px 18px;background:#f4f7fd;border-radius:12px;font-family:Arial,'Noto Sans',sans-serif;font-size:14px;line-height:22px;color:#41536e;">
+        <p style="margin:0 0 10px;">
+          {{ txt("If you accept, you will be able to open", "अगर आप स्वीकार करेंगे तो आप") }}
+          <strong style="color:#0b1730;">{{ portal_title }}</strong>
+          {{ txt("with your own account.", "को अपने खाते से खोल पाएँगे।") }}
+        </p>
+        <p style="margin:0 0 8px;">{{ sees }}</p>
+        <p style="margin:0;">{{ not_yet }}</p>
+      </td>
+    </tr>
+  </table>
+
+  <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 18px;">
+    <tr>
+      <td style="border-radius:12px;background:#1f4ed0;">
+        <a href="{{ accept_url }}" style="display:inline-block;padding:12px 22px;font-family:Arial,'Noto Sans',sans-serif;font-size:15px;font-weight:600;line-height:20px;color:#ffffff;text-decoration:none;">{{ txt("Accept the invitation", "आमंत्रण स्वीकार करें") }}</a>
+      </td>
+    </tr>
+  </table>
+
+  <p style="margin:0 0 16px;">
+    {{ txt("Opening that link needs an account of your own — this mail carries no login, and the link works only in this browser, for one person.", "वह लिंक खोलने के लिए आपका अपना खाता चाहिए — इस संदेश में कोई लॉगिन नहीं है, और यह लिंक केवल इस ब्राउज़र में और एक व्यक्ति के लिए काम करता है।") }}
+    {% if expires %}
+    {{ txt("It stays open until", "यह") }}
+    <strong style="color:#0b1730;">{{ expires }}</strong>
+    {{ txt(", after which the place is given back and nothing further happens.", "तक खुला रहेगा, उसके बाद वह स्थान वापस ले लिया जाएगा और आगे कुछ नहीं होगा।") }}
+    {% else %}
+    {{ txt("If it is not accepted, the place is given back and nothing further happens.", "अगर यह स्वीकार नहीं होता तो वह स्थान वापस ले लिया जाता है और आगे कुछ नहीं होता।") }}
+    {% endif %}
+    {{ txt("Either way, the organisation can remove you again in one click, and that removes nothing you wrote anywhere else.", "किसी भी स्थिति में, संगठन आपको एक क्लिक से हटा सकता है, और उससे आपके द्वारा कहीं और लिखा गया कुछ नहीं हटता।") }}
+  </p>
+
+  <p style="margin:0;padding:14px 16px;background:#f4f7fd;border-radius:12px;color:#41536e;">
+    {{ txt("Your address is held only as this waiting place. The moment your own account accepts, it is deleted from their roster and replaced by that account, and it is used for no other message. If you did not expect this invitation, do nothing.", "आपका पता केवल इस अपेक्षा-स्थान के रूप में रखा जाता है। जैसे ही आपका अपना खाता इसे स्वीकार करता है, उनकी सूची से यह हटा दिया जाता है और उसके स्थान पर वह खाता आ जाता है, और किसी अन्य संदेश के लिए इसका उपयोग नहीं होता। अगर आपको यह आमंत्रण की उम्मीद नहीं थी, तो कुछ मत करें।") }}
+  </p>
+{% endblock %}
+
+{% block stop_line %}
+<p style="margin:0 0 10px;">
+  {{ txt("You are getting this because somebody at an organisation typed this address into their portal and asked us to invite you. There is no account behind this address yet, nothing is stored about you but that invitation, and it can be left unaccepted — which is the same as declining it.", "यह संदेश आपको इसलिए मिला है क्योंकि किसी संगठन में किसी ने अपना पोर्टल खोलकर यह पता लिखा और हमें आपको आमंत्रित करने को कहा। इस पते से अभी कोई खाता जुड़ा नहीं है, और आपके बारे में उस आमंत्रण के सिवा कुछ नहीं सहेजा जाता। इसे स्वीकार न करना भी एक उत्तर है — यानी मना करना।") }}
+</p>
+{% endblock %}

@@ -10,6 +10,7 @@ import {
 } from "react";
 import { AlertTriangle, CheckCircle2, Info, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 
 type ToastTone = "success" | "error" | "info";
 
@@ -41,6 +42,7 @@ const TONES: Record<ToastTone, string> = {
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<ToastItem[]>([]);
+  const t = useT();
 
   const dismiss = useCallback((id: number) => {
     setItems((current) => current.filter((item) => item.id !== id));
@@ -49,10 +51,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const toast = useCallback(
     (message: string, tone: ToastTone = "info") => {
       const id = Date.now() + Math.random();
-      setItems((current) => [...current.slice(-3), { id, tone, message }]);
+      setItems((current) => [...current.slice(-3), { id, tone, message: t(message) }]);
       setTimeout(() => dismiss(id), tone === "error" ? 7000 : 4500);
     },
-    [dismiss],
+    [dismiss, t],
   );
 
   const value = useMemo<ToastApi>(
@@ -87,7 +89,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               <button
                 type="button"
                 onClick={() => dismiss(item.id)}
-                aria-label="Dismiss notification"
+                aria-label={t("Dismiss notification")}
                 className="rounded-full p-0.5 opacity-70 hover:opacity-100"
               >
                 <X className="h-3.5 w-3.5" aria-hidden />

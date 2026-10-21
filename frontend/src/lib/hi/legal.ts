@@ -1,0 +1,410 @@
+/** Hindi for the legal index and the privacy, terms and contact pages. See ./index.ts.
+ *
+ * A parent who reads only Hindi still has to be able to read what happens to
+ * their child's data, so these pages are translated in full rather than given
+ * Hindi headings over English prose. */
+export const HI: Record<string, string> = {
+  // Shared frame
+  Prototype: "प्रोटोटाइप",
+  Privacy: "गोपनीयता",
+  Terms: "शर्तें",
+  Contact: "संपर्क",
+  Home: "होम",
+  "This is not a legal opinion.": "यह क़ानूनी सलाह नहीं है।",
+  Legal: "क़ानूनी",
+  "All legal pages": "सभी क़ानूनी पेज",
+  "Privacy Policy": "गोपनीयता नीति",
+  Print: "छापें",
+  "On this page": "इस पेज पर",
+  Contents: "विषय-सूची",
+  "Last updated": "आख़िरी अपडेट",
+
+  // Legal index page
+  "Three pages, written for the app that actually exists rather than from a template: what happens to your data, the terms of use, and how to reach this project.":
+    "तीन पेज, टेम्पलेट से नहीं बल्कि असल में मौजूद ऐप के हिसाब से लिखे गए: आपके डेटा का क्या होता है, इस्तेमाल की शर्तें क्या हैं, और इस प्रोजेक्ट से संपर्क कैसे करें।",
+  "The three pages": "तीनों पेज",
+  "What the server keeps, what it never asks for, and which outside services see your text.":
+    "सर्वर क्या रखता है, कभी क्या माँगता ही नहीं, और आपका टेक्स्ट किस-किस बाहरी सेवा तक जाता है।",
+  "What the guide promises — and, more usefully, what it refuses to do.":
+    "मार्गदर्शक क्या वादा करता है — और ज़्यादा ज़रूरी बात, क्या करने से मना करता है।",
+  "The one channel anyone actually reads, and what to do if a child is in danger.":
+    "बस एक ही रास्ता जिस पर सच में कोई पढ़ता है, और अगर कोई बच्चा ख़तरे में हो तो क्या करें।",
+  "What these pages do not claim": "ये पेज क्या दावा नहीं करते",
+  "None of this is a legal opinion, and nothing here claims compliance with the DPDP Act, GDPR, COPPA or any other law. This build has not had qualified legal review, so it should not hold a real child’s data yet.":
+    "इनमें से कुछ भी क़ानूनी सलाह नहीं है, और कोई भी बात DPDP एक्ट, GDPR, COPPA या किसी अन्य कानून के पालन का दावा नहीं करती। इस बिल्ड की योग्य क़ानूनी जाँच नहीं हुई है, इसलिए इसे अभी किसी असली बच्चे का डेटा नहीं रखना चाहिए।",
+  "If a sentence here and a sentence on another page ever disagree, the other page is the one to read — this index only points the way.":
+    "अगर यहाँ की किसी बात और किसी दूसरे पेज की बात में फ़र्क़ लगे, तो दूसरा पेज पढ़ें — यह सूचीबद्ध पेज बस रास्ता दिखाता है।",
+
+  // Privacy page — the policy's own contents list
+  Introduction: "परिचय",
+  "Information we collect": "हम जो जानकारी इकट्ठा करते हैं",
+  "How we use it": "इसका इस्तेमाल कैसे होता है",
+  "Legal basis": "क़ानूनी आधार",
+  "Data storage": "डेटा कहाँ सहेजा जाता है",
+  "Data sharing": "डेटा साझा करना",
+  "AI-specific disclosure": "AI के बारे में स्पष्ट बात",
+  "Data retention period": "डेटा कितने समय तक रहता है",
+  "Your rights": "आपके अधिकार",
+  "Children’s privacy": "बच्चों की गोपनीयता",
+  "International data transfers": "अंतरराष्ट्रीय डेटा ट्रांसफर",
+  "Security measures": "सुरक्षा के उपाय",
+  Cookies: "कुकीज़",
+  "Grievance officer": "शिकायत अधिकारी",
+  "Changes to this policy": "इस नीति में बदलाव",
+  "Contact us": "संपर्क करें",
+  "In the app": "ऐप में मौजूद",
+  "Partly built": "आधूरा बना है",
+  "Not built": "नहीं बना",
+  Access: "पहुँच",
+  Correction: "सुधार",
+  Deletion: "मिटाना",
+  Portability: "डेटा निकालकर ले जाना",
+  "Withdraw consent": "अनुमति वापस लेना",
+  Company: "कंपनी",
+  "Officer’s name": "अधिकारी का नाम",
+  Email: "ईमेल",
+  "Postal address": "डाक पता",
+  "Sample values": "नमूना मान",
+  "None — the email above is the only line in.":
+    "कोई नहीं — ऊपर दिया ईमेल ही एकमात्र रास्ता है।",
+  "These details are sample values on a demonstration build. Nobody monitors this inbox yet, and no company has been registered behind them, so treat an answer as unlikely rather than slow. Whoever runs a real deployment replaces them by setting NEXT_PUBLIC_LEGAL_COMPANY, _OFFICER, _EMAIL, _ADDRESS and _CITY at build time, and this note then disappears.":
+    "ये मान एक डेमो बिल्ड के नमूना मान हैं। अभी इस इनबॉक्स पर कोई नहीं देखता और इनके पीछे कोई कंपनी रजिस्टर नहीं हुई है, इसलिए यहाँ जवाब देर से नहीं, बल्कि संभवतः कभी नहीं आएगा। जो भी इसका असली डिप्लॉयमेंट चलाएगा, वह बिल्ड के समय NEXT_PUBLIC_LEGAL_COMPANY, _OFFICER, _EMAIL, _ADDRESS और _CITY भरकर इन्हें बदल देगा, और फिर यह नोट अपने आप हट जाएगा।",
+  "The application database": "ऐप का डेटाबेस",
+  "17 October 2026": "17 अक्तूबर 2026",
+
+  // Privacy page — introduction and what is collected
+  "This page says what happens to your data, in plain words.":
+    "यह पेज सरल शब्दों में बताता है कि आपके डेटा का क्या होता है।",
+  "CareerGuide AI is a career-exploration prototype for Indian students from class 6 to 12, and for their parents. It describes the app that actually exists — not a policy template.":
+    "CareerGuide AI कक्षा 6 से 12 तक के भारतीय विद्यार्थियों और उनके अभिभावकों के लिए बना करियर-खोज का एक प्रोटोटाइप है। यह उसी ऐप का हिसाब देता है जो असल में मौजूद है — किसी पॉलिसी टेम्पलेट की नक़ल नहीं।",
+  "Where the app does not yet do something a policy usually promises, this page says that instead of promising it.":
+    "जहाँ ऐप अभी वह नहीं करता जो एक नीति आमतौर पर वादा करती है, यह पेज वादा करने की जगह वही बात साफ़-साफ़ लिखता है।",
+  "The short version: there is no sign-up, the app asks for almost nothing, the microphone is used only while you are actively speaking, and the only outside services that see your words are the ones named below. Anyone sitting at this browser can continue this student’s conversation, so the browser is the account and privacy here depends partly on keeping the device itself private.":
+    "छोटा सार: कोई साइन-अप नहीं, ऐप लगभग कुछ नहीं माँगता, माइक सिर्फ़ तभी इस्तेमाल होता है जब आप ख़ुद बोल रहे हैं, और आपकी बातें देखने वाली बाहरी सेवाएँ बस नीचे लिखी हैं। जो भी इसी ब्राउज़र में बैठा है, वह इस विद्यार्थी की बातचीत जारी रख सकता है — इसलिए यही ब्राउज़र आपका खाता है, और यहाँ गोपनीयता इस बात पर भी निर्भर करती है कि डिवाइस ख़ुद कितना निजी रखा जाए।",
+  "This is one document about one prototype. It is not a legal opinion, and it does not claim to satisfy any law — see the sections on legal basis and on the grievance officer for what is actually missing.":
+    "यह एक ही प्रोटोटाइप के बारे में एक दस्तावेज़ है। यह क़ानूनी सलाह नहीं है, और न ही यह किसी कानून को पूरा करने का दावा करती है — असल में क्या छूट गया है, यह क़ानूनी आधार और शिकायत अधिकारी वाले हिस्सों में देखें।",
+  "When you use the app, the server keeps only:":
+    "जब आप ऐप इस्तेमाल करते हैं, सर्वर बस इतना ही रखता है:",
+  "Your role — student or parent — and a nickname, if you chose to give one.":
+    "आपकी भूमिका — विद्यार्थी या अभिभावक — और एक निकनेम, अगर आपने दिया हो।",
+  "The class or grade you mention in conversation, if you mention one.":
+    "वह कक्षा या ग्रेड, अगर आपने बातचीत में बताया हो।",
+  "The language your account opens in.": "वह भाषा जिसमें आपका खाता खुलता है।",
+  "Consent records, kept per scope: profile, voice, history.":
+    "अनुमति के रिकॉर्ड, हर हिस्से के लिए अलग: प्रोफ़ाइल, आवाज़, इतिहास।",
+  "Your conversations with the guide, and their text.":
+    "मार्गदर्शक के साथ आपकी बातचीत, और उसका टेक्स्ट।",
+  "Your interest answers, your saved careers, and your study plans with their step status.":
+    "आपके रुचि-उत्तर, आपके सेव किए गए करियर, और आपके अध्ययन प्लान यह बताते हुए कि कौन-सा कदम पूरा हुआ।",
+  "Report records, and any parent-link relationship you start with a sharing code.":
+    "रिपोर्ट के रिकॉर्ड, और कोई भी अभिभावक-लिंक जो आप शेयरिंग कोड से शुरू करते हैं।",
+  "Opaque session tokens, so this browser can come back without a password.":
+    "बेनामी सेशन टोकन, ताकि यह ब्राउज़र बिना पासवर्ड वापस आ सके।",
+  "One opaque id from Clerk, and the date it was connected — only on an account whose owner chose to add an email sign-in. No address, no name from Clerk, no password.":
+    "Clerk की एक बेनामी आईडी, और वह तारीख़ जिसको जोड़ी गई — सिर्फ़ उसी खाते पर जिसका मालिक जानबूझकर ईमेल साइन इन जोड़े। न ईमेल पता, न Clerk का दिया नाम, न पासवर्ड।",
+  "And it deliberately does not collect or store:":
+    "और यह जानबूझकर यह सब इकट्ठा नहीं करता और न ही रखता है:",
+  "We do not ask for a phone number or a password, and we do not ask for an email address. The one address that can exist here belongs to an invitation, and it is dealt with under “School and counsellor portals”.":
+    "हम फ़ोन नंबर या पासवर्ड नहीं माँगते, और ईमेल पता भी नहीं माँगते। यहां हो सकने वाला एकमात्र पता किसी आमंत्रण का होता है; उसका वर्णन “स्कूल और काउंसलर पोर्टल” वाले हिस्से में है।",
+  "The optional email sign-in does not change that. It is run by Clerk, and the only thing this app keeps from it is Clerk's own opaque user id — never the address, never a password.":
+    "वैकल्पिक ईमेल साइन इन से इसमें कुछ नहीं बदलता। वह Clerk से चलता है, और इस ऐप को उससे सिर्फ़ Clerk की अपनी बेनामी यूज़र आईडी मिलती है — न कभी पता, न कभी पासवर्ड।",
+  "We do not store your location or your address, and the app never asks which school you go to.":
+    "हम आपका स्थान या पता नहीं सहेजते, और ऐप कभी नहीं पूछता कि आप किस स्कूल में पढ़ते हैं।",
+  "Joining a school's or a counsellor's portal is the only place an email address appears in this product, and it is described under “School and counsellor portals” below.":
+    "स्कूल या काउंसलर के पोर्टल में शामिल होना ही इस सेवा का एकमात्र हिस्सा है जहां ईमेल पता आता है; उसका वर्णन नीचे “स्कूल और काउंसलर पोर्टल” में है।",
+  "We do not ask for bank account numbers or financial documents.":
+    "हम बैंक खाता नंबर या वित्तीय दस्तावेज़ नहीं माँगते।",
+  "We do not take photographs, and there is no camera feature to take them with.":
+    "हम फ़ोटो नहीं खींचते, और ऐप में कैमरा है ही नहीं जिससे फ़ोटो खिंच सके।",
+  "Raw microphone audio is never recorded and never uploaded. Speech-to-text happens inside your browser, using the Web Speech API, and only the resulting text leaves it.":
+    "माइक की सीधी आवाज़ कभी रिकॉर्ड या अपलोड नहीं होती। बोलकर टेक्स्ट बनाना आपके अपने ब्राउज़र में, Web Speech API से होता है, और ब्राउज़र से बाहर सिर्फ़ बना हुआ टेक्स्ट जाता है।",
+  "Nothing records or monitors in the background. The microphone is live only while the student is in an explicit listening state on the call screen.":
+    "पीछे से कुछ भी रिकॉर्ड या निगरानी नहीं होता। माइक तभी चालू रहता है जब विद्यार्थी कॉल स्क्रीन पर ख़ुद सुनने की हालत में हो।",
+  "The application's own code sets one cookie — the session one named under Cookies below — and stores no IP address against your account. The two measurement services described there can set cookies of their own, and only on a public page, only after an answer of Accept or a custom choice that switches them on, and never on a student's or a parent's screen.":
+    "ऐप के अपने कोड से एक कुकी लगती है — नीचे कुकीज़ वाले हिस्से में बताई गई सेशन वाली — और आपके खाते से आपका IP पता नहीं जोड़ा जाता। वहाँ बताई गई दोनों मापने वाली सेवाएँ भी अपनी कुकी ज़रूर डाल सकती हैं, मगर सिर्फ़ सार्वजनिक पेज पर, सिर्फ़ तब जब आपने सब स्वीकार किया हो या अपनी पसंद में इन्हें चालू किया हो, और कभी भी किसी विद्यार्थी या अभिभावक की स्क्रीन पर नहीं।",
+  "If the optional email sign-in is switched on and a student actually uses it, Clerk's own library keeps its session in that browser. That storage is Clerk's, under Clerk's policy, not this app's — and it exists only for the account that chose to connect an email.":
+    "अगर वैकल्पिक ईमेल साइन इन चालू हो और कोई विद्यार्थी सच में उसे इस्तेमाल करे, तो Clerk की अपनी लाइब्रेरी अपना सेशन उसी ब्राउज़र में रखती है। वह भंडार Clerk का है, Clerk की नीति के तहत — इस ऐप का नहीं; और वह सिर्फ़ उसी खाते के लिए होता है जिसने जानबूझकर ईमेल जोड़ा।",
+  "We do not infer anything from your voice — not ability, not personality, not a diagnosis. The voice is only turned into words.":
+    "हम आपकी आवाज़ से कुछ नहीं अनुमान लगाते — न योग्यता, न स्वभाव, न किसी रोग की पहचान। आवाज़ का काम सिर्फ़ शब्दों में बदलना है।",
+
+  // Privacy page — how it is used, legal basis, storage
+  "Your data is used to run the app you are using, and for nothing else. Concretely:":
+    "आपका डेटा बस उसी ऐप को चलाने के लिए इस्तेमाल होता है जिसका आप इस्तेमाल कर रहे हैं, और किसी और काम के लिए नहीं। साफ़-साफ़ कहें तो:",
+  "To reply in the conversation, and to remember what was already said when you come back.":
+    "बातचीत का जवाब देने के लिए, और जब आप वापस आएँ तो यह याद रखने के लिए कि पहले क्या कहा गया था।",
+  "To keep the interest answers, saved careers and study plans in one place for this device.":
+    "रुचि-उत्तर, सेव किए गए करियर और अध्ययन प्लान एक ही डिवाइस पर एक जगह बनाए रखने के लिए।",
+  "To show a student’s own progress to a parent they deliberately shared it with, and to nobody else.":
+    "विद्यार्थी की अपनी प्रगति उसी अभिभावक को दिखाने के लिए, जिससे उसने ख़ुद शेयरिंग कोड से लिंक किया — और किसी और को नहीं।",
+  "To know which consents have been given, so voice and history can be switched off again.":
+    "यह याद रखने के लिए कि किन चीज़ों की अनुमति दी गई है, ताकि आवाज़ और इतिहास कभी भी फिर बंद किए जा सकें।",
+  "There is no advertising, no profiling for someone else’s benefit, and no sale of this data to anyone.":
+    "इसमें कोई विज्ञापन नहीं है, किसी और के फ़ायदे के लिए प्रोफ़ाइल नहीं बनाई जाती, और यह डेटा किसी को बेचा नहीं जाता।",
+  "A policy of this kind usually names a legal basis for each processing step — consent under Article 6(1)(a) of the GDPR, or the grounds set out in India’s Digital Personal Data Protection Act, 2023. This build mentions those laws only to say what it is trying to respect: consent is asked per scope, it can be withdrawn, and the data collected is the minimum the feature needs.":
+    "ऐसी नीति आमतौर पर हर प्रोसेसिंग कदम का क़ानूनी आधार बताती है — GDPR के अनुच्छेद 6(1)(a) के तहत अनुमति, या भारत के डिजिटल पर्सनल डेटा प्रोटेक्शन एक्ट, 2023 में बताए गए आधार। यह बिल्ड उन कानूनों का नाम सिर्फ़ यह बताने के लिए लेता है कि वह किन बातों का ख़्याल रखता है: अनुमति हर हिस्से के लिए अलग माँगी जाती है, उसे वापस ली जा सकती है, और इकट्ठा किया गया डेटा बस उतना ही है जितना फ़ीचर को चाहिए।",
+  "Naming them is not a compliance claim. This prototype has had no qualified legal review, no data protection impact assessment, and no documented lawful basis per processing purpose. If this app is ever to hold real children’s data, that review has to happen first, and this section has to be rewritten by someone qualified to write it.":
+    "उनका नाम लेना पालन का दावा नहीं है। इस प्रोटोटाइप की योग्य क़ानूनी जाँच नहीं हुई है, डेटा प्रोटेक्शन इम्पैक्ट असेसमेंट नहीं हुआ है, और हर उद्देश्य का क़ानूनी आधार कहीं दर्ज नहीं है। अगर यह ऐप कभी असल बच्चों का डेटा रखेगा, तो वह जाँच पहले होनी चाहिए, और यह हिस्सा उसे लिखने के योग्य किसी से दुबारा लिखाना होगा।",
+  "Run locally, the app writes to a SQLite file, careerguide.db, inside the project folder on that machine. The deployed site stores the same records in a Postgres database managed by Vercel. A move to Supabase Postgres has been prepared — the tables exist and are empty — but it has not been switched over, so it is not where your data lives today.":
+    "अपने कंप्यूटर पर चलाने पर ऐप उसी मशीन के प्रोजेक्ट फ़ोल्डर में careerguide.db नाम की SQLite फ़ाइल लिखता है। लाइव साइट वही रिकॉर्ड Vercel द्वारा संचालित Postgres डेटाबेस में रखती है। Supabase Postgres पर जाने की तैयारी हुई है — टेबल बनी हैं पर खाली हैं — पर स्विच नहीं किया गया, इसलिए आज आपका डेटा वहीं नहीं है।",
+  "In every case the database holds exactly the stored items listed above. No audio files are written anywhere, and there is no separate store of conversation transcripts.":
+    "हर हालत में डेटाबेस में बस ऊपर लिखी चीज़ें ही होती हैं, इससे ज़्यादा कुछ नहीं। कहीं कोई ऑडियो फ़ाइल नहीं लिखी जाती, और बातचीत का अलग से कहीं भंडार नहीं है।",
+
+  // Privacy page — sharing and the AI disclosure
+  "This app runs on services that see some of what you type. They are listed here because hiding them would be dishonest.":
+    "यह ऐप ऐसी सेवाओं पर चलता है जो आपकी कुछ बातें देखती हैं। ये यहाँ लिखी गई हैं, क्योंकि इन्हें छिपाना ठीक नहीं होगा।",
+  "The text of the conversation is sent to the model openai/gpt-oss-120b, over Groq’s API, to generate the guide’s reply. Groq sees that text. Your voice never reaches it.":
+    "बातचीत का टेक्स्ट Groq की API से मॉडल openai/gpt-oss-120b तक भेजा जाता है ताकि मार्गदर्शक का जवाब बन सके। Groq वह टेक्स्ट देखता है। आपकी आवाज़ कभी उसके पास नहीं पहुँचती।",
+  "The text of the guide’s reply is sent to be turned into spoken audio. Your voice is never sent — only the reply’s text.":
+    "मार्गदर्शक के जवाब का टेक्स्ट बोलकर सुनाने के लिए ऑडियो बनाने भेजा जाता है। आपकी आवाज़ कभी नहीं भेजी जाती — सिर्फ़ जवाब का टेक्स्ट जाता है।",
+  "Hosts the web app and the API, and runs the database this build stores data in. This build runs on the non-commercial Vercel Hobby plan.":
+    "वेब ऐप और API होस्ट करता है, और जिस डेटाबेस में यह बिल्ड डेटा रखता है वह भी चलाता है। यह बिल्ड ग़ैर-व्यावसायिक Vercel Hobby प्लान पर चलता है।",
+  "It holds exactly the stored items listed above, and nothing else.":
+    "इसमें बस ऊपर लिखी चीज़ें होती हैं, इससे ज़्यादा कुछ नहीं।",
+  "Google Analytics 4 (only after consent, and only if configured)":
+    "Google Analytics 4 (सिर्फ़ अनुमति के बाद, और सिर्फ़ सेट किया गया हो तो)",
+  "On a deployment whose operator has named a GA4 property, and only for a visitor who has accepted analytics, this site sends one page-view hit per public page: the path of that page, its full URL, and the path of the page that linked here. It is configured to send no advertising identifiers, no ad-personalisation signals and no display-features data, and it never loads on a signed-in screen — so nothing a student typed or said can reach it. With no property configured, no request to Google is made by anybody at all.":
+    "जिस तैनाती पर उसे चलाने वाले ने GA4 प्रॉपर्टी नाम से बताई हो, वहाँ और सिर्फ़ उन्हीं आगंतुकों के लिए जिन्होंने एनालिटिक्स स्वीकार किया हो — यह साइट हर सार्वजनिक पेज के लिए एक ही पेज-व्यू भेजती है: उस पेज का पथ, उसका पूरा URL, और जिस पेज से यहाँ लिंक आया था उसका पथ। इसे इस तरह सेट किया गया है कि कोई विज्ञापन पहचान, कोई ad-personalisation सिग्नल और कोई display-features डेटा जाए ही न, और यह लॉग-इन की स्क्रीन पर कभी चलती ही नहीं — इसलिए विद्यार्थी ने जो लिखा या कहा, वह इस तक नहीं पहुँच सकता। जब कोई प्रॉपर्टी सेट नहीं हो, तो Google के पास एक भी अनुरोध नहीं जाता।",
+  "Microsoft Clarity (only after consent, and only if configured)":
+    "Microsoft Clarity (सिर्फ़ अनुमति के बाद, और सिर्फ़ सेट किया गया हो तो)",
+  "Clarity records how a page is used: clicks, scrolling, and a replay of the page's own elements. Because that replay can include text sitting in an input box on the screen, it is switched off entirely on a student's screens, a parent's screens and the entry screens, and loads on public pages only — for a visitor who has accepted, on a deployment where the operator has named a Clarity project. Rejecting, or changing the answer later, stops the recorder and clears the identifiers it left in this browser.":
+    "Clarity यह दर्ज करता है कि पेज का इस्तेमाल कैसे हुआ — क्लिक, स्क्रॉल, और पेज के अपने हिस्सों का रीप्ले। चूँकि उस रीप्ले में स्क्रीन पर किसी खाने में लिखा टेक्स्ट भी आ सकता है, इसे विद्यार्थी की स्क्रीनों, अभिभावक की स्क्रीनों और शुरूआती स्क्रीनों पर पूरी तरह बंद रखा जाता है, और यह सिर्फ़ सार्वजनिक पेजों पर चलती है — उन्हीं आगंतुकों के लिए जिन्होंने स्वीकार किया हो, और उस तैनाती पर जहाँ चलाने वाले ने Clarity प्रोजेक्ट नाम से बताया हो। इनकार करने पर या बाद में जवाब बदलने पर रिकॉर्डिंग थम जाती है और इस ब्राउज़र में छोड़े गए पहचान-निशानी भी हट जाते हैं।",
+  "Clerk (only if email sign-in is switched on)":
+    "Clerk (सिर्फ़ तभी, जब ईमेल साइन इन चालू हो)",
+  "On a deployment where the operator switches on the optional email sign-in, the sign-in itself happens on Clerk's servers, and the email address lives there. This app receives one opaque user id from Clerk and no other detail about the account. On a deployment where it is switched off — which is how this prototype currently runs — Clerk is never contacted at all.":
+    "जिस तैनाती में उसे चलाने वाला वैकल्पिक ईमेल साइन इन चालू कर दे, वहाँ साइन इन स्वयं Clerk के सर्वर पर होता है और ईमेल पता वहीं रहता है। यह ऐप Clerk से सिर्फ़ एक बेनामी यूज़र आईडी लेता है, खाते की और कोई जानकारी नहीं। जिस तैनाती में वह बंद हो — जैसा कि यह प्रोटोटाइप अभी चल रहा है — वहाँ Clerk से कभी ही संपर्क नहीं होता।",
+  "If sending replies to a speech vendor is not acceptable for a child, the app falls back to the browser’s own voice, which sends nothing anywhere.":
+    "अगर किसी बच्चे के जवाब आवाज़-सेवा को भेजना ठीक न लगे, तो ऐप ब्राउज़र की अपनी आवाज़ पर लौट आता है, जो कहीं कुछ नहीं भेजती।",
+  "And data is never shared with:": "और डेटा इन किसी के साथ साझा नहीं होता:",
+  "There is no advertising SDK, no third-party tracker and nothing sold. The two measurement services above are loaded by name, only after an accepted answer, only on public pages, and withdrawing that answer stops them and clears what they stored.":
+    "इसमें न कोई विज्ञापन SDK है, न किसी तीसरी चीज़ की ट्रैकिंग, और कुछ भी बेचा नहीं जाता। ऊपर बताई गई दोनों मापने वाली सेवाएँ नाम के साथ, सिर्फ़ स्वीकार किए जवाब के बाद और सिर्फ़ सार्वजनिक पेजों पर चलती हैं; वह जवाब वापस लेने पर वे बंद हो जाती हैं और उन्होंने इस ब्राउज़र में जो रखा था वह भी हट जाता है।",
+  "A payment provider is integrated in the code and switched off unless the operator puts real keys on the server. When a family does pay, the card is typed only into the provider's own page: this app keeps an order id, a payment id, an amount in paise and a receipt — no card number, no expiry, no CVV, no cardholder name, and none of the provider's payload that carries those. Nothing financial is passed to anyone else, and no institution can pay to change a career suggestion.":
+    "पेमेंट प्रोवाइडर कोड में जोड़ा गया है, और सर्वर पर असली कीज़ डाले बिना वह बंद ही रहता है। जब कोई परिवार सच में भुगतान करता है, तो कार्ड की जानकारी सिर्फ़ प्रोवाइडर की अपनी पेज पर टाइप होती है: यह ऐप केवल ऑर्डर आईडी, पेमेंट आईडी, रकम (पैसे में) और एक रसीद रखता है — कार्ड नंबर, एक्सपायरी, CVV या कार्डधारक का नाम नहीं, और प्रोवाइडर का कोई वह हिस्सा भी नहीं जो ये बातें रखता है। वित्तीय जानकारी और किसी को नहीं दी जाती, और कोई संस्था करियर की सलाह बदलवाने के लिए पैसे नहीं दे सकती।",
+  "We do not sell personal data, and no institution can pay to change a career suggestion — there is no sponsored or ranked recommendation in the code for a payment to influence.":
+    "हम निजी डेटा नहीं बेचते, और कोई संस्था पैसा देकर करियर की सलाह नहीं बदलवा सकती — कोड में कोई प्रायोजित या रैंक वाली सिफ़ारिश है ही नहीं, जिस पर पैसा असर डाले।",
+  "The guide’s replies are generated by a language model, openai/gpt-oss-120b, called through Groq’s API. Career information it gives is for exploration and discussion. It is not guaranteed, and it is not a substitute for a qualified career counsellor, a teacher, a doctor, or the official information published by a board or university. The app does not promise placements, admissions, salaries, or job outcomes, and it does not fabricate institution data.":
+    "मार्गदर्शक के जवाब एक भाषा-मॉडल openai/gpt-oss-120b से बनते हैं, जिसे Groq की API से बुलाया जाता है। करियर की जानकारी यह खोज और बातचीत के लिए देता है। इसकी कोई गारंटी नहीं है, और यह योग्य करियर काउंसलर, टीचर, डॉक्टर या बोर्ड/विश्वविद्यालय द्वारा प्रकाशित आधिकारिक जानकारी का विकल्प नहीं है। ऐप न प्लेसमेंट, न एडमिशन, न वेतन, न नौकरी के नतीजों का वादा करता है, और न ही संस्थानों की ग़लत जानकारी गढ़ता है।",
+  "Your conversation text is sent to the model to answer you in that conversation. It is not used by this app to train a model, and there is no fine-tuning pipeline in this codebase. What the provider itself does with API inputs, and for how long, has not been verified by us — that is the provider’s own policy, and it should be read before this app is used by a real child.":
+    "आपकी बातचीत का टेक्स्ट उसी बातचीत का जवाब बनाने के लिए मॉडल को भेजा जाता है। इस ऐप द्वारा उसे किसी मॉडल की ट्रेनिंग के लिए इस्तेमाल नहीं किया जाता, और इस कोडबेस में कोई फ़ाइन-ट्यूनिंग पाइपलाइन नहीं है। सेवा प्रदाता ख़ुद API इनपुट का क्या करता है और कितने समय तक रखता है, यह हमने जाँचा नहीं है — वह अपनी नीति में बताता है, और असली बच्चे के इस्तेमाल से पहले उसे पढ़ना चाहिए।",
+  "If a conversation mentions abuse or danger, the app answers with a fixed, safety-focused reply that points to a trusted adult or a local service. That reply is produced by the app itself. It is not sent to the AI provider, and it does not depend on what the model chooses to say.":
+    "अगर बातचीत में मार-पीट या ख़तरे की बात आए, तो ऐप एक तय, सुरक्षा पर केंद्रित जवाब देता है जो भरोसेमंद बड़े या नज़दीकी सेवा की ओर ले जाता है। यह जवाब ऐप ख़ुद बनाता है — न वह AI सेवा को भेजा जाता है, न यह मॉडल की मर्ज़ी पर निर्भर करता है।",
+
+  // Privacy page — retention and rights
+  "Honest answer: there is no automatic deletion schedule. A conversation, an interest answer, or a plan stays in the database until the student clears it from Settings, or until the app’s data itself is deleted by whoever runs it. Nothing expires on a clock.":
+    "सीधा जवाब: अपने-आप मिटने का कोई शेड्यूल नहीं है। एक बातचीत, रुचि-उत्तर या प्लान डेटाबेस में तब तक रहता है जब तक विद्यार्थी सेटिंग्स से उसे न मिटा दे, या जब तक ऐप को चलाने वाला ख़ुद सारा डेटा न हटा दे। कोई चीज़ घड़ी के हिसाब से ख़त्म नहीं होती।",
+  "That gap is stated here as a known weakness of this build, not written as a policy that exists. A real retention period — with automatic expiry, and with deletion propagated to any backup — is something this app does not have yet.":
+    "यह कमी यहाँ इस बिल्ड की जानी-पहचानी कमज़ोरी के रूप में लिखी गई है, मौजूदा नीति के रूप में नहीं। एक असली रिटेंशन अवधि — अपने-आप पुराना होकर मिटने के साथ, और बैकअप से भी हटने के साथ — इस ऐप में अभी नहीं है।",
+  "What you can actually do from inside the app today, stated as it is rather than as an aspiration:":
+    "आज ऐप के अंदर से आप असल में क्या कर सकते हैं, वैसे ही लिखा गया है जैसा है, आदर्श के रूप में नहीं:",
+  "Everything stored about you is shown in the app itself — your conversations, saved careers, plans and consents.":
+    "आपके बारे में जो कुछ सहेजा गया है, वह ऐप में ही दिखता है — आपकी बातचीत, सेव किए करियर, प्लान और अनुमतियाँ।",
+  "Your reply language, interface language, class, age, interests and the two background questions are all editable in Settings at any time. The nickname you gave when the account started cannot be changed in the app yet, so today correcting it means asking whoever runs this site through the contact page. Nothing else about you is asked for.":
+    "जवाब की भाषा, इंटरफ़ेस की भाषा, कक्षा, उम्र, रुचियाँ और दो पृष्ठभूमि के सवाल — ये सब सेटिंग्स में कभी भी बदले जा सकते हैं। खाता बनते समय दिया गया निकनेम अभी ऐप के अंदर से बदला नहीं जा सकता, इसलिए आज उसे सुधारने का मतलब है संपर्क पेज से इस साइट को चलाने वाले से कहना। आपके बारे में और कुछ माँगा ही नहीं जाता।",
+  "Settings → Delete account erases an account in one step: the conversations and messages, the assessments with their answers and results, the reports and the PDFs printed from them, the study plans and every item in them, saved careers, the profile, the settings, every consent given and any mail still queued are removed, and every session on every device signs out. The row that was the account is kept holding nothing but the date it was erased on, because a payment ledger and an operator log have to point at something. An erasure is final — the app keeps no copy to restore from — and an operator account cannot erase itself, which is the one case that goes through whoever runs the site. Clearing conversations and Settings → This device → Start over still work on their own, for someone who wants one without the other.":
+    "सेटिंग्स → खाता मिटाएँ एक ही चरण में खाता मिटा देता है: बातचीत और संदेश, आकलन उनके उत्तरों और परिणामों के साथ, रिपोर्टें और उनसे बने PDF, अध्ययन प्लान और उनकी हर मद, सेव किए करियर, प्रोफ़ाइल, सेटिंग्स, दी गई हर अनुमति और भेजे जाने के लिए बाकी ईमेल — सब हटा दिए जाते हैं, और हर डिवाइस का सत्र साइन आउट हो जाता है। खाते की पंक्ति बची रहती है, उसमें केवल मिटाने की तारीख होती है, क्योंकि भुगतान का लेखा और साइट चलाने वाले का लॉग किसी पंक्ति पर टिके रहने चाहिए। मिटाना अंतिम है — ऐप बहाल करने के लिए कोई प्रति नहीं रखता — और साइट चलाने वाले का खाता ख़ुद नहीं मिट सकता; वह एक मामला साइट चलाने वाले से ही सुलझेगा। बातचीत मिटाना और सेटिंग्स → यह डिवाइस → नई शुरुआत अपने दम पर काम करते रहते हैं, ताकि किसी को बस उतना ही चाहिए।",
+  "A finished assessment can be turned into a PDF report and downloaded, so that one file leaves the app with you. There is still no export of everything at once — conversations, saved careers and plans can be read or copied out by hand, but the app cannot yet bundle them into a file.":
+    "पूरा हुआ आकलन PDF रिपोर्ट बनकर डाउनलोड किया जा सकता है, यानी वह एक फ़ाइल ऐप से बाहर आपके साथ आती है। पर एक साथ सब कुछ एक्सपोर्ट करने की सुविधा अभी नहीं है — बातचीत, सेव किए करियर और प्लान पढ़े या ख़ुद चुन-चुन कर कॉपी किए जा सकते हैं, लेकिन ऐप उन्हें अभी एक फ़ाइल में बाँध नहीं सकता।",
+  "Consent for profile, voice and history is stored per scope and can be switched off in Settings; the app then gates that feature instead of carrying on regardless.":
+    "प्रोफ़ाइल, आवाज़ और इतिहास की अनुमति अलग-अलग हिस्सों के लिए सहेजी जाती है और सेटिंग्स से कभी भी बंद की जा सकती है; उसके बाद ऐप वह फ़ीचर रोक देता है, मनमानी जारी नहीं रखता।",
+  "Because there is no email or phone on file, a request to delete or export everything cannot currently be made through a support address tied to your identity — it is made by using the controls above on your own device.":
+    "चूँकि सिस्टम में न आपका ईमेल है न फ़ोन, इसलिए सब कुछ मिटाने या एक्सपोर्ट करने का अनुरोध किसी पहचान-आधारित सपोर्ट पते से अभी नहीं किया जा सकता — यह आपके अपने डिवाइस पर ऊपर दिए गए नियंत्रणों से ही होता है।",
+
+  // Privacy page — children, transfers, security, cookies
+  "The app is written for students from class 6 to 12, so minors are its main users, and their parents are secondary ones. It asks for no personal identifier: no name, no email, no phone, no school, no location. The only thing it learns about a child is what the child chooses to say in conversation, plus their consent choices. The one exception is a school's or a counsellor's portal, which is described above — a child reaches one only by accepting an invitation themselves.":
+    "यह ऐप कक्षा 6 से 12 तक के विद्यार्थियों के लिए बना है, इसलिए मुख्य उपयोगकर्ता नाबालिग हैं और उनके अभिभावक गौण। यह कोई पहचान नहीं माँगता: न नाम, न ईमेल, न फ़ोन, न स्कूल, न स्थान। किसी बच्चे के बारे में इसे बस इतना पता चलता है जितना वह बातचीत में ख़ुद कहना चुने, और उसकी अनुमतियों के चुनाव। एक अपवाद स्कूल या काउंसलर का पोर्टल है, जो ऊपर बताया गया है — कोई बच्चा उस तक सिर्फ़ ख़ुद आमंत्रण स्वीकार करके ही पहुँचता है।",
+  "A parent link is opt-in and one-way: the student generates a sharing code, and only the relationship started with that code exists. A parent cannot browse other students’ data, and changing an id in a request does not open another family’s information — the server checks the token, not the id.":
+    "अभिभावक लिंक स्वेच्छा से और एकतरफ़ा होता है: विद्यार्थी शेयरिंग कोड बनाता है, और बस उसी कोड से शुरू हुआ रिश्ता मौजूद रहता है। कोई अभिभावक दूसरे विद्यार्थियों का डेटा नहीं देख सकता, और अनुरोध में आईडी बदलने से दूसरे परिवार की जानकारी नहीं खुलती — सर्वर टोकन जाँचता है, आईडी नहीं।",
+  "What is not built: there is no mechanism to require or record parental consent separately from the child’s own consent, because the app has no way to verify an adult. Whether that is acceptable for a real deployment of a product used by young children is exactly the question a qualified legal review has to answer, and this page will not answer it by wishing.":
+    "जो नहीं बना है: बच्चे अपनी अनुमति से अलग, अभिभावक की अनुमति ज़रूरी करने या दर्ज करने का कोई तरीक़ा नहीं है, क्योंकि ऐप किसी बड़े की पहचान जाँच नहीं सकता। छोटे बच्चों की चीज़ के असली उपयोग के लिए यह स्वीकार्य है या नहीं, यही वह सवाल है जिसका जवाब योग्य क़ानूनी जाँच को देना है — और यह पेज उसे मनचाहे जवाब से नहीं सुलझाएगा।",
+  "They happen. Groq’s inference endpoints and Google’s Gemini speech service are operated outside India, so the text of a conversation and the text of a reply leave the country they were typed in. Vercel’s platform and its database may also serve and store data from outside India.":
+    "ये होते हैं। Groq के inference एंडपॉइंट और Google की Gemini speech सेवा भारत से बाहर चलाई जाती हैं, इसलिए बातचीत का टेक्स्ट और जवाब का टेक्स्ट उस देश से बाहर जाता है जहाँ वे टाइप किए गए। Vercel का प्लेटफ़ॉर्म और उसका डेटाबेस भी भारत से बाहर बैठकर डेटा दे और रख सकता है।",
+  "There is no documented transfer mechanism, standard contractual clause, or adequacy assessment behind those transfers in this build. If a child in India is to use this app for real, that paperwork is missing and needs to be prepared.":
+    "इस बिल्ड में उन ट्रांसफर के पीछे कोई दर्ज किया गया तंत्र, स्टैंडर्ड कॉन्ट्रैक्चुअल क्लॉज़ या पर्याप्तता आंकलन नहीं है। अगर भारत में कोई बच्चा इसे असल में इस्तेमाल करेगा, तो वह कागज़ी काम छूटा हुआ है और उसे तैयार करना होगा।",
+  "What is in place today:": "आज जो व्यवस्था मौजूद है:",
+  "The session that authorises a child's data is a cookie the browser sends and no page script can read. The server keeps only an unreadable digest of it, so a copy of the database is not a list of ways into an account. Ownership is checked on every data request: a request that names another student’s id is answered with 401 — permission is enforced on the backend, not only hidden in the interface.":
+    "जो सेशन बच्चे के डेटा तक पहुँच की छूट देता है, वह एक कुकी है जिसे ब्राउज़र भेजता है और पेज का कोई स्क्रिप्ट उसे पढ़ नहीं सकता। सर्वर उसका सिर्फ़ पढ़ने-लायक़ न हो ऐसा सार रखता है, इसलिए डेटाबेस की कॉपी खातों में घुसने की सूची नहीं बनती। हर डेटा अनुरोध में मालिकाना हक जाँचा जाता है: जिस अनुरोध में दूसरे विद्यार्थी की आईडी हो, उसे 401 मिलता है — अनुमति बैकएंड पर लागू होती है, सिर्फ़ इंटरफ़ेस में छिपाई नहीं जाती।",
+  "An email sign-in authorises nothing by itself. Clerk proves which email is being used; this app still only serves a child's answers to its own session token, and that token is issued for the account the email was connected from. A Clerk session alone reaches no data.":
+    "ईमेल साइन इन ख़ुद में कोई अधिकार नहीं देता। Clerk इतना सिद्ध करता है कि कौन सा ईमेल इस्तेमाल हो रहा है; यह ऐप तब भी बच्चे के उत्तर सिर्फ़ उसके अपने सेशन टोकन को देता है, और वह टोकन उसी खाते के लिए जारी होता है जिससे ईमेल जोड़ा गया। अकेले Clerk सेशन से कोई डेटा नहीं खुलता।",
+  "Come-back codes are stored as an index plus a salted, iterated hash, not as the code itself.":
+    "कम-बैक कोड ख़ुद नहीं सहेजे जाते; बस एक इंडेक्स और नमक देकर बार-बार हश किए गए मान की सहेजी जाती है।",
+  "Model API keys live only in server-side environment variables. They are never placed in frontend code, in browser storage, or in a Git commit.":
+    "मॉडल की API कुंजियाँ सिर्फ़ सर्वर-साइड एनवायरनमेंट वेरिएबल में रहती हैं। वे कभी frontend कोड, ब्राउज़र स्टोरेज या Git commit में नहीं रखी जातीं।",
+  "Logs record that a call failed and what kind of failure it was. They do not record the contents of a child’s conversation, and no code writes raw audio to disk.":
+    "लॉग सिर्फ़ इतना दर्ज करते हैं कि कोई कॉल फेल हुई और कैसी फेल हुई। वे किसी बच्चे की बातचीत का मक़सद दर्ज नहीं करते, और कोई कोड सीधी आवाज़ डिस्क पर नहीं लिखता।",
+  "No system holding data is ever fully safe, and it would be dishonest to imply otherwise here. What is not in place:":
+    "डेटा रखने वाला कोई भी सिस्टम पूरे तरह सुरक्षित नहीं होता, और यहाँ उलट इशारा करना बेईमानी होगी। जो व्यवस्था नहीं है:",
+  "There has been no penetration test, no third-party security audit, and no bug bounty programme.":
+    "न पेनेट्रेशन टेस्ट हुआ है, न किसी तीसरे पक्ष का सुरक्षा ऑडिट, न कोई बग बाउंटी प्रोग्राम।",
+  "The database is a shared instance on a hobby-tier plan, not a dedicated, separately audited store.":
+    "डेटाबेस hobby-टियर प्लान पर साझा इंस्टेंस है, समर्पित और अलग से ऑडिट किया हुआ भंडार नहीं।",
+  "Anyone sitting at this browser can continue this student’s conversation, because there is no password to stand between them and it.":
+    "इसी ब्राउज़र पर बैठा कोई भी इस विद्यार्थी की बातचीत जारी रख सकता है, क्योंकि बीच में आने वाला कोई पासवर्ड नहीं है।",
+  "Hosting on the Vercel Hobby plan is permitted for non-commercial use only; this build is a prototype.":
+    "Vercel Hobby प्लान पर होस्टिंग की छूट सिर्फ़ ग़ैर-व्यावसायिक इस्तेमाल के लिए है; यह बिल्ड एक प्रोटोटाइप है।",
+  "The code that belongs to this application drops no advertising pixel and carries no cross-site tracker. It writes one cookie, the session one described below, and nothing else. Anything else that appears in this browser comes from one of two places: the storage values listed here, and — on a deployment where analytics has been switched on and then accepted — the two measurement services named under the services that see data.":
+    "इस ऐप का अपना कोड न कोई विज्ञापन पिक्सेल छोड़ता है, न साइट-दर-साइट ट्रैकिंग रखता है। वह एक कुकी लिखता है — नीचे बताई गई सेशन वाली — और उसके सिवाय कुछ नहीं। इस ब्राउज़र में और कुछ दिखता भी है, तो वह दो जगहों में से आता है: यहाँ लिखे स्टोरेज मान, और — उस तैनाती पर जहाँ एनालिटिक्स चालू करके स्वीकार भी किया गया हो — डेटा देखने वाली सेवाओं वाले हिस्से में नाम से लिखी गई दोनों मापने वाली सेवाएँ।",
+  "This site writes one cookie:": "यह साइट एक कुकी लिखती है:",
+  "The session: which student this browser is signed in as. No script on this page can read it, it travels only to the address that wrote it, and it expires by itself — a day after the last request, and never more than a month after the sign-in that made it.":
+    "वह सेशन: यह ब्राउज़र किस विद्यार्थी के रूप में साइन इन है। इस पेज का कोई स्क्रिप्ट उसे पढ़ नहीं सकता, वह सिर्फ़ उस पते तक ही जाती है जिसने उसे लिखा था, और अपने आप ख़त्म हो जाती है — आख़िरी अनुरोध के एक दिन बाद, और उसे बनाने वाले साइन इन के एक महीने से ज़्यादा कभी नहीं।",
+  "Some browsers refuse a cookie set by a request to a different site, and this site's page and its API are two hosts. Safari, and Firefox with strict tracking protection, are the two that do. On those browsers the session is kept in the open tab's memory instead and is gone when the tab closes — the app then recognises the device again on the next visit, and no work is lost.":
+    "कुछ ब्राउज़र किसी और साइट की ओर से अनुरोध पर लगी कुकी को रखने से मना कर देते हैं, और इस साइट का पेज तथा उसका API दो अलग पते हैं। Safari और सख़्त ट्रैकिंग-सुरक्षा वाला Firefox ऐसे ही हैं। उन ब्राउज़रों में सेशन खुली टैब की मेमोरी में रखा जाता है और टैब बंद होते ही हट जाता है — फिर अगली बार आने पर ऐप इसी डिवाइस को पहचान लेता है और कोई काम छूटा नहीं जाता।",
+  "Besides that cookie, it stores three small values in this browser’s own localStorage, which behave like the app’s memory of who you are on this device:":
+    "उस कुकी के अलावा यह ब्राउज़र के अपने localStorage में तीन छोटे मान रखता है, जो ऐप की याद की तरह काम करते हैं कि इस डिवाइस पर आप कौन हैं:",
+  "The random id that says which student this browser belongs to.":
+    "वह यादृच्छिक आईडी, जो बताती है कि यह ब्राउज़र किस विद्यार्थी का है।",
+  "Which language this device’s menus and buttons are in.":
+    "इस डिवाइस के मेन्यू और बटन किस भाषा में हैं।",
+  "The answer given to the storage notice — accepted, rejected, or managed — so the site does not ask again on every visit.":
+    "स्टोरेज नोटिस को दिया गया जवाब — स्वीकार, अस्वीकार या अपना चुनाव — ताकि साइट हर आने पर दोबारा पूछे नहीं।",
+  "Clearing this site’s data in the browser removes the three values above. The session cookie lives against the address that wrote it, which on this deployment is the API’s own host, so clearing it can take one extra step there — and either way the result is the same: the app can no longer find this student’s progress, which is the trade-off the introduction describes.":
+    "ब्राउज़र में इस साइट का डेटा मिटाने पर ऊपर लिखे तीनों मान हट जाते हैं। सेशन वाली कुकी उसी पते के नाम रहती है जिसने उसे लिखा था, और इस तैनाती पर वह पता API का अपना होस्ट है, इसलिए उसे हटाने में वहाँ एक क़दम और लग सकता है — पर किसी भी तरीक़े से नतीजा एक ही है: ऐप उस विद्यार्थी की प्रगति अब ढूँढ नहीं पाएगा, यही वह सौदा है जो परिचय में बताया गया है।",
+  "On a deployment whose operator has named a measurement project, a visitor who accepts analytics also lets two services set cookies of their own on the public pages: Google Analytics and Microsoft Clarity, described under the services that see data. Rejecting — or changing the answer afterwards — stops both and clears their identifiers (_ga, _gid, _ga_<property>, _clck, _clsk) from this browser. On a student's screens, a parent's screens and the entry screens neither service ever loads, whatever answer was given.":
+    "जिस तैनाती पर चलाने वाले ने कोई मापने वाला प्रोजेक्ट नाम से बताया हो, वहाँ एनालिटिक्स स्वीकार करने वाला आगंतुक दो सेवाओं को सार्वजनिक पेजों पर अपनी कुकी डालने की छूट भी दे देता है — Google Analytics और Microsoft Clarity, जिनका वर्णन डेटा देखने वाली सेवाओं वाले हिस्से में है। इनकार करने पर — या बाद में जवाब बदलने पर — दोनों बंद हो जाती हैं और इनकी पहचान (_ga, _gid, _ga_<property>, _clck, _clsk) इस ब्राउज़र से हट जाती हैं। विद्यार्थी की स्क्रीनों, अभिभावक की स्क्रीनों और शुरूआती स्क्रीनों पर ये दोनों कोई भी जवाब दिए जाने पर कभी नहीं चलतीं।",
+  "With no project named, which is how this prototype runs, this site sets no cookie other than its own session cookie and contacts no measurement service at all.":
+    "जब कोई प्रोजेक्ट नाम से नहीं बताया गया — जैसा कि यह प्रोटोटाइप अभी चल रहा है — तो यह साइट अपनी सेशन कुकी के सिवाय कोई कुकी नहीं लगाती और किसी मापने वाली सेवा से संपर्क ही नहीं करती।",
+
+  // Privacy page — grievance officer, changes, contact
+  "A policy for users in India names a grievance officer who can be reached and who answers within a stated period. Those details live in one file in this project's code, and every legal page reads them from there, so a deployment changes them once instead of hunting through four documents.":
+    "भारत के उपयोगकर्ताओं के लिए नीति एक शिकायत अधिकारी का नाम बताती है, जिस तक पहुँचा जा सके और जो तय समय में जवाब दे। वे मान इस प्रोजेक्ट के कोड की एक ही फ़ाइल में हैं, और हर क़ानूनी पेज उन्हें वहीं से पढ़ता है — इसलिए असली तैनाती पर उन्हें चार जगह नहीं, एक बार बदलना होता है।",
+  "This page is updated by editing it and putting the new version online, with the date at the top changed. There is no notification system — no in-app banner, no email list, because there is no email on file. A student who wants to know whether this page changed has to read the date at the top.":
+    "इस पेज को अपडेट करने का मतलब है उसे एडिट करके नया संस्करण ऑनलाइन डालना और ऊपर लिखी तारीख़ बदलना। कोई सूचना-तंत्र नहीं है — न ऐप के अंदर बैनर, न ईमेल लिस्ट, क्योंकि सिस्टम में कोई ईमेल है ही नहीं। यह जानना चाहने वाला विद्यार्थी ऊपर लिखी तारीख़ ख़ुद देखेगा।",
+  "The text of the policy itself is stored with the code, so the version you are reading matches the version of the app you are using. Its history is public in the Git repository this project is kept in.":
+    "नीति का टेक्स्ट कोड के साथ ही सहेजा जाता है, इसलिए आप जो पढ़ रहे हैं वह आपके इस्तेमाल कर रहे ऐप के संस्करण से मेल खाता है। इसका इतिहास इस प्रोजेक्ट की Git रिपॉज़िटरी में सार्वजनिक है।",
+  "The grievance inbox and postal address above are the contact routes for anything about data. There is no separate support desk behind them, and a bug you can describe is usually faster reported where others can see it:":
+    "ऊपर दिया शिकायत इनबॉक्स और डाक पता ही डेटा से जुड़ी हर बात पहुँचाने के रास्ते हैं। इनके पीछे कोई अलग सपोर्ट डेस्क नहीं है, और जिस बग का आप वर्णन कर सकते हैं, वह दूस लोगों के सामने बता देने से आमतौर पर जल्दी ठीक होता है:",
+  "If a student is in danger right now, this app is not the right place to ask for help. In India, Childline is reachable at 1098, and the app itself points a disclosure toward a trusted adult or a local service rather than waiting for anyone to read it.":
+    "अगर कोई विद्यार्थी अभी ख़तरे में है, तो मदद माँगने के लिए यह ऐप सही जगह नहीं है। भारत में चाइल्डलाइन 1098 पर पहुँचा जा सकता है, और ऐप ख़ुद किसी के पढ़ने का इंतज़ार किए बिना ऐसी बात को भरोसेमंद बड़े या नज़दीकी सेवा की ओर ले जाता है।",
+
+  // Terms page
+  "These are the terms for using CareerGuide AI. They are short because the app is a prototype with no payments, no passwords, and no promises it cannot keep.":
+    "CareerGuide AI इस्तेमाल करने की ये शर्तें हैं। ये छोटी हैं, क्योंकि यह ऐप एक प्रोटोटाइप है — न भुगतान, न पासवर्ड, और ऐसी कोई गारंटी नहीं जिसे यह रख न सके।",
+  "What you are using": "आप क्या इस्तेमाल कर रहे हैं",
+  "CareerGuide AI helps a student explore careers through conversation, in Hindi, English or Hinglish. It is a support for a conversation at home — not a replacement for a qualified career counsellor, a teacher, or a doctor.":
+    "CareerGuide AI विद्यार्थी को हिन्दी, अंग्रेज़ी या हिंग्लिश में बातचीत से करियर समझने में मदद करता है। यह घर में बातचीत शुरू करने का सहारा है — योग्य करियर काउंसलर, टीचर या डॉक्टर की जगह नहीं।",
+  "The guide explores; it never judges": "मार्गदर्शक रास्ते दिखाता है, फ़ैसला नहीं सुनाता",
+  "Suggestions are starting points built from what the student said, and the evidence behind them is shown so you can disagree.":
+    "सलाहें उसी बात से बनती हैं जो विद्यार्थी ने कही, और उनके पीछे का आधार भी दिखाया जाता है ताकि आप असहमत हो सकें।",
+  "It is not an aptitude test, an IQ test, or a prediction of the future.":
+    "यह न एप्टिट्यूड टेस्ट है, न IQ टेस्ट, न भविष्य की भविष्यवाणी।",
+  "It will never tell a child a career is impossible because of marks, income, gender, region or disability.":
+    "यह कभी किसी बच्चे को नहीं कहेगा कि मार्क्स, आमदनी, लिंग, इलाके या दिव्यांगता के कारण कोई करियर असंभव है।",
+  "It does not diagnose anything, and nothing about ability is inferred from a child’s voice, accent or speaking speed.":
+    "यह किसी चीज़ की पहचान या निदान नहीं करता, और बच्चे की आवाज़, उच्चारण या बोलने की रफ़्तार से उसकी योग्यता के बारे में कुछ नहीं जोड़ा जाता।",
+  "Everything in the catalogue is sample data": "पूरी सूची नमूना डेटा है",
+  "Careers, learning resources, scholarships and institutions are sample data for exploration. Fees, deadlines, placements and scheme rules change every year — verify them on official websites before relying on anything here. No guaranteed outcome of any kind is offered: not admission, not a job, not a salary.":
+    "करियर, पढ़ने के संसाधन, स्कॉलरशिप और संस्थान सब खोज के लिए नमूना डेटा हैं। फ़ीस, आख़िरी तारीख़, प्लेसमेंट और योजना के नियम हर साल बदलते हैं — यहाँ किसी बात पर भरोसा करने से पहले आधिकारिक साइट पर जाँच लें। किसी तरह की गारंटी नहीं दी जाती: न एडमिशन, न नौकरी, न वेतन।",
+  "No payments, so nothing to refund": "कोई भुगतान नहीं — इसलिए रिफ़ंड का सवाल भी नहीं",
+  "Payments are not implemented at all. There is no subscription, no checkout and nothing to pay — which also means there is nothing to refund. Sponsored institution entries are badged, and payment never influences a career suggestion.":
+    "भुगतान बिल्कुल नहीं बनाया गया है। न सब्सक्रिप्शन, न चेकआउट, न देने के लिए कुछ — इसलिए रिफ़ंड करने को भी कुछ नहीं। प्रायोजित संस्थानों पर बैज लगा होता है, और पैसा कभी करियर की सलाह नहीं बदलता।",
+  "Your progress lives in one browser": "आपकी प्रगति एक ही ब्राउज़र में रहती है",
+  "There is no account to log into. Progress is tied to a random device id kept by this browser. Clearing this site’s data, a private window, or another device starts a new student, and the old progress cannot be recovered. Do not use a shared or public computer, and use Settings → This device → Start over when you are done.":
+    "लॉगिन करने के लिए कोई खाता नहीं है। प्रगति इस ब्राउज़र के एक यादृच्छिक डिवाइस आईडी से जुड़ी होती है। इस साइट का डेटा मिटाने पर, निविंडो में खोलने पर या दूसरा डिवाइस इस्तेमाल करने पर नया विद्यार्थी बनेगा और पुरानी प्रगति वापस नहीं मिलेगी। साझा या पब्लिक कंप्यूटर इस्तेमाल न करें, और काम ख़त्म होने पर सेटिंग्स → यह डिवाइस → नई शुरुआत दबाएँ।",
+  "The optional email sign-in does not change any of that. It connects an email to the account this browser already holds, so the same work can also be opened by signing in; while it is switched off — which is how this prototype runs — there is nothing to log into at all.":
+    "वैकल्पिक ईमेल साइन इन इनमें से कुछ नहीं बदलता। वह ईमेल को उसी खाते से जोड़ता है जो यह ब्राउज़र पहले से रखे है, ताकि वही काम साइन इन करके भी खुल सके; और जब तक वह बंद है — जैसा कि यह प्रोटोटाइप अभी चल रहा है — लॉगिन करने को कुछ है ही नहीं।",
+  "Under 18": "18 साल से कम उम्र",
+  "The first screen asks a grown-up to confirm consent for a user under 18. That confirmation is honest intent, not identity proof — the app has no way to verify who is typing, and it deliberately asks for nothing that could identify anyone.":
+    "पहली स्क्रीन एक बड़े से 18 साल से कम उम्र के उपयोग के लिए अनुमति की पुष्टि माँगती है। वह पुष्टि ईमानदार इरादा है, पहचान का प्रमाण नहीं — ऐप के पास यह जाँचने का कोई तरीक़ा नहीं कि कौन टाइप कर रहा है, और यह जानबूझकर ऐसी कोई चीज़ नहीं माँगता जिससे किसी की पहचान हो जाए।",
+  "Not an emergency service": "यह कोई आपातकालीन सेवा नहीं है",
+  "If a conversation mentions danger, the app answers with a fixed safety message pointing to a trusted adult or a local service. The app itself is not an emergency service, and nobody watches it in real time. In an emergency, contact real services directly.":
+    "अगर बातचीत में ख़तरे की बात आए, तो ऐप एक तय सुरक्षा-संदेश देता है जो भरोसेमंद बड़े या नज़दीकी सेवा की ओर ले जाता है। ऐप ख़ुद आपातकालीन सेवा नहीं है, और इसे कोई लाइव देख नहीं रहा होता। आपातकाल में सीधे असली सेवा से संपर्क करें।",
+  "As it is": "जैसा है, वैसा ही",
+  "This prototype is provided as it is, without warranties of any kind. It may be wrong, it may change without notice, and it may break — the code and the deployed site can move at any time. This build has not had qualified legal review, and moving a real child’s data onto it needs one first.":
+    "यह प्रोटोटाइप जैसा है वैसा ही दिया जा रहा है, किसी तरह की गारंटी के बिना। यह ग़लत हो सकता है, बिना बताए बदल सकता है, और टूट भी सकता है — कोड भी और लाइव साइट भी कभी भी बदल सकती हैं। इस बिल्ड की योग्य क़ानूनी जाँच नहीं हुई है, और किसी असली बच्चे का डेटा डालने से पहले वह ज़रूरी है।",
+
+  // Contact page
+  "How to reach this project, what it does not offer, and what to do if a child is in danger right now.":
+    "इस प्रोजेक्ट से संपर्क कैसे करें, यह क्या नहीं देता, और अगर कोई बच्चा अभी ख़तरे में है तो क्या करें।",
+  "The honest situation": "सीधी बात यही है",
+  "This prototype has no support team. There is no support inbox, and there is no phone number. We are not going to print an address nobody reads or a number nobody answers.":
+    "इस प्रोटोटाइप में सहायता टीम नहीं है। न कोई सपोर्ट इनबॉक्स, न कोई फ़ोन नंबर। हम वह पता नहीं छापेंगे जिसे कोई पढ़ता नहीं, और न वह नंबर जिसे कोई उठाता नहीं।",
+  "There is also no contact form on this page. A form that looks like it works but sends your message nowhere would be a lie, and this project does not allow those.":
+    "इस पेज पर संपर्क फ़ॉर्म भी नहीं है। ऐसा फ़ॉर्म जो चलता दिखे पर आपका संदेश कहीं पहुँचाए नहीं, वह झूठ होगा — और इस प्रोजेक्ट में झूठ नहीं रखा जाता।",
+  "The one real channel": "बस एक ही असली रास्ता",
+  "The only place anyone actually sees a message is the project’s GitHub repository. Open an issue there — bug reports, wrong career information, and privacy concerns included:":
+    "जगह जहाँ कोई संदेश सच में देखा जाता है, वह है प्रोजेक्ट की GitHub रिपॉज़िटरी। वहाँ issue खोलें — खामी की रिपोर्ट, ग़लत करियर जानकारी और गोपनीयता की चिंता, सब:",
+  "Open the GitHub repository": "GitHub रिपॉज़िटरी खोलें",
+  "It is a public repository. Please do not paste a child’s conversation, nickname or device id into an issue — the app’s own data-minimisation rules apply to bug reports too.":
+    "यह एक सार्वजनिक रिपॉज़िटरी है। कृपया किसी बच्चे की बातचीत, निकनेम या डिवाइस आईडी issue में न चिपकाएँ — ऐप के अपने डेटा कम रखने के नियम रिपोर्ट पर भी लागू होते हैं।",
+  "There is no promised response time. A real service would need a support team; this prototype does not have one yet, and saying otherwise would be the first dishonest thing on this page.":
+    "जवाब देने का कोई तय समय नहीं है। असली सेवा को सपोर्ट टीम चाहिए; इस प्रोटोटाइप के पास अभी नहीं है, और कुछ और कहना इस पेज की पहली बेईमानी होगी।",
+  "If a child is in danger right now": "अगर कोई बच्चा अभी ख़तरे में है",
+  "Do not wait on this page or on the app. Talk to a trusted adult immediately. In India, Childline 1098 is a national helpline for child protection. The app’s built-in safety reply points the same way, but the app itself is not monitored and cannot dispatch help.":
+    "इस पेज या ऐप का इंतज़ार न करें। तुरंत किसी भरोसेमंद बड़े से बात करें। भारत में बच्चों की सुरक्षा के लिए चाइल्डलाइन 1098 एक राष्ट्रीय हेल्पलाइन है। ऐप का अपने अंदर का सुरक्षा-जवाब भी उसी ओर ले जाता है, पर ऐप ख़ुद निगरानी में नहीं है और मदद भेज नहीं सकता।",
+  "Before real children use this": "असली बच्चे इस्तेमाल करें, इससे पहले",
+  "Reaching a real audience needs a support channel that is actually answered and a qualified legal review first — this build claims compliance with no law, because it has had no review against any.":
+    "असली लोगों तक पहुँचने से पहले एक ऐसा संपर्क-रास्ता चाहिए जिसका जवाब सच में मिले, और योग्य क़ानूनी जाँच भी — यह बिल्ड किसी कानून के पालन का दावा नहीं करता, क्योंकि किसी कानून से उसकी जाँच नहीं हुई है।",
+
+  // School and counsellor portals — the privacy section and the terms section.
+  "School and counsellor portals": "स्कूल और काउंसलर पोर्टल",
+  "If you accept an invitation to a school's or a counsellor's portal: one membership row for that portal, holding its name, the role the invitation was written for, the date you joined, and your own switch for finished reports.":
+    "अगर आप किसी स्कूल या काउंसलर के पोर्टल का आमंत्रण स्वीकार करते हैं: उस पोर्टल के लिए एक सदस्यता पंक्ति — उसका नाम, वह भूमिका जिसके लिए आमंत्रण लिखा गया था, शामिल होने की तारीख, और पूरी रिपोर्ट दिखाने का आपका अपना स्विच।",
+  "A school or a counsellor can have a portal of its own on this site. Nothing reaches it before a person says yes: a portal is handed no roster, no report and no conversation until the invited account opens its link and accepts, and the acceptance happens on the screen of the person who accepted it.":
+    "इस साइट पर किसी स्कूल या काउंसलर का अपना पोर्टल हो सकता है। किसी व्यक्ति के हाँ कहने से पहले उस तक कुछ नहीं पहुँचता: जब तक आमंत्रित खाता लिंक खोलकर स्वीकार न करे, पोर्टल को न सदस्य-सूची दी जाती है, न रिपोर्ट, न बातचीत — और स्वीकार करना उसी व्यक्ति की अपनी स्क्रीन पर होता है जिसने स्वीकार किया है।",
+  "What one membership holds: the portal's name, the role the invitation was written for — student, parent, counsellor or administrator — the date of joining, and the switch that decides whether finished reports are visible. The address an invitation was sent to is kept only while the place is waiting, and is cleared the moment the person joins. Take the place back and the switch goes with it, rather than waiting to be granted again by accident.":
+    "एक सदस्यता में क्या रहता है: पोर्टल का नाम, वह भूमिका जिसके लिए आमंत्रण लिखा गया था — विद्यार्थी, अभिभावक, काउंसलर या प्रशासक — शामिल होने की तारीख, और वह स्विच जो तय करता है कि पूरी रिपोर्ट दिखेगी या नहीं। जिस पते पर आमंत्रण भेजा गया, वह तब तक रहता है जब तक जगह इंतज़ार में है, और व्यक्ति के जुड़ते ही मिट जाता है। जगह वापस लेने पर वह स्विच भी साथ चला जाता है, ताकि ग़लती से दोबारा चालू न हो जाए।",
+  "What its staff can see: the members of their own portal, the labels they typed themselves, and aggregate counts of questionnaire progress. What no portal screen can reach: a student's conversations with the guide, their unfinished answers, their drafts, and any other portal's data. Small groups are withheld from the counts, so a number handed to an institution cannot point at one child.":
+    "उसके स्टाफ़ क्या देख सकते हैं: अपने ही पोर्टल के सदस्य, वे नाम जो उन्होंने ख़ुद टाइप किए, और प्रश्नावारी की प्रगति की जोड़-संख्या। कोई पोर्टल स्क्रीन इन्हें नहीं देख सकती: विद्यार्थी की गाइड से बातचीत, उसके अधूरे जवाब, उसके ड्राफ़्ट, और किसी दूसरे पोर्टल का डेटा। छोटे समूह गिनती से हटा दिए जाते हैं, इसलिए किसी संस्था को दी गई कोई संख्या एक अकेले बच्चे की ओर इशारा नहीं कर सकती।",
+  "Finished reports are shared by the student's own switch, which is off by default and takes one click to turn off again. A counsellor can send a note in the other direction: a note stays private until they share it, and only a note they shared appears in the student's own list of notes.":
+    "पूरी रिपोर्ट विद्यार्थी के अपने स्विच से शेयर होती हैं, जो डिफ़ॉल्ट में बंद है और एक क्लिक से फिर बंद हो सकता है। काउंसलर दूसरी दिशा में नोट भेज सकते हैं: नोट तब तक निजी रहता है जब तक वे उसे शेयर न करें, और सिर्फ़ शेयर किया हुआ नोट ही विद्यार्थी की अपनी नोट-सूची में दिखता है।",
+  "What this feature does not do: an invitation link is the whole proof of who may take a place. The server does not check that the person opening it is the person the address belongs to, so a letter that reached the wrong inbox, or a link handed on to someone else, can be opened by them — and on a deployment where email is switched off, the link is shown on screen to be passed over by hand. Whoever runs a portal is responsible for how its invitations travel. Whether that is enough for an institution's student data is a question for qualified legal review, and this page does not answer it by asserting.":
+    "यह फ़ीचर क्या नहीं करता: आमंत्रण का लिंक ही इस बात का पूरा प्रमाण है कि जगह कौन ले सकता है। सर्वर यह नहीं जाँचता कि लिंक खोलने वाला वही व्यक्ति है जिसके पते पर पत्र गया था — इसलिए ग़लत इनबॉक्स में पहुँचा पत्र, या किसी और को बढ़ाया गया लिंक, वह भी खोल सकता है; और जहां ईमेल बंद है, वहां लिंक स्क्रीन पर दिखता है ताकि उसे हाथ से दिया जा सके। पोर्टल जिसे चलाता है, उसी की ज़िम्मेदारी है कि उसके आमंत्रण कैसे पहुँचते हैं। किसी संस्था के विद्यार्थी डेटा के लिए यह काफ़ी है या नहीं — यह योग्य क़ानूनी जाँच का सवाल है, और यह पेज दावा करके उसे हल नहीं करता।",
+  "A portal is opened by an adult account, never by a child's. A school's portal is opened by whoever runs this site, because an institution's credibility is not something one request can declare, and a counsellor's practice is opened by the adult whose account will run it. A student's account cannot be handed a staff role, and a link mailed to a child cannot make them their own school's administrator.":
+    "पोर्टल एक बड़े के खाते से खुलता है, कभी किसी बच्चे के खाते से नहीं। स्कूल का पोर्टल वही खोलता है जो यह साइट चलाता है, क्योंकि किसी संस्था की विश्वसनीयता एक अनुरोध से घोषित नहीं की जा सकती; और काउंसलर का प्रैक्टिस उसी बड़े के खाते से खुलता है जो उसे चलाएगा। विद्यार्थी के खाते को स्टाफ़ भूमिका नहीं दी जा सकती, और किसी बच्चे के पते पर भेजा गया लिंक उसे अपना स्कूल प्रशासित करने वाला नहीं बना सकता।",
+  "The limits on a staff role are the point of it. Nobody at a school or a practice may press a student into turning on their sharing switch, may take an invitation link out of their hands, or may read what the portal was never given. A place ends from either side — staff take it back, or the member leaves — and in both cases what that person wrote, asked and earned stays in their own account.":
+    "स्टाफ़ भूमिका की सीमाएँ ही उसका असली मतलब हैं। स्कूल या प्रैक्टिस का कोई भी व्यक्ति किसी विद्यार्थी को उसका शेयरिंग स्विच चालू करने के लिए दबाव नहीं डाल सकता, उसके हाथ से आमंत्रण का लिंक नहीं ले सकता, और वह कुछ ऐसा नहीं पढ़ सकता जो पोर्टल को दिया ही नहीं गया। जगह दोनों ओर से ख़त्म हो सकती है — स्टाफ़ वापस ले ले, या सदस्य छोड़ दे — और दोनों हालत में उस व्यक्ति ने जो लिखा, जो पूछा और जो अर्जित किया, वह उसके अपने खाते में रहता है।",
+  "Tiers are counted, not bought. A portal's seat limit comes from this platform's own list, no card is charged from inside a portal screen, and a bigger tier is arranged with a person. No plan, paid or granted, changes what a student is told about their own career.":
+    "टियर गिने जाते हैं, खरीदे नहीं। पोर्टल की सीट-सीमा इसी प्लेटफ़ॉर्म की अपनी सूची से आती है, पोर्टल की स्क्रीन से कोई कार्ड चार्ज नहीं होता, और बड़ा टियर किसी इंसान से तय होता है। कोई प्लान — पैसा वाला या दिया हुआ — यह नहीं बदलता कि किसी विद्यार्थी को उसके अपने करियर के बारे में क्या बताया जाता है।",
+
+  // Study-abroad directory and its enquiry form — privacy, terms, disclaimer
+  "Study-abroad enquiries": "विदेश में पढ़ाई की पूछताछ",
+  "The study-abroad directory and its enquiry form":
+    "विदेश में पढ़ाई की डायरेक्टरी और उसका पूछताछ फ़ॉर्म",
+  "The study-abroad directory": "विदेश में पढ़ाई की डायरेक्टरी",
+  "A visa, an entry permission, or a right to study in any country.":
+    "वज़ा, किसी देश में प्रवेश की अनुमति, या किसी देश में पढ़ने का अधिकार।",
+  "If you send a study-abroad enquiry: the name, email address and optional phone number you typed, the stage chosen from a short list, which country or service page sent it, what you wrote in the message box, and the fact and time of the contact tick. Its own section below.":
+    "अगर आप विदेश में पढ़ाई के लिए पूछताछ भेजते हैं: आपका लिखा नाम, ईमेल पता और (चाहें तो) फ़ोन नंबर, छोटी सूची से चुना गया चरण, कौन से देश या सेवा पेज से यह भेजा गया, मैसेज बॉक्स में आपने क्या लिखा, और संपर्क की अनुमति का टिक — कि लगा और कब लगा। इसकी पूरी बात नीचे अपने हिस्से में है।",
+  "A student's account never needs a phone number, a password or an email address, and the app never asks for one. The two places a person does type an address are an invitation to a school's or a counsellor's portal, and a study-abroad enquiry — both described in their own sections below.":
+    "किसी विद्यार्थी के खाते को फ़ोन नंबर, पासवर्ड या ईमेल पते की कभी ज़रूरत नहीं होती, और ऐप कभी माँगता भी नहीं। जहां व्यक्ति अपना पता ख़ुद टाइप करता है, सिर्फ़ दो ऐसी जगह हैं — किसी स्कूल या काउंसलर के पोर्टल का आमंत्रण, और विदेश में पढ़ाई की पूछताछ — दोनों की पूरी जानकारी नीचे अपने-अपने हिस्से में है।",
+  "We do not store your location or your address, and the app never asks which school you go to. A study-abroad enquiry can hold a stage chosen from a short list and nothing more precise than that — never a school, never a city.":
+    "हम आपका लोकेशन या पता नहीं रखते, और ऐप कभी नहीं पूछता कि आप किस स्कूल जाते हैं। विदेश में पढ़ाई की पूछताछ में छोटी सूची से चुने गए चरण से ज़्यादा सटीक कुछ नहीं रहता — न स्कूल, न शहर।",
+  "The email service (only if a key is configured)":
+    "ईमेल सेवा (सिर्फ़ अगर सर्वर पर की लगी हो)",
+  "Mail that leaves this app — a portal invitation, a study-abroad acknowledgement, a notice to whoever runs the site — goes out through one transactional email provider, and that provider receives the address it is delivering to and the words of the message. With no key on the server no message is delivered to anyone, and the screens say the mail was not sent instead of pretending it was. Which provider a given deployment uses, and what that provider's own retention policy says, is the operator's configuration and their answer, not this document's.":
+    "इस ऐप से जो भी मेल बाहर जाती है — पोर्टल का आमंत्रण, विदेश में पढ़ाई की पूछताछ की रसीद, या इस साइट को चलाने वाले के लिए सूचना — वह एक ही ट्रांज़ैक्शनल ईमेल सेवा से जाती है, और उस सेवा तक वह पता पहुँचता है जिस पर मेल देय है और मेल के शब्द भी। सर्वर पर की न लगे तो किसी को कोई मेल पहुँचता ही नहीं, और स्क्रीन यही कहती हैं कि मेल नहीं भेजा गया — भेज दिया, ऐसा दिखाती नहीं। किसी ख़ास डिट्चमेंट में कौन सी सेवा इस्तेमाल होती है और उस सेवा का अपना रख-रखाव नियम क्या कहता है — यह उसके संचालक की सेटिंग और उनका जवाब है, इस दस्तावेज़ का नहीं।",
+  "We do not sell personal data, and no institution can pay to change a career suggestion — the guide’s recommendations read the career catalogue and the student’s own answers, and they do not look at money. The separate study-abroad directory has a field for a paid listing, and it is only ever printed as a label on that entry: it cannot move a row up a list, and no listing has been sold on this build.":
+    "हम व्यक्तिगत डेटा नहीं बेचते, और कोई संस्थान पैसा देकर किसी विद्यार्थी का करियर-सुझाव नहीं बदलवा सकता — मार्गदर्शक की सिफ़ारिश करियर कैटलॉग और विद्यार्थी के अपने जवाब देखती है, पैसा नहीं देखती। अलग विदेश-पढ़ाई डायरेक्टरी में शुल्क-वाली लिस्टिंग के लिए एक फ़ील्ड ज़रूर है, पर वह प्रविष्टि पर सिर्फ़ एक लेबल की तरह छपता है: वह किसी पंक्ति को सूची में ऊपर नहीं ले जा सकता, और इस बिल्ड में आज तक कोई लिस्टिंग बेची नहीं गई है।",
+  "Honest answer: there is no automatic deletion schedule. A conversation, an interest answer, a plan, or a study-abroad enquiry stays in the database until the person who made it is dealt with by hand — the student clearing their own data from Settings, or an operator deleting the enquiry — or until the app’s data itself is deleted by whoever runs it. Nothing expires on a clock.":
+    "ईमानदार जवाब: कोई अपने-आप मिटने का शेड्यूल नहीं है। एक बातचीत, रुचि का एक जवाब, एक प्लान, या विदेश में पढ़ाई की एक पूछताछ डेटाबेस में तब तक रहती है जब तक उसका काम हाथ से न हो — विद्यार्थी Settings से अपना डेटा ख़ुद मिटाए, या संचालक पूछताछ मिटा दे — या जब तक यह साइट चलाने वाला ऐप का डेटा ही न मिटा दे। कुछ भी किसी घड़ी पर ख़त्म नहीं होता।",
+  "Because there is no email or phone on a student’s account, a request to delete or export everything cannot currently be made through a support address tied to your identity — it is made by using the controls above on your own device. A person who sent a study-abroad enquiry did leave an address, and asking for it to be removed is made through the contact page; the operator can delete that row, and there is no button for the sender to do it themselves yet.":
+    "क्योंकि विद्यार्थी के खाते पर कोई ईमेल या फ़ोन नहीं होता, सब कुछ मिटाने या बाहर निकालने का अनुरोध फ़िलहाल आपकी पहचान से जुड़े किसी सहायता पते से नहीं किया जा सकता — वह आपके अपने डिवाइस पर ऊपर दिए नियंत्रणों से किया जाता है। जो व्यक्ति विदेश में पढ़ाई की पूछताछ भेजता है, वह अपना पता यहाँ छोड़ जाता है, और अपना पता हटाने का अनुरोध संपर्क पेज से किया जाता है; संचालक वह पंक्ति मिटा सकता है, पर भेजने वाले के लिए इसे ख़ुद करने का बटन अभी नहीं है।",
+  "The app is written for students from class 6 to 12, so minors are its main users, and their parents are secondary ones. It asks for no personal identifier: no name, no email, no phone, no school, no location. The only thing it learns about a child is what the child chooses to say in conversation, plus their consent choices. Two things sit outside that rule, and both are described above: a school's or a counsellor's portal, where a child becomes a member only by accepting an invitation themselves, and the study-abroad enquiry form, which does ask for a name and an address.":
+    "यह ऐप कक्षा 6 से 12 के विद्यार्थियों के लिए लिखा गया है, इसलिए इसके मुख्य उपयोग नाबालिग हैं और उनके माता-पिता गौण। इसमें कोई व्यक्तिगत पहचान-कर्ता नहीं माँगा जाता: न नाम, न ईमेल, न फ़ोन, न स्कूल, न लोकेशन। किसी बच्चे के बारे में इसका एकमात्र ज्ञान वही है जो बच्चा बातचीत में कहना चाहे, और उसकी अनुमतियों के चुनाव। दो चीज़ें इस नियम के बाहर हैं और दोनों ऊपर बताई जा चुकी हैं: किसी स्कूल या काउंसलर का पोर्टल, जिसमें बच्चा सिर्फ़ अपना आमंत्रण ख़ुद स्वीकारकर सदस्य बनता है; और विदेश में पढ़ाई का पूछताछ फ़ॉर्म, जो नाम और पता ज़रूर माँगता है।",
+  "That enquiry form is the weaker of the two, and it is stated as a weakness: it asks no age question and has no way to tell whether the person typing is the student or a parent, and its only gate is the tick from whoever did type. A family should treat it as the adult's form — the one a parent or guardian sends about a child's plans — until a real age or guardian check exists here.":
+    "उन दोनों में पूछताछ फ़ॉर्म कमज़ोर है, और इसे कमज़ोरी के रूप में ही लिखा गया है: इसमें उम्र का कोई सवाल नहीं है, और यह बता नहीं सकता कि टाइप करने वाला विद्यार्थी है या उसका अभिभावक; इसका एकमात्र दरवाज़ा वही टिक है जो टाइप करने वाले ने लगाया। परिवार को इसे बड़ों वाला फ़ॉर्म मानना चाहिए — यानी जो फ़ॉर्म बच्चे की योजना के बारे में माता-पिता या अभिभावक भेजें — जब तक यहाँ उम्र या अभिभावक की सच्ची जाँच नहीं बनती।",
+  "The study-abroad pages let a family ask for a first conversation about going abroad to study. That form is the one place in this app where a person types a name and an email address and the site keeps them. What one enquiry row holds: the name and the address typed, a phone number only if it was offered, the stage chosen from a short list, which country or service page sent the form, what was written in the message box, and the fact and the time of the contact tick. Then, kept apart from all of that, the operator’s own status label, note and timestamp.":
+    "विदेश में पढ़ाई के पेज किसी परिवार को विदेश जाकर पढ़ने की पहली बातचीत माँगने देते हैं। यह फ़ॉर्म इस ऐप की वही एक जगह है जहां व्यक्ति अपना नाम और ईमेल पता टाइप करता है और साइट उसे रख लेती है। एक पूछताछ पंक्ति में क्या रहता है: लिखा हुआ नाम और पता, फ़ोन नंबर सिर्फ़ अगर दिया गया हो, छोटी सूची से चुना गया चरण, कौन से देश या सेवा पेज से फ़ॉर्म भेजा गया, मैसेज बॉक्स में क्या लिखा गया, और संपर्क की अनुमति का टिक — कि लगा और कब लगा। इन सब से अलग रखी जाती है संचालक की अपनी स्थिति-लेबल, नोट और उसकी तारीख।",
+  "Two things make this row different from everything else here. It carries no account: there is deliberately no user id on it, so an enquiry about a paid service cannot be joined to a child’s conversation record, and whoever reads the enquiries queue sees a name, an address and what that person chose to type — not their answers, plans, reports or history. And the tick is stored rather than assumed: a row cannot exist unless “You may contact me at this address about this enquiry” was ticked, and the time of that tick is the only record there is of who agreed to be contacted.":
+    "दो बातें इसे यहाँ के बाक़ी सब से अलग बनाती हैं। इससे कोई खाता जुड़ा नहीं है: इस पर जान-बूझकर कोई user id नहीं है, इसलिए किसी शुल्क-वाली सेवा के बारे में पूछी गई बात किसी बच्चे की बातचीत के रिकॉर्ड से जोड़ी नहीं जा सकती — और पूछताछ की सूची पढ़ने वाला सिर्फ़ नाम, पता और वही देखता है जो उस व्यक्ति ने ख़ुद टाइप किया; उसके जवाब, प्लान, रिपोर्ट या इतिहास नहीं। और टिक मान लिया नहीं जाता, उसे सहेजा जाता है: “इस पूछताछ के बारे में आप मुझे इस पते पर संपर्क कर सकते हैं” के बिना पंक्ति बन ही नहीं सकती, और उस टिक का समय ही इस बात का एकमात्र रिकॉर्ड है कि संपर्क की अनुमति किसने दी थी।",
+  "Where it goes. The enquiry is stored on this app’s own database, and it is announced to two mailboxes and to nobody else: the address set on the server by whoever runs this site, and — where a mail service is configured — a copy back to the sender so they know the form actually arrived. There is no mailing list, no import into a CRM, no advertising audience built from it, and no institution that receives it. An address is never written into a log line: the log records the row’s id. One technical note, because it is the sort of thing a policy tends to skip — this form has no session in front of it, so the guard that limits how many enquiries arrive per hour counts the sender’s own network address. That count lives in the throttle store while the window lasts, and it is not written into the enquiry row or attached to a student.":
+    "यह कहाँ जाता है। पूछताछ इस ऐप के अपने डेटाबेस में सहेजी जाती है, और इसकी सूचना दो इनबॉक्स के सिवाय किसी और को नहीं जाती: सर्वर पर वह पता जो इस साइट को चलाने वाला ने ख़ुद डाला है, और — जहां ईमेल सेवा लगी हो — भेजने वाले को एक प्रति ताकि उसे पता चले कि उसका फ़ॉर्म सच में पहुँचा। इससे कोई मेलिंग-लिस्ट नहीं बनती, इसे किसी CRM में नहीं डाला जाता, इससे कोई विज्ञापन-ऑडियंस नहीं बनाई जाती, और किसी संस्थान को यह नहीं दी जाती। पता कभी लॉग लाइन में नहीं लिखा जाता — लॉग में सिर्फ़ पंक्ति का id दर्ज होता है। एक तक़नीकी बात, क्योंकि ऐसी बातें नीतियों में अक्सर छूट जाती हैं: इस फ़ॉर्म के सामने कोई सत्र (session) नहीं होता, इसलिए प्रति घंटे कितनी पूछताछ आ सकती है यह गिनती भेजने वाले के अपने नेटवर्क पते से की जाती है। वह गिनती तब तक थ्रॉटल-स्टोर में रहती है जब तक वह समय-सीमा है, पूछताछ की पंक्ति में नहीं लिखी जाती और किसी विद्यार्थी से नहीं जोड़ी जाती।",
+  "How long. The same honest answer as the rest of this page: no clock deletes these rows. An enquiry stays until an operator deletes it from the enquiries screen, which is real and is the only way one leaves today. A person who asked to be removed has no self-service button — that request goes to the contact page and to whoever runs this site, and they can also answer from the row. A retention period for enquiries, and a way for a sender to take their own address back out, are not built.":
+    "कितने दिन तक। यहाँ भी वही ईमानदार जवाब है जो इस पेज के बाक़ी हिस्से में: कोई घड़ी इन पंक्तियों को मिटाती नहीं। एक पूछताछ तब तक रहती है जब तक संचालक उसे अपनी पूछताछ स्क्रीन से न मिटा दे — और आज इसका वही एक रास्ता है। जो अपना पता हटवाना चाहे, उसके लिए कोई अपना बटन नहीं है — वह अनुरोध संपर्क पेज से इस साइट को चलाने वाले के पास जाता है, और वे उस पंक्ति को देखकर ही जवाब दे सकते हैं। पूछताछ की रख-रखाव अवधि, और भेजने वाले का अपना पता ख़ुद वापस हटाने का तरीक़ा — ये बने नहीं हैं।",
+  "The directory itself, because it holds no data about you and still needs saying. A country, university or service page describes places this project has not visited and figures this project has not checked. Every seeded institution is stored as not verified, with its fee, intakes, deadlines and application links left empty rather than filled with a plausible number. A blank on one of those pages means nobody has read that value off the institution’s own website yet — it does not mean a course is free, and it does not mean there is no deadline. Nothing on these pages is an application, an admission, an offer of a place, a visa service or advice about immigration law, and being listed is not a partnership: no institution pays for its place, a paid listing exists in the code only as a label that cannot reorder a list, and none has been sold. Whether keeping a consultation enquiry in this way is lawful for a given country or a given child is a question for qualified legal review, and this page describes what happens instead of claiming permission.":
+    "डायरेक्टरी के बारे में, क्योंकि उसमें आपके बारे में कोई डेटा नहीं है फिर भी यह कहना ज़रूरी है। किसी देश, विश्वविद्यालय या सेवा का पेज ऐसी जगहों और ऐसी रक़मों के बारे में बताता है जिन्हें इस प्रोजेक्ट ने न देखा है, न जाँचा है। यहाँ रखा गया हर संस्थान “सत्यापित नहीं” के रूप में रखा है, और उसकी फ़ीस, intake, डेडलाइन व आवेदन लिंक खाली छोड़े गए हैं — कोई मानस-नुमा आँकड़ा भरकर नहीं लिखा गया। उस पेज पर दिख रहा खाली घर का मतलब है कि किसी ने वह बात उस संस्थान की अपनी वेबसाइट से अभी पढ़ी नहीं — इसका यह मतलब नहीं कि कोई कोर्स मुफ़्त है, और न यह कि कोई डेडलाइन ही नहीं है। इन पेजों पर दिखने वाला कुछ भी आवेदन नहीं, प्रवेश नहीं, सीट की पेशकश नहीं, वीज़ा की सेवा नहीं और परवासी क़ानून की सलाह नहीं; और सूची में दिखना कोई साझेदारी नहीं: कोई संस्थान अपनी जगह के लिए पैसा नहीं देता, शुल्क-वाली लिस्टिंग कोड में सिर्फ़ एक लेबल की तरह है जो सूची का क्रम नहीं बदल सकता, और अब तक कोई लिस्टिंग बेची नहीं गई। किसी ख़ास देश या किसी ख़ास बच्चे के लिए पूछताछ इस तरह रखना क़ानूनी रूप से स्वीकार्य है या नहीं — यह योग्य क़ानूनी जाँच का सवाल है, और यह पेज अनुमति का दावा करने के बजाय बस बताता है कि असल में क्या होता है।",
+  "The study-abroad pages are a directory and a way to ask a question. They are not an application service. This app does not apply to a university on anyone’s behalf, does not hold a student’s documents, does not issue or advise on an offer of a place, and is not a registered immigration or visa adviser. Nothing written on those pages is advice about immigration law, and a country page is a description, not an eligibility rule.":
+    "विदेश में पढ़ाई के पेज एक डायरेक्टरी हैं और एक सवाल पूछने का ज़रिया। ये आवेदन करने की सेवा नहीं हैं। यह ऐप किसी की ओर से किसी विश्वविद्यालय में आवेदन नहीं करता, किसी विद्यार्थी के दस्तावेज़ अपने पास नहीं रखता, किसी सीट की पेशकश नहीं देता और न इसके बारे में सलाह देता है, और यह कोई पंजीकृत परवासी या वीज़ा सलाहकार नहीं है। उन पेजों पर लिखा गया कुछ भी किसी देश के परवासी क़ानून की सलाह नहीं है, और किसी देश का पेज एक विवरण है — पात्रता का नियम नहीं।",
+  "Sending the enquiry form asks for a conversation. It creates one row on this site, holding what the sender typed and the time they agreed to be contacted. It is not a contract, an acceptance, a booking or an offer of service, and nothing is owed to the sender because it was sent; what comes back is whatever whoever runs this site chooses to say. The operator can mark that row contacted or closed, and can delete it. The sender has no button of their own for either yet, and asks through the contact page.":
+    "पूछताछ फ़ॉर्म भेजना एक बातचीत माँगना है। इससे इस साइट पर एक ही पंक्ति बनती है, जिसमें भेजने वाले का लिखा हुआ और वह समय रहता है जब उसने संपर्क की अनुमति दी। यह कोई अनुबंध नहीं, स्वीकृति नहीं, बुकिंग नहीं और सेवा की पेशकश नहीं — और इसे भेजने के कारण भेजने वाले को कुछ देना ज़रूरी नहीं होता; जो वापस आता है वही होता है जो इस साइट को चलाने वाला कहना चाहे। संचालक उस पंक्ति को “संपर्क किया” या “बंद” कर सकता है, और उसे मिटा भी सकता है। भेजने वाले के पास इन दोनों के लिए अभी अपना बटन नहीं है — उसे संपर्क पेज से अनुरोध करना है।",
+  "The facts on those pages are the weakest part of them, and this clause says so plainly. Every institution here was stored as not verified: its fee, its intakes, its deadlines and its application links are blank until somebody reads them off that institution’s own website, and an entry can later be filled in with its source and the date it was true. A blank is not a zero and not a no — it means nobody has checked. Where a number is shown, it was true of one page on one date, not of the year you are planning for. Every fee, deadline, requirement and visa rule has to be confirmed with the institution and the official bodies themselves before a family spends anything on it.":
+    "उन पेजों के तथ्य ही उनका सबसे कमज़ोर हिस्सा हैं, और यह शर्त उसे साफ़-साफ़ कहती है। यहाँ का हर संस्थान “सत्यापित नहीं” के रूप में रखा गया है: उसकी फ़ीस, intake, डेडलाइन और आवेदन लिंक तब तक खाली हैं जब तक कोई उन्हें उस संस्थान की अपनी वेबसाइट से न पढ़ ले; बाद में कोई प्रविष्टि उसके स्रोत और उस तारीख के साथ भरी जा सकती है जब वह सही थी। खाली जगह शून्य नहीं है और “नहीं” भी नहीं — इसका मतलब है कि किसी ने जाँचा नहीं। जहां कोई आँकड़ा दिखता है, वह एक विशेष पेज पर एक विशेष तारीख को सही था — आप जिस साल की योजना बना रहे हैं, उसके लिए नहीं। किसी परिवार के लिए कोई खर्च करने से पहले हर फ़ीस, डेडलाइन, शर्त और वीज़ा नियम उस संस्थान और आधिकारिक निकायों से ख़ुद पक्का करना ज़रूरी है।",
+  "No institution pays for its place in this directory, and none has been paid. A listing is not a partnership, an endorsement or an agent agreement, and a link out to an institution is only a link out. The entry does carry one field for a paid listing; it exists so that a listing which ever becomes paid has to say so on the page, and it cannot move a row up a list. Where the guide suggests a career or a stream, it does not read this directory at all.":
+    "इस डायरेक्टरी में अपनी जगह के लिए कोई संस्थान पैसा नहीं देता, और अब तक किसी को कुछ दिया नहीं गया। कोई लिस्टिंग साझेदारी, समर्थन या एजेंट अनुबंध नहीं है, और किसी संस्थान की ओर जाने वाला लिंक सिर्फ़ एक लिंक है। प्रविष्टि में शुल्क-वाली लिस्टिंग के लिए एक फ़ील्ड ज़रूर है; वह इसलिए मौजूद है कि कभी कोई लिस्टिंग पैसे वाली बने तो पेज पर उसे ऐसा दिखाना पड़े, और वह किसी पंक्ति को सूची में ऊपर नहीं ले जा सकती। जब मार्गदर्शक कोई करियर या स्ट्रीम बताता है, तब वह यह डायरेक्टरी पढ़ता ही नहीं।",
+  "The country, university and service pages under study abroad are the least verified part of this app, and they are marked that way in the data rather than in a footnote. Every institution was stored with verified set to false, and with its fee, intakes, deadlines and application links left empty. No number was guessed to make a page look finished, and a blank field is shown as a gap instead of as a zero.":
+    "विदेश में पढ़ाई के अंतर्गत देश, विश्वविद्यालय और सेवा वाले पेज इस ऐप का सबसे कम जाँचा हुआ हिस्सा हैं, और यह बात किसी तलपटी में नहीं, डेटा में ही दर्ज है। यहाँ का हर संस्थान verified = false के साथ रखा गया है, और उसकी फ़ीस, intake, डेडलाइन व आवेदन लिंक खाली हैं। पेज भरा हुआ दिखे इसलिए कोई आँकड़ा गढ़ा नहीं गया, और खाली फ़ील्ड को शून्य दिखाकर नहीं भरा गया।",
+  "So read a blank as what it is: nobody has checked. It does not mean a course costs nothing, that a deadline has passed, or that an institution takes no international students. Where a field does hold a value, that value was copied off one page on one date and it is that page’s claim, not this app’s.":
+    "इसलिए खाली जगह को वही समझिए जो वह है: किसी ने जाँचा नहीं है। इसका मतलब यह नहीं कि किसी कोर्स की फ़ीस कुछ नहीं है, यह नहीं कि डेडलाइन बीत गई, और यह भी नहीं कि कोई संस्थान विदेशी विद्यार्थी नहीं लेता। जहां कोई फ़ील्ड में मान दिखता है, वह एक विशेष पेज से एक विशेष तारीख को लिया गया है — और वह उस पेज का दावा है, इस ऐप का नहीं।",
+  "This app is not a study-abroad agency, a recruitment agent for any institution, or a registered immigration adviser. It does not apply to a university for anyone, does not hold documents, cannot obtain an offer of a place, and gives no advice about visas, immigration or the law of any country. An enquiry sent through these pages asks for a conversation about plans; it is not an application, and no outcome is promised by sending it.":
+    "यह ऐप विदेश में पढ़ाई की एजेंसी नहीं है, किसी संस्थान की भर्ती एजेंट नहीं है, और न कोई पंजीकृत परवासी सलाहकार। यह किसी के लिए किसी विश्वविद्यालय में आवेदन नहीं करता, दस्तावेज़ अपने पास नहीं रखता, किसी सीट की पेशकश नहीं ला सकता, और वीज़ा, परवास या किसी देश के क़ानून के बारे में सलाह नहीं देता। इन पेजों से भेजी गई पूछताछ योजना के बारे में बातचीत माँगती है; यह आवेदन नहीं है, और इसे भेजने से कोई नतीजा तय नहीं होता।",
+  "The two things to do before spending money on any of this are the two nobody can do for you: read the institution’s own website, and read the official visa and exam bodies for the country concerned. A page here is a starting point for that reading, never a replacement for it.":
+    "इस सब पर पैसा ख़र्च करने से पहले दो काम आपको ख़ुद करने हैं, और वे कोई आपके लिए नहीं कर सकता: संस्थान की अपनी वेबसाइट पढ़िए, और संबंधित देश के आधिकारिक वीज़ा व परीक्षा निकाय पढ़िए। यहाँ का कोई पेज उस पढ़ाई की शुरुआत है, उसका विकल्प कभी नहीं।",
+};

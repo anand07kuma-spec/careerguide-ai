@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
@@ -67,7 +67,10 @@ def saved(
 
 
 @router.get("/{slug}", response_model=CareerOut)
-def career_detail(slug: str, db: Session = Depends(get_db)) -> CareerOut:
+def career_detail(
+    slug: str = Path(max_length=80, pattern=r"^[a-z0-9-]+$"),
+    db: Session = Depends(get_db),
+) -> CareerOut:
     career = db.scalars(select(Career).where(Career.slug == slug)).first()
     if career is None:
         raise HTTPException(status_code=404, detail="We could not find that career.")

@@ -24,6 +24,7 @@ import { Toggle } from "@/components/ui/field";
 import { useToast } from "@/components/ui/toast";
 import { api, isOffline } from "@/lib/api";
 import { useSession } from "@/lib/session";
+import { useT, useTf } from "@/lib/i18n";
 import { classLabel, cn } from "@/lib/utils";
 import { THEME_LABELS, type ChatMessage, type ConversationInfo, type ThemeKey } from "@/lib/types";
 import {
@@ -53,6 +54,8 @@ const FACT_NOTICES: Record<string, string> = {
 export default function ChatPage() {
   const { settings, user, reload } = useSession();
   const { toast } = useToast();
+  const t = useT();
+  const tf = useTf();
   const player = useAudioPlayer();
 
   const [session, setSession] = useState<ConversationInfo | null>(null);
@@ -135,11 +138,11 @@ export default function ChatPage() {
         .catch((error: unknown) => {
           if (isOffline(error)) setBootOffline(true);
           setBootError(
-            error instanceof Error ? error.message : "Could not open the conversation.",
+            error instanceof Error ? error.message : t("Could not open the conversation."),
           );
         })
         .finally(() => setBooting(false)),
-    [openSession, spoken],
+    [openSession, spoken, t],
   );
 
   // The screen already renders as "booting", so mounting only fires the request;
@@ -196,9 +199,17 @@ export default function ChatPage() {
         // Anything this turn revealed about the student is already saved on the
         // server. Saying so here keeps the storage visible instead of silent.
         const saved: string[] = [];
-        for (const [key, value] of Object.entries(answer.profile_updates ?? {})) {
+        const updates = answer.profile_updates ?? {};
+        for (const [key, value] of Object.entries(updates)) {
+          // A spoken age fills in two columns — the number and the band the server
+          // derived from it. One fact was said, so one chip says it back.
+          if (key === "age_range" && "age" in updates) continue;
           const label =
-            key === "class_level" ? classLabel(String(value)) : FACT_NOTICES[key] ?? key;
+            key === "class_level"
+              ? classLabel(String(value))
+              : key === "age"
+                ? tf("{years} years old", { years: Number(value) })
+                : t(FACT_NOTICES[key] ?? key);
           if (label) saved.push(label);
         }
         setMessages((current) => [
@@ -222,19 +233,23 @@ export default function ChatPage() {
           // The server's text-to-speech failed; the browser's own voice is a
           // different sound, so the reply still says it is labelled as such.
           if (answer.audio_error) {
-            setNotice(`${answer.audio_error} Your browser's own voice is reading this reply.`);
+            setNotice(
+              tf("{failed} Your browser's own voice is reading this reply.", {
+                failed: answer.audio_error,
+              }),
+            );
             speakWithBrowser(answer.reply.content, answer.language || language);
           }
         }
       } catch (error) {
         setSendError(
-          error instanceof Error ? error.message : "The guide could not answer just now.",
+          error instanceof Error ? error.message : t("The guide could not answer just now."),
         );
       } finally {
         setSending(false);
       }
     },
-    [dictation, language, player, reload, sending, session, speakOn],
+    [dictation, language, player, reload, sending, session, speakOn, t, tf],
   );
 
   const canSend = Boolean(session) && draft.trim().length > 0 && !sending;
@@ -250,17 +265,17 @@ export default function ChatPage() {
         } catch {
           // The new chat still opens; only the old thread's status is unsure, and
           // that much is worth saying rather than swallowing.
-          toast("The previous chat may still be listed as open on the Journey page.", "info");
+          toast(t("The previous chat may still be listed as open on the Journey page."), "info");
         }
       }
       const fresh = await api.startConversation("chat", spoken);
       await openSession(fresh, []);
     } catch (error) {
-      setBootError(error instanceof Error ? error.message : "Could not start a new chat.");
+      setBootError(error instanceof Error ? error.message : t("Could not start a new chat."));
     } finally {
       setBooting(false);
     }
-  }, [openSession, player, session, spoken, toast]);
+  }, [openSession, player, session, spoken, t, toast]);
 
   const endConversation = useCallback(async () => {
     if (!session) return;
@@ -268,31 +283,34 @@ export default function ChatPage() {
     cancelBrowserTts();
     try {
       await api.endConversation(session.id);
-      toast("Conversation closed. Your progress is on the Journey page.", "success");
+      toast(t("Conversation closed. Your progress is on the Journey page."), "success");
       setSession(null);
       setMessages([]);
       setBooting(false);
     } catch (error) {
-      toast(error instanceof Error ? error.message : "Could not close the conversation.", "error");
+      toast(error instanceof Error ? error.message : t("Could not close the conversation."), "error");
     }
-  }, [player, session, toast]);
+  }, [player, session, t, toast]);
 
   const clearMessages = useCallback(async () => {
     if (!session) return;
     try {
       await api.clearConversation(session.id);
       setMessages([]);
-      setNotice("Earlier messages were deleted from the server.");
-      toast("Messages deleted.", "success");
+      setNotice(t("Earlier messages were deleted from the server."));
+      toast(t("Messages deleted."), "success");
     } catch (error) {
-      toast(error instanceof Error ? error.message : "Could not delete the messages.", "error");
+      toast(error instanceof Error ? error.message : t("Could not delete the messages."), "error");
     }
-  }, [session, toast]);
+  }, [session, t, toast]);
 
   const stageLine = useMemo(() => {
     if (!session || session.stage <= 1) return null;
-    return `Guide is at step ${Math.min(session.stage, GUIDE_STAGES)} of ${GUIDE_STAGES} — it simply asks a few friendly questions.`;
-  }, [session]);
+    return tf("Guide is at step {step} of {total} — it simply asks a few friendly questions.", {
+      step: Math.min(session.stage, GUIDE_STAGES),
+      total: GUIDE_STAGES,
+    });
+  }, [session, tf]);
 
   if (booting) {
     return (
@@ -315,9 +333,18 @@ export default function ChatPage() {
           extra={
             bootOffline ? (
               <p className="mt-3 text-xs leading-relaxed text-muted">
-                The server at <code>localhost:8000</code> is not answering. In the
-                <code> backend</code> folder run
-                <code> uvicorn app.main:app --reload</code>, then press Try again.
+                {process.env.NODE_ENV === "development" ? (
+                  <>
+                    {tf("The server at {api} is not answering.", { api: "localhost:8000" })}
+                    {" " + t("In the backend folder run") + " "}
+                    <code>uvicorn app.main:app --reload</code>
+                    {t(", then press Try again.")}
+                  </>
+                ) : (
+                  t(
+                    "We are having trouble connecting to our servers. Please try again later.",
+                  )
+                )}
               </p>
             ) : null
           }
@@ -330,17 +357,17 @@ export default function ChatPage() {
     <Screen
       title="Chat with your guide"
       description="Type, speak, or do both. There is no wrong answer, and you can stop any time."
-      badge={<Badge tone="brand">Talk with your guide</Badge>}
+      badge={<Badge tone="brand">{t("Talk with your guide")}</Badge>}
       action={
         <>
           <Button variant="secondary" size="sm" onClick={() => void startNewConversation()}>
             <Plus className="h-4 w-4" aria-hidden />
-            New chat
+            {t("New chat")}
           </Button>
           {session ? (
             <Button variant="ghost" size="sm" onClick={() => void endConversation()}>
               <StopCircle className="h-4 w-4" aria-hidden />
-              End
+              {t("End")}
             </Button>
           ) : null}
         </>
@@ -352,12 +379,13 @@ export default function ChatPage() {
             <div className="flex items-start gap-3">
               <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-700" aria-hidden />
               <div className="text-sm">
-                <p className="font-semibold text-ink">Your safety comes first</p>
+                <p className="font-semibold text-ink">{t("Your safety comes first")}</p>
                 <p className="mt-1 leading-relaxed text-ink/80">
-                  If someone is hurting you or you feel unsafe at home, please tell a trusted adult
-                  right away — a parent, relative, teacher or school counsellor. In India you can
-                  also call <strong>Childline 1098</strong>, free, any time, day or night. Career
-                  talk can wait.
+                  {t(
+                    "If someone is hurting you or you feel unsafe at home, please tell a trusted adult right away — a parent, relative, teacher or school counsellor.",
+                  )}{" "}
+                  {t("In India you can also call")} <strong>{t("Childline 1098")}</strong>
+                  {t(", free, any time, day or night. Career talk can wait.")}
                 </p>
                 <Button
                   variant="ghost"
@@ -365,7 +393,7 @@ export default function ChatPage() {
                   className="mt-2"
                   onClick={() => setSafety(false)}
                 >
-                  I have read this
+                  {t("I have read this")}
                 </Button>
               </div>
             </div>
@@ -413,14 +441,14 @@ export default function ChatPage() {
                         {message.themes?.length
                           ? message.themes.map((theme) => (
                               <Badge key={theme} tone="teal">
-                                {THEME_LABELS[theme as ThemeKey] ?? theme}
+                                {t(THEME_LABELS[theme as ThemeKey] ?? theme)}
                               </Badge>
                             ))
                           : null}
                         {message.saved?.length
                           ? message.saved.map((label) => (
                               <Badge key={label} tone="brand">
-                                Saved: {label}
+                                {tf("Saved: {fact}", { fact: label })}
                               </Badge>
                             ))
                           : null}
@@ -438,7 +466,9 @@ export default function ChatPage() {
                             ) : (
                               <Play className="h-3.5 w-3.5" aria-hidden />
                             )}
-                            {player.status === "playing" ? "Pause voice" : "Play voice"}
+                            {player.status === "playing"
+                              ? t("Pause voice")
+                              : t("Play voice")}
                           </Button>
                         ) : null}
                       </div>
@@ -450,7 +480,7 @@ export default function ChatPage() {
             {sending ? (
               <div className="flex justify-start">
                 <div className="rounded-card border border-line bg-surface px-4 py-3 text-sm text-muted">
-                  <span role="status">Your guide is thinking…</span>
+                  <span role="status">{t("Your guide is thinking…")}</span>
                 </div>
               </div>
             ) : null}
@@ -465,7 +495,7 @@ export default function ChatPage() {
 
             {dictation.error ? (
               <p className="mb-2 rounded-card bg-canvas px-3 py-2 text-xs text-muted">
-                {MIC_ERROR_TEXT[dictation.error]}
+                {t(MIC_ERROR_TEXT[dictation.error])}
               </p>
             ) : null}
 
@@ -480,20 +510,20 @@ export default function ChatPage() {
                   }
                 }}
                 rows={1}
-                placeholder="Type your answer… (Enter sends, Shift+Enter makes a new line)"
-                aria-label="Message to your guide"
+                placeholder={t("Type your answer… (Enter sends, Shift+Enter makes a new line)")}
+                aria-label={t("Message to your guide")}
                 className="cg-scrollbar max-h-32 min-h-[46px] flex-1 resize-none rounded-card border border-line bg-surface px-3.5 py-2.5 text-sm text-ink outline-none placeholder:text-muted/70 focus:border-brand focus:ring-2 focus:ring-brand-mist"
               />
               <Button
                 variant="secondary"
                 size="icon"
-                aria-label={dictation.listening ? "Stop dictating" : "Speak your answer"}
+                aria-label={dictation.listening ? t("Stop dictating") : t("Speak your answer")}
                 title={
                   dictation.supported
                     ? dictation.listening
-                      ? "Stop listening"
-                      : "Speak instead of typing"
-                    : "Speech input is not available in this browser"
+                      ? t("Stop listening")
+                      : t("Speak instead of typing")
+                    : t("Speech input is not available in this browser")
                 }
                 disabled={!dictation.supported}
                 onClick={() => {
@@ -510,8 +540,8 @@ export default function ChatPage() {
               </Button>
               <Button
                 size="icon"
-                aria-label="Send your message"
-                title="Send (Enter)"
+                aria-label={t("Send your message")}
+                title={t("Send (Enter)")}
                 disabled={!canSend}
                 onClick={() => void replyTo(draft)}
               >
@@ -538,13 +568,13 @@ export default function ChatPage() {
                 {player.status === "playing" || player.status === "paused" ? (
                   <Button variant="ghost" size="sm" onClick={() => player.stop()}>
                     <Square className="h-3.5 w-3.5" aria-hidden />
-                    Stop voice
+                    {t("Stop voice")}
                   </Button>
                 ) : null}
                 {messages.length > 0 ? (
                   <Button variant="ghost" size="sm" onClick={() => void clearMessages()}>
                     <Trash2 className="h-3.5 w-3.5" aria-hidden />
-                    Delete these messages
+                    {t("Delete these messages")}
                   </Button>
                 ) : null}
               </div>
@@ -554,8 +584,8 @@ export default function ChatPage() {
               <p className="mt-2 flex items-start gap-2 text-xs text-teal" role="status">
                 <Volume2 className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
                 {dictation.interim
-                  ? `Still hearing: ${dictation.interim}`
-                  : "Listening… your finished words appear in the box above."}
+                  ? tf("Still hearing: {words}", { words: dictation.interim })
+                  : t("Listening… your finished words appear in the box above.")}
               </p>
             ) : null}
           </div>
@@ -563,7 +593,7 @@ export default function ChatPage() {
 
         {!dictation.supported ? (
           <p className="text-xs leading-relaxed text-muted">
-            {MIC_ERROR_TEXT.unsupported}
+            {t(MIC_ERROR_TEXT.unsupported)}
           </p>
         ) : null}
       </div>

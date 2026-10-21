@@ -1,0 +1,43 @@
+{#
+  Address confirmation. Context: `name`, `confirm_url`, `valid_hours`.
+
+  This is the reason an address in this database can be trusted with a child's
+  report: nothing is sent to a typed address until somebody opens a link at it.
+  A parent who mistypes a relative's address, and a stranger who types a child's
+  parent to spam them, both stop here.
+
+  The link is also printed in full. Plenty of mail clients block a button whose
+  domain they do not like, and a confirmation you cannot click is a feature that
+  appears broken rather than one that is working as designed.
+#}
+{% extends "base.html" %}
+
+{% block title %}{{ txt("Confirm this email address", "इस ईमेल पते की पुष्टि करें") }}{% endblock %}
+{% block preheader %}{{ txt("One link to open, then we can write to you", "एक लिंक खोलें, फिर हम आपको लिख सकते हैं") }}{% endblock %}
+
+{% block eyebrow %}{{ txt("Almost done", "लगभग हो गया") }}{% endblock %}
+
+{% block heading %}{{ txt("Is this address yours?", "क्या यह पता आपका है?") }}{% endblock %}
+
+{% block body %}
+  <p style="margin:0 0 14px;">
+    {{ txt((name ~ " " if name else "") ~ "asked for a " ~ site_name ~ " account to be able to write to this address. Until the link below is opened, it cannot: no message, no report, nothing.", (name ~ " " if name else "") ~ "ने अनुरोध किया था कि उनका " ~ site_name ~ " खाता इस पते पर लिख सके। जब तक नीचे दिया लिंक नहीं खुलता, वह नहीं लिख सकता: न कोई संदेश, न रिपोर्ट, कुछ भी।") }}
+  </p>
+  <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 16px;">
+    <tr>
+      <td style="border-radius:12px;background:#1f4ed0;">
+        <a href="{{ confirm_url }}" style="display:inline-block;padding:12px 22px;font-family:Arial,'Noto Sans',sans-serif;font-size:15px;font-weight:600;line-height:20px;color:#ffffff;text-decoration:none;">{{ txt("Confirm this address", "इस पते की पुष्टि करें") }}</a>
+      </td>
+    </tr>
+  </table>
+  <p style="margin:0 0 14px;font-size:13px;line-height:20px;color:#41536e;">
+    {{ txt("If that button is not working for you, copy this address into your browser:", "अगर वह बटन काम नहीं कर रहा, तो यह पता अपने ब्राउज़र में डालें:") }}
+  </p>
+  <p style="margin:0 0 18px;padding:12px 14px;background:#f4f7fd;border-radius:10px;font-family:'Courier New',monospace;font-size:12px;line-height:18px;color:#26334c;word-break:break-all;">{{ confirm_url }}</p>
+  <p style="margin:0 0 14px;">
+    {{ txt("Confirming switches on nothing else. Each kind of message — a result, a weekly summary, a payment receipt — is agreed to separately, and each can be turned off on its own.", "पुष्टि करने से और कुछ चालू नहीं होता। हर प्रकार का संदेश — रिपोर्ट, सप्ताह का सारांश, भुगतान की रसीद — अलग से स्वीकार किया जाता है, और हर एक अलग ही बंद किया जा सकता है।") }}
+  </p>
+  <p style="margin:0;">
+    {{ txt("This link stops working after", "यह लिंक") }} {{ valid_hours }} {{ txt("hours. If you did not ask for any of this, ignore the message and delete it; nothing happens to it, and nothing is sent to you.", "घंटों बाद बंद हो जाएगा। अगर आपने कुछ भी नहीं माँगा, तो इसे अनदेखा कर डीलीट कर दें; इससे कुछ नहीं होगा, और आपको कुछ भेजा भी नहीं जाएगा।") }}
+  </p>
+{% endblock %}

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -23,7 +23,9 @@ router = APIRouter(prefix="/api/journey", tags=["journey"])
 
 @router.get("/events", response_model=list[JourneyEventOut])
 def events(
-    limit: int = 60,
+    # A negative limit is not "no rows" in SQLite — it means no limit at all, so
+    # the bounds are checked here rather than clamped after the fact.
+    limit: int = Query(default=60, ge=1, le=200),
     student_id: int = Depends(require_student),
     db: Session = Depends(get_db),
 ) -> list[JourneyEventOut]:
@@ -32,7 +34,7 @@ def events(
             select(JourneyEvent)
             .where(JourneyEvent.student_id == student_id)
             .order_by(JourneyEvent.id.desc())
-            .limit(min(limit, 200))
+            .limit(limit)
         )
     )
     return [JourneyEventOut.model_validate(r) for r in rows]

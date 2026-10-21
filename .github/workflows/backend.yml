@@ -1,0 +1,214 @@
+name: Backend
+
+# What this proves, and what it deliberately does not claim.
+#
+#  * `pip install -r requirements.txt` — every dependency is pinned to an exact version,
+#    so this job installs the same numbers the laptop and the Docker image use. An
+#    unpinned or missing pin fails here.
+#  * `compileall` — this is the whole of the repository's static checking today. There is
+#    no ruff or mypy configured anywhere in `backend/`, so this job does not pretend to run
+#    one. It does catch the failure class that actually bites a repo without a compiled
+#    language: a file that does not parse, a decorator wired to a name that does not exist.
+#  * `alembic upgrade head --sql` against a PostgreSQL URL — renders the migration chain to
+#    SQL without touching a server. It is the only way to prove that the chain runs on
+#    Postgres, not just on SQLite, from a machine that has no Postgres: SQLite quietly
+#    ignores a forward foreign-key reference and a too-short varchar, and Postgres refuses
+#    both. The asserted contents are the tables the newest revisions create and the column
+#    widening from `0009_observation_source_width`, which exists precisely because the
+#    SQLite-first development hid a 17-character value in a 16-character column.
+#  * `schema_fit_check.py` — every seeded catalogue string against the length its model
+#    declares, with no database involved.
+#  * `scripts/*_test.py` — the suites. Each one builds its own throwaway SQLite database in
+#    the system temp directory and talks to the app through `TestClient`, so no server, no
+#    database service and no network are needed to run them. A suite that would need a
+#    provider key prints `[SKIP]` and exits 0 without that key: a CI run with no secrets is
+#    a supported mode, not a green lie. The count is printed rather than hardcoded, so
+#    adding a suite does not silently change what "all passed" means.
+#
+# Python 3.12 because that is what `backend/.venv` and `backend/Dockerfile` use; the brief
+# said 3.11 and the shipped image does not, deliberately — the pins were resolved against
+# 3.12.7 and a second interpreter version would mean re-resolving them.
+#
+# There is no `deploy` step on push: `backend/vercel.json` already publishes this project
+# through Vercel's own Git integration, and a second path would build the same commit twice
+# and race it. The manual job at the bottom refuses to run rather than reporting success if
+# its secrets are missing — and note that it has never been run. It is written for the day it
+# is needed (a rollback, a deploy from an unmerged branch) and its first execution will be its
+# first test. The steps above have each been run.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend.yml"
+  pull_request:
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  python_version: "3.12"
+  # Read from the npm registry on 2026-10-20. `vercel@latest` meant the commit that
+  # deploys today is built by a different CLI than the same commit deployed next month,
+  # which is the one way a manual rollback step can fail for a reason nobody can diff.
+  # Bump it deliberately, in a commit that says so. The frontend workflow pins the same
+  # number for the same reason.
+  VERCEL_VERSION: "64.7.0"
+
+jobs:
+  check:
+    name: Install, static check, migration SQL and the suites
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.python_version }}
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install the pinned dependencies
+        run: python -m pip install --disable-pip-version-check --no-input -r requirements.txt
+
+      - name: Nothing that ships fails to parse
+        run: python -m compileall -q app scripts migrations
+
+      - name: The migration chain renders on PostgreSQL
+        run: |
+          DATABASE_URL="postgresql+psycopg://ci:ci@127.0.0.1:5432/ci" \
+            python -m alembic upgrade head --sql > /tmp/chain.sql
+          created=$(grep -c '^CREATE TABLE' /tmp/chain.sql)
+          echo "tables created: $created"
+          # Forty: the thirty-nine tables the application has, plus alembic's own version
+          # table. The floor is the point — before `0000_baseline_schema` the chain created
+          # nineteen and assumed the app had made the rest with `create_all`, which is a
+          # precondition PostgreSQL enforces and a deployment cannot meet.
+          if [ "$created" -lt 40 ]; then
+            echo "::error::the chain creates $created tables; it created 40 the last time it was read, and an empty PostgreSQL needs all of them"
+            exit 1
+          fi
+          for t in users organizations memberships audit_events email_jobs study_universities \
+                   payments subscriptions report_pdfs assessment_responses assessment_results \
+                   exam_groups exams; do
+            if ! grep -q "^CREATE TABLE $t" /tmp/chain.sql; then
+              echo "::error::$t is not created by the chain — a revision was dropped or renamed"
+              exit 1
+            fi
+          done
+          # The Issue 11 failure, stated as an ordering fact: `assessments` points a foreign
+          # key at `users`. PostgreSQL refuses the DDL if the referenced table is not
+          # created first, so `upgrade head` on an empty database died with
+          # `relation "users" does not exist` while working on a laptop, where SQLite only
+          # complains when a row is written.
+          if [ "$(grep -n '^CREATE TABLE users' /tmp/chain.sql | cut -d: -f1)" -gt \
+               "$(grep -n '^CREATE TABLE assessments' /tmp/chain.sql | cut -d: -f1)" ]; then
+            echo "::error::users is created after assessments, so an empty PostgreSQL cannot be built by the chain"
+            exit 1
+          fi
+          # 0009: 'interest_activity' is 17 characters and the column was 16. SQLite never
+          # mentioned it; Postgres raised on the first insert. The widening has to be in the
+          # SQL that actually runs on the deployed database.
+          if ! grep -q 'ALTER TABLE interest_observations ALTER COLUMN source TYPE VARCHAR(32)' /tmp/chain.sql; then
+            echo "::error::no widening of interest_observations.source in the rendered SQL"
+            exit 1
+          fi
+          # 0011: an exam points at the door it is under, so the same ordering fact has to hold
+          # for the newest tables as it does for `users`. Nothing in a laptop's SQLite would
+          # notice if the revisions were reordered; an empty PostgreSQL refuses the DDL.
+          if [ "$(grep -n '^CREATE TABLE exam_groups' /tmp/chain.sql | cut -d: -f1)" -gt \
+               "$(grep -n '^CREATE TABLE exams' /tmp/chain.sql | cut -d: -f1)" ]; then
+            echo "::error::exam_groups is created after exams, so an empty PostgreSQL cannot be built by the chain"
+            exit 1
+          fi
+          # 0012: the erasure date is an added column on a table the baseline already made,
+          # which is the kind of change `create_all` performs silently and a migration must
+          # say out loud — otherwise an account can be erased on a laptop and 500 on the
+          # deployment.
+          if ! grep -q 'ALTER TABLE users ADD COLUMN erased_at' /tmp/chain.sql; then
+            echo "::error::no users.erased_at column in the rendered SQL"
+            exit 1
+          fi
+          echo "chain ok: $created tables, users before its dependants, exam_groups before exams, users.erased_at present, source column widened"
+
+      - name: Seeded content fits its declared column lengths
+        run: python scripts/schema_fit_check.py
+
+      - name: Run the suites
+        run: |
+          suites=$(ls scripts/*_test.py | wc -l)
+          echo "running $suites suites"
+          failed=""
+          for f in scripts/*_test.py; do
+            echo "::group::$f"
+            if ! python "$f"; then
+              failed="$failed $f"
+              echo "::error::$f exited non-zero"
+            fi
+            echo "::endgroup::"
+          done
+          if [ -n "$failed" ]; then
+            echo "::error::failed suites:$failed"
+            exit 1
+          fi
+          echo "all $suites suites exited 0 — read the counts above for how many checks that was"
+
+  deploy:
+    name: Deploy to Vercel (manual only)
+    if: github.event_name == 'workflow_dispatch'
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Refuse to deploy without the Vercel secrets
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          if [ -z "$VERCEL_TOKEN" ] || [ -z "$VERCEL_ORG_ID" ] || [ -z "$VERCEL_PROJECT_ID" ]; then
+            echo "::error::This job needs repository secrets VERCEL_TOKEN, VERCEL_ORG_ID and VERCEL_PROJECT_ID."
+            echo "Nothing was deployed. Until they are set, Vercel's own Git integration is the only thing"
+            echo "that publishes this API."
+            exit 1
+          fi
+          echo "Secrets present."
+
+      - name: Pull the environment Vercel already holds
+        run: npx --yes vercel@${{ env.VERCEL_VERSION }} pull --yes --environment=production --token "$VERCEL_TOKEN"
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      - name: Build with that environment
+        run: npx --yes vercel@${{ env.VERCEL_VERSION }} build --prod --token "$VERCEL_TOKEN"
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      - name: Deploy
+        run: npx --yes vercel@${{ env.VERCEL_VERSION }} deploy --prebuilt --prod --token "$VERCEL_TOKEN"
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}

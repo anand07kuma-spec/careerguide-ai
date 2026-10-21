@@ -16,3 +16,44 @@ edge-tts==7.3.1
 # PostgreSQL driver — only needed when DATABASE_URL points at Postgres
 # (e.g. a Supabase project). SQLite works without it.
 psycopg[binary]==3.3.6
+
+# Schema migrations. The app does not import Alembic at runtime — a fresh database
+# is still created on first boot — but changing the shape of a database that holds
+# real answers is done with `alembic revision` / `alembic upgrade`. See the README
+# section "Changing the schema (Alembic)".
+alembic==1.16.4
+
+# PDF reports. `reportlab` draws the pages; it needs `uharfbuzz` to shape Devanagari,
+# because ReportLab has no text shaper of its own and Hindi conjuncts come from the
+# font's OpenType substitutions. Both ship plain wheels, so the same code runs on a
+# laptop and on serverless hosting — unlike WeasyPrint, which needs system Pango
+# libraries that the deploy target does not have.
+reportlab==5.0.1
+uharfbuzz==0.56.3
+
+# Rate limiting. `slowapi` wraps the `limits` library, which counts requests in
+# this process's memory — see app/middleware/rate_limit.py for what that means on
+# serverless hosting, where the counter is per instance rather than per service.
+slowapi==0.1.10
+
+# Only needed when RATE_LIMIT_REDIS_URL is set, which is how the counters move from
+# per-process to shared. One container is fine without it; a compose stack running
+# several workers of the same API is not, because each worker would then hold its own
+# copy of every limit. Nothing else in this app talks to Redis — there is no queue, no
+# cache and no session store here — so this is the whole of what the service is for.
+redis==7.4.0
+
+# Clerk webhooks. Clerk signs every delivery with an Svix-compatible signature, and
+# this is the library Clerk's own docs name for checking it. Needed for exactly one
+# thing — proving a "delete that account" instruction came from Clerk — so it is a
+# dependency of the optional email sign-in, not of the device account. Without a
+# CLERK_WEBHOOK_SIGNING_SECRET the endpoint refuses every delivery and this package
+# is never imported.
+svix==1.83.0
+
+# Email HTML. The six messages in app/templates/emails are Jinja2 templates rather
+# than string concatenation, because they interpolate an address, a child's result
+# and a payment amount into markup — autoescape is the thing that stops a name
+# containing `<` from breaking the layout or smuggling markup into a family's inbox.
+# Pure Python, no system libraries, so it costs a deployment nothing.
+jinja2==3.1.6

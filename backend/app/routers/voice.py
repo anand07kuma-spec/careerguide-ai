@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from ..database import get_db
+from ..middleware.rate_limit import speak_limit
 from ..models import User
 from ..schemas import TTSIn, VoiceInfoOut
 from ..security import get_current_user
@@ -27,7 +28,9 @@ def voices() -> VoiceInfoOut:
 
 
 @router.post("/speak")
+@speak_limit
 async def speak(
+    request: Request,
     payload: TTSIn,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
