@@ -1,4 +1,4 @@
-import { Suspense } from "react";
+import { type ReactNode, Suspense } from "react";
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
@@ -148,7 +148,7 @@ const SITE_SCHEMAS = [
  */
 const THEME_PREPAINT = `try{var c=null;try{c=localStorage.getItem("careerguide.theme")}catch(e){c=null}var d=!!window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches;document.documentElement.dataset.theme=c==="dark"||(c==="system"&&d)?"dark":"light"}catch(e){}`;
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html
       lang="en"
