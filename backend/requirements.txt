@@ -41,7 +41,7 @@ slowapi==0.1.10
 # several workers of the same API is not, because each worker would then hold its own
 # copy of every limit. Nothing else in this app talks to Redis — there is no queue, no
 # cache and no session store here — so this is the whole of what the service is for.
-redis==7.4.0
+redis==8.1.0
 
 # Clerk webhooks. Clerk signs every delivery with an Svix-compatible signature, and
 # this is the library Clerk's own docs name for checking it. Needed for exactly one
