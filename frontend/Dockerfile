@@ -7,7 +7,7 @@
 #
 # Node 24 to match the machine every build of this app has been verified on.
 
-FROM node:24-alpine AS deps
+FROM node:25-alpine AS deps
 WORKDIR /app
 
 # Only the manifests at first, so `npm ci` is re-run when a dependency changes and not
@@ -19,7 +19,7 @@ COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund
 
 
-FROM node:24-alpine AS builder
+FROM node:25-alpine AS builder
 WORKDIR /app
 
 COPY --from=deps /app/node_modules ./node_modules
@@ -50,7 +50,7 @@ ENV NEXT_PUBLIC_BACKEND_URL=$NEXT_PUBLIC_BACKEND_URL \
 RUN npm run build
 
 
-FROM node:24-alpine AS runner
+FROM node:25-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production \
