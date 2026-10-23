@@ -3,11 +3,11 @@
 #   python -m venv .venv
 #   .venv\Scripts\python.exe -m pip install -r requirements.txt
 
-fastapi==0.143.0
-uvicorn[standard]==0.46.0
-sqlalchemy==2.0.49
-pydantic==2.13.4
-pydantic-settings==2.14.2
+fastapi==0.156.1
+uvicorn[standard]==0.54.0
+sqlalchemy==2.1.5
+pydantic==2.14.1
+pydantic-settings==2.16.1
 python-dotenv==1.2.4
 python-multipart==0.0.32
 httpx==0.28.1
@@ -21,7 +21,7 @@ psycopg[binary]==3.3.6
 # is still created on first boot — but changing the shape of a database that holds
 # real answers is done with `alembic revision` / `alembic upgrade`. See the README
 # section "Changing the schema (Alembic)".
-alembic==1.16.4
+alembic==1.20.0
 
 # PDF reports. `reportlab` draws the pages; it needs `uharfbuzz` to shape Devanagari,
 # because ReportLab has no text shaper of its own and Hindi conjuncts come from the
