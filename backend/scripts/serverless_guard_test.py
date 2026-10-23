@@ -6,6 +6,11 @@ The app must refuse to read or write data in that shape — but say so clearly
 instead of crashing, because a dead function looks to a browser like a network
 problem and the real reason never reaches anyone.
 
+The same hazard exists on any host that rebuilds a container on every push, and
+such a host sets no environment flag of its own. Render is that case, so the guard
+has a second trigger — `REQUIRE_POSTGRES` — and this file checks both: the refusal
+with the flag and no `VERCEL`, and a plain local run that keeps its SQLite file.
+
 Runs against a throwaway database, never `careerguide.db`.
 
 Run from `backend/`:
@@ -81,10 +86,12 @@ with TestClient(app) as client:
     docs = client.get("/docs")
     check("non-API paths still serve", docs.status_code == 200, docs.status_code)
 
-# The same SQLite file is correct on a laptop, so the guard must stay off there.
+# Two shapes of the same question, asked of a fresh process each time because the
+# guard is decided at import: a host that sets no flag of its own but does say the
+# disk is temporary (`REQUIRE_POSTGRES`), and a laptop, which is none of those things.
 CHILD = """
 import os, pathlib, sys, tempfile
-ROOT = sys.argv[1]
+ROOT, require_pg = sys.argv[1], sys.argv[2]
 sys.path.insert(0, ROOT)
 db = pathlib.Path(tempfile.gettempdir()) / "careerguide_local_check.db"
 if db.exists():
@@ -92,6 +99,9 @@ if db.exists():
 os.environ["DATABASE_URL"] = "sqlite:///" + db.as_posix()
 os.environ["AI_PROVIDER"] = "demo"
 os.environ["RATE_LIMIT_ENABLED"] = "false"  # throttles are proved in security_test.py
+if require_pg == "1":
+    # The switch a Render-style deployment flips, with no vendor flag present.
+    os.environ["REQUIRE_POSTGRES"] = "true"
 from fastapi.testclient import TestClient
 from app.main import app
 with TestClient(app) as c:
@@ -100,12 +110,27 @@ with TestClient(app) as c:
     print(h.json().get("storage"), r.status_code)
     db.unlink(missing_ok=True)
 """
-env = {k: v for k, v in os.environ.items() if k != "VERCEL"}
-local = subprocess.run(
-    [sys.executable, "-c", CHILD, str(ROOT)],
-    capture_output=True, text=True, env=env, cwd=str(ROOT),
+def _run(require_pg: str) -> str:
+    # Neither vendor flag is passed down: the parent process runs with `VERCEL=1`, and
+    # each child decides for itself which trigger, if any, it is testing.
+    child_env = {k: v for k, v in os.environ.items() if k not in {"VERCEL", "REQUIRE_POSTGRES"}}
+    child = subprocess.run(
+        [sys.executable, "-c", CHILD, str(ROOT), require_pg],
+        capture_output=True, text=True, env=child_env, cwd=str(ROOT),
+    )
+    lines = child.stdout.strip().splitlines()
+    return lines[-1] if lines else child.stderr[-200:]
+
+
+hosted = _run("1")
+check(
+    "`REQUIRE_POSTGRES` is the guard on a host that sets no flag of its own",
+    hosted == "unconfigured 503",
+    hosted,
 )
-last = local.stdout.strip().splitlines()[-1] if local.stdout.strip() else local.stderr[-200:]
+
+# The same SQLite file is correct on a laptop, so the guard must stay off there.
+last = _run("0")
 check("local run keeps using its SQLite file", last == "ready 200", last)
 
 if DB_PATH.exists():

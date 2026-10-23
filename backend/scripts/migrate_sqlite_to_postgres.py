@@ -54,6 +54,7 @@ sys.path.insert(0, str(ROOT))
 from sqlalchemy import create_engine, inspect, select, text  # noqa: E402
 
 from app import models  # noqa: E402, F401  (registers every table on Base.metadata)
+from app.config import BARE_PG_SCHEMES, postgres_url  # noqa: E402
 from app.database import Base  # noqa: E402
 
 # The tables the seeder writes (`app/seed/`, `app/services/assessment_bank.py`). These
@@ -171,15 +172,19 @@ def main() -> int:
     if not args.target:
         print("refused: no target. Set DATABASE_URL or pass --to.")
         return 1
-    if not args.target.startswith("postgresql"):
+    if not args.target.startswith(BARE_PG_SCHEMES):
         print(
-            f"refused: the target is not PostgreSQL ({mask(args.target)}). This script "
+            f"refused: the target is not a Postgres URL ({mask(args.target)}). This script "
             "moves data onto Postgres; between two SQLite files there is nothing to fix."
         )
         return 1
+    # A URL copied out of the Neon or Supabase dashboard carries neither the driver
+    # this project ships nor a TLS mode. Both are added here, exactly as `Settings`
+    # adds them, so the cutover cannot fail on a string the running app accepts.
+    target = postgres_url(args.target)
 
     src_engine = create_engine(f"sqlite:///{source_path.as_posix()}")
-    tgt_engine = create_engine(args.target)
+    tgt_engine = create_engine(target)
     src_inspect, tgt_inspect = inspect(src_engine), inspect(tgt_engine)
 
     src_names = set(src_inspect.get_table_names())
@@ -192,7 +197,7 @@ def main() -> int:
         )
 
     print(f"source : {source_path}  ({len(tables)} of {len(Base.metadata.tables)} tables present)")
-    print(f"target : {mask(args.target)}")
+    print(f"target : {mask(target)}")
 
     with src_engine.connect() as sc, tgt_engine.begin() as tc:
         absent = [t.name for t in tables if t.name not in tgt_inspect.get_table_names()]

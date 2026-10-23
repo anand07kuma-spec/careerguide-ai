@@ -43,7 +43,9 @@ import { allowedLogoHosts } from "@/lib/site";
 
 /** The backend origin the browser talks to, plus its scheme for the audio socket. */
 function backendOrigin(): string {
-  const raw = (process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:8000").trim();
+  // Empty counts as unset, the same way `lib/api.ts` treats it: a Vercel variable that
+  // exists with a blank value must not become a `connect-src` directive for this origin.
+  const raw = (process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000").trim();
   try {
     return new URL(raw).origin;
   } catch {

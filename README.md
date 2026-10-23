@@ -46,7 +46,8 @@ Health check: http://127.0.0.1:8000/api/health · interactive docs: http://127.0
 Everything else lives in **[docs/ARCHITECTURE_AND_TESTS.md](docs/ARCHITECTURE_AND_TESTS.md)**:
 
 - §1 settings, `.env` reference, database and Alembic migrations, wiring a real AI model
-- §2 deploying to Vercel
+- §2 deploying to Vercel, or to Render with a Neon/Supabase Postgres (`render.yaml`, and the full
+  production environment-variable list)
 - §3 how voice works, and which browser supports what
 - §4 every screen and API surface, including the portals and the study-abroad directory
 - §5 how to verify it yourself — each suite, what it covers, and what has and has not been run

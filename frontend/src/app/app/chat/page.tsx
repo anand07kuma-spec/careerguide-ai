@@ -25,7 +25,7 @@ import { Card } from "@/components/ui/card";
 import { EmptyState, ErrorState, LoadingPanel } from "@/components/ui/feedback";
 import { Toggle } from "@/components/ui/field";
 import { useToast } from "@/components/ui/toast";
-import { api, isOffline } from "@/lib/api";
+import { BACKEND_URL, api, isOffline } from "@/lib/api";
 import type { RoadmapPlan } from "@/lib/assessments";
 import { useSession } from "@/lib/session";
 import { useT, useTf, useUiLang } from "@/lib/i18n";
@@ -418,7 +418,7 @@ function ChatThread() {
               <p className="mt-3 text-xs leading-relaxed text-muted">
                 {process.env.NODE_ENV === "development" ? (
                   <>
-                    {tf("The server at {api} is not answering.", { api: "localhost:8000" })}
+                    {tf("The server at {api} is not answering.", { api: BACKEND_URL })}
                     {" " + t("In the backend folder run") + " "}
                     <code>uvicorn app.main:app --reload</code>
                     {t(", then press Try again.")}

@@ -1,14 +1,111 @@
 """Application settings loaded from environment / .env."""
 
+import logging
 from functools import lru_cache
+from urllib.parse import urlsplit
 
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+log = logging.getLogger(__name__)
 
 # `psycopg` is the PostgreSQL driver in requirements.txt. A host that hands over a
 # plain `postgresql://` URL (Vercel's database integrations do) would otherwise send
 # SQLAlchemy looking for psycopg2, which is not installed here.
 BARE_PG_SCHEMES = ("postgres://", "postgresql://")
+
+# The hostnames that mean "this database is on this machine or in this compose
+# project". A hosted Postgres gets `sslmode=require` added to its URL below; these
+# do not, because the container images the project documents (`postgres:17` with
+# SSL off, `db`/`postgres` as the service name) refuse it and the developer would
+# see a TLS error for a database that is not on a network at all.
+LOCAL_PG_HOSTS = {
+    "localhost",
+    "127.0.0.1",
+    "0.0.0.0",
+    "::1",
+    "host.docker.internal",
+    "db",
+    "postgres",
+}
+
+# Every browser origin the local dev pair is served from, in the order the frontend
+# README tells people to use them. Only reached when `FRONTEND_URL` is unset.
+DEV_FRONTEND_ORIGINS = (
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://careerguide.localhost:3000",
+)
+
+
+def use_shipped_driver(value: str) -> str:
+    """`postgres://` / `postgresql://` → `postgresql+psycopg://`.
+
+    Both vendors hand out a bare scheme, SQLAlchemy then defaults to `psycopg2`, and
+    `psycopg2` is not in `requirements.txt` — so the URL pasted from the dashboard is
+    one that cannot open until someone reads this function.
+    """
+    for scheme in BARE_PG_SCHEMES:
+        if value.startswith(scheme):
+            return "postgresql+psycopg://" + value[len(scheme) :]
+    return value
+
+
+def require_tls_on_hosted_postgres(value: str) -> str:
+    """Add `sslmode=require` to a remote Postgres URL that asked for nothing.
+
+    Neon and Supabase both terminate TLS at their poolers and Neon's endpoint simply
+    refuses a plaintext session, so the missing parameter is a URL that works on
+    somebody's laptop and fails on the host — or, worse, a child's rows crossing a
+    network unencrypted. An URL that already mentions `sslmode` (or `ssl`) is left
+    exactly as written: an explicit `disable` or `allow` is a decision, and this
+    function does not overrule decisions.
+    """
+    if not value.startswith("postgres"):
+        return value
+    try:
+        parts = urlsplit(value)
+    except ValueError:
+        # Unparseable (an unescaped bracket in a password, usually). The driver fix
+        # above has already happened, so the worst case here is a loud connection
+        # error rather than a silent plaintext connection.
+        log.warning("DATABASE_URL could not be parsed, so no TLS parameter was added to it.")
+        return value
+    host = (parts.hostname or "").lower().strip("[]")
+    if not host or host in LOCAL_PG_HOSTS:
+        return value
+    named = {pair.split("=")[0].strip().lower() for pair in parts.query.split("&") if pair.strip()}
+    if named & {"sslmode", "ssl"}:
+        return value
+    joiner = "&" if parts.query else "?"
+    return f"{value}{joiner}sslmode=require"
+
+
+def postgres_url(value: str) -> str:
+    """Both rewrites above, for a URL that never passes through `Settings`.
+
+    `scripts/migrate_sqlite_to_postgres.py` builds its target engine from `--to` /
+    `DATABASE_URL` on its own, so without this the same Neon string works in the app
+    and dies in the cutover with `No module named 'psycopg2'` — on the one run that
+    must not fail halfway.
+    """
+    return require_tls_on_hosted_postgres(use_shipped_driver(value.strip()))
+
+
+def frontend_origins(value: str) -> list[str]:
+    """`FRONTEND_URL` as a list, or the dev pair with a warning nobody can miss."""
+    entries = [origin.strip().rstrip("/") for origin in value.split(",") if origin.strip()]
+    if entries:
+        return entries
+    log.warning(
+        "FRONTEND_URL is not set, so this API will only accept a browser on %s. "
+        "That is right for a laptop and wrong for a deployment: on Render, set "
+        "FRONTEND_URL to the exact origin the site is served from (https://…), "
+        "or every request the page makes will be refused by the browser before "
+        "it reaches this API.",
+        ", ".join(DEV_FRONTEND_ORIGINS),
+    )
+    return list(DEV_FRONTEND_ORIGINS)
 
 
 class Settings(BaseSettings):
@@ -22,18 +119,33 @@ class Settings(BaseSettings):
     @field_validator("database_url")
     @classmethod
     def use_the_shipped_postgres_driver(cls, value: str) -> str:
-        for scheme in BARE_PG_SCHEMES:
-            if value.startswith(scheme):
-                return "postgresql+psycopg://" + value[len(scheme) :]
-        return value
+        return postgres_url(value)
 
     # Creating the tables and seeding the catalogue happens on the first boot.
     # Set DB_AUTO_SETUP=false once the database is prepared, so a serverless cold
     # start does not run schema DDL on every new instance.
     db_auto_setup: bool = True
-    cors_origins: str = (
-        "http://localhost:3000,http://127.0.0.1:3000,http://careerguide.localhost:3000"
-    )
+    # Set to true on any host whose filesystem is thrown away between deploys —
+    # Render, Fly, a container platform. With it on, a `sqlite:` URL makes the app
+    # boot, answer `/api/health` and refuse every data route, instead of quietly
+    # writing a child's conversations onto a disk that vanishes at the next push.
+    # The same guard already runs automatically when `VERCEL` is set (see
+    # `app/main.py`); this is the switch for a host that sets no flag of its own.
+    require_postgres: bool = False
+    # The browser this API answers to. One origin (`https://site.example`), or a
+    # comma-separated few when one backend serves several frontends; on Render this
+    # is the *exact* value of the frontend's own URL, scheme included, with no
+    # trailing slash. Unset, this falls back to the local dev pair on `localhost`
+    # and logs a warning naming the fallback — the app works on a laptop and a
+    # deployed page fails in the browser, which is the shape of mistake that reads
+    # as "the API is down" while the API is fine.
+    frontend_url: str = ""
+    # Origins beyond `FRONTEND_URL`, and nothing else. A school's or a counsellor's
+    # portal is served from its own subdomain (`green-school.<base>`), so on a
+    # deployment that runs portals these are the origins that belong here — dropping
+    # them would not be tightening security, it would be a portal that loads and
+    # cannot sign anybody in.
+    cors_origins: str = ""
 
     # AI provider. Leave ai_provider="demo" until real credentials exist.
     ai_provider: str = "demo"

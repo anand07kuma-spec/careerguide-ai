@@ -123,8 +123,23 @@ import type {
   VoiceInfo,
 } from "./types";
 
-export const BACKEND_URL = (
-  process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:8000"
+/**
+ * `??` catches a variable that does not exist. It does not catch one that exists and
+ * is empty, which is what a Vercel environment variable looks like when somebody adds
+ * the row and leaves the value blank — and an empty base turns every call into a
+ * request against this app's own origin, where `/api/health` is a 404 page. So a
+ * blank counts as missing here, on both sides.
+ */
+function backendFrom(value: string | undefined, fallback: string): string {
+  return (value ?? "").trim() || fallback;
+}
+
+/** The address a browser on this laptop reaches the API at when nothing is set. */
+export const DEV_BACKEND_URL = "http://localhost:8000";
+
+export const BACKEND_URL = backendFrom(
+  process.env.NEXT_PUBLIC_BACKEND_URL,
+  DEV_BACKEND_URL
 ).replace(/\/$/, "");
 
 /**
@@ -139,10 +154,11 @@ export const BACKEND_URL = (
  * browser about a host it cannot resolve; it is not `NEXT_PUBLIC_`, so it is
  * stripped out of the client bundle rather than shipped in it.
  */
-const SERVER_BACKEND_URL = (
-  process.env.BACKEND_INTERNAL_URL ??
-  process.env.NEXT_PUBLIC_BACKEND_URL ??
-  "http://localhost:8000"
+// `||` and not `??`, so a blank `BACKEND_INTERNAL_URL` falls through to the public
+// address instead of stopping at the blank and taking the dev fallback with it.
+const SERVER_BACKEND_URL = backendFrom(
+  process.env.BACKEND_INTERNAL_URL || process.env.NEXT_PUBLIC_BACKEND_URL,
+  DEV_BACKEND_URL
 ).replace(/\/$/, "");
 
 /** Which address to fetch from: a browser keeps the public one, a server render

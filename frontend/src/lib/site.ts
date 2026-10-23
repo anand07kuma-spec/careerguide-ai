@@ -51,11 +51,11 @@ export function absolute(path: string): string {
  * public address is the container itself, and a sitemap built that way silently
  * lists no careers at all. See `apiBase()` in `lib/api.ts` for the same split. */
 export function backendBase(): string {
+  // The same rule as `apiBase()`: a variable that exists but is empty is a missing
+  // one, and a blank here builds a sitemap of URLs on no host at all.
   const value =
-    process.env.BACKEND_INTERNAL_URL ??
-    process.env.NEXT_PUBLIC_BACKEND_URL ??
-    "http://localhost:8000";
-  return value.trim().replace(/\/+$/, "");
+    process.env.BACKEND_INTERNAL_URL || process.env.NEXT_PUBLIC_BACKEND_URL || "";
+  return value.trim().replace(/\/+$/, "") || "http://localhost:8000";
 }
 
 /**

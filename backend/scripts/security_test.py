@@ -5,13 +5,18 @@ throttle is a thing that must not interrupt a functional test. That is the right
 call for them and the wrong call for the throttle itself, which would then ship
 untested. So this file runs with the throttles on, turned down to two and three a
 minute by environment so a limit is observable in three requests instead of
-twenty-one, and it checks the five things a hardening pass usually gets wrong:
+twenty-one, and it checks the things a hardening pass usually gets wrong:
 
   * a limit that counts the *address* on a school's shared network, so one student
     painting the send button locks out the whole classroom;
   * a 429 whose body is a library sentence ("Rate limit exceeded to ::...") shown
     to a child, or a stack trace;
-  * a CORS list that quietly kept ``*`` because someone typed it once;
+  * a CORS list that quietly kept ``*`` because someone typed it once, and an origin
+    list whose primary setting (``FRONTEND_URL``) is silently ignored or silently
+    guessed when nobody sets it;
+  * a ``DATABASE_URL`` handed over by Neon or Supabase that would either look for a
+    driver this project does not ship or send a child's rows over a network in plain
+    text because the host omitted ``sslmode`` from the string it printed;
   * a "validated" endpoint that validated the fields a friendly UI always fills in
     and ignored the ones a hostile caller picks — length, shape, extra keys;
   * a bearer token that is trusted in shape but leaked into a log, a cache key, or
@@ -68,8 +73,11 @@ os.environ.update(
         # internet being up.
         "TTS_PROVIDER": "azure",
         "AZURE_SPEECH_KEY": "",
-        # Keep the allowed-origin list exactly what the test asserts on. Blank
-        # means the deployment's public site URL is not folded in.
+        # Keep the allowed-origin list exactly what the test asserts on. A named
+        # frontend plus a blank public site URL means nothing is folded in that the
+        # file does not already check — an unset FRONTEND_URL would add the three
+        # development origins, and every count below would be about a different list.
+        "FRONTEND_URL": "http://localhost:3000",
         "CORS_ORIGINS": "http://localhost:3000, https://family.example/,  ",
         "PUBLIC_SITE_URL": "",
     }
@@ -303,8 +311,95 @@ site = browser_origins(Settings(cors_origins="http://localhost:3000", public_sit
 check("the site's own public URL is allowed without being listed twice", "https://careerguide-web.vercel.app" in site, site)
 check(
     "a plain http public URL is not folded in automatically",
-    browser_origins(Settings(cors_origins="http://localhost:3000", public_site_url="http://nowhere.test"))
+    browser_origins(Settings(frontend_url="http://localhost:3000", cors_origins="", public_site_url="http://nowhere.test"))
     == ["http://localhost:3000"],
+)
+
+# `FRONTEND_URL` is the setting a deployment is told to write, so it has to be the one
+# that decides — and the one that is guessed when nobody writes it has to be guessable
+# out loud rather than silently.
+named = browser_origins(Settings(frontend_url="https://family-site.example/", cors_origins="", public_site_url=""))
+check(
+    "FRONTEND_URL alone decides the list, trailing slash and all",
+    named == ["https://family-site.example"],
+    named,
+)
+check(
+    "CORS_ORIGINS adds to FRONTEND_URL rather than replacing it",
+    browser_origins(
+        Settings(frontend_url="https://family-site.example", cors_origins="https://green-school.example", public_site_url="")
+    )
+    == ["https://family-site.example", "https://green-school.example"],
+)
+check(
+    "one origin named twice is allowed once, because a browser compares the reply header",
+    browser_origins(
+        Settings(frontend_url="http://localhost:3000", cors_origins="http://localhost:3000 ,http://localhost:3000/", public_site_url="")
+    )
+    == ["http://localhost:3000"],
+)
+check(
+    "a comma-separated FRONTEND_URL is several origins, not one broken one",
+    browser_origins(Settings(frontend_url="https://a.example, https://b.example", cors_origins="", public_site_url=""))
+    == ["https://a.example", "https://b.example"],
+)
+unset = browser_origins(Settings(frontend_url="", cors_origins="", public_site_url=""))
+check(
+    "an unset FRONTEND_URL falls back to the development pair, never to nothing",
+    unset == ["http://localhost:3000", "http://127.0.0.1:3000", "http://careerguide.localhost:3000"],
+    unset,
+)
+check(
+    "…and a `*` in FRONTEND_URL is refused like one in CORS_ORIGINS",
+    "*" not in browser_origins(Settings(frontend_url="*", cors_origins="", public_site_url="")),
+)
+
+# ---------------------------------------------------------- 3b. how the URL reaches postgres
+print("\n[3b] A hosted Postgres URL is read the way the host wrote it")
+
+neon = Settings(
+    database_url="postgresql://neondb_owner:npg_abc@endpoint-pooler.us-east-2.aws.neon.tech/neondb"
+).database_url
+check(
+    "a plain `postgresql://` URL is sent to the driver this project ships",
+    neon.startswith("postgresql+psycopg://"),
+    neon,
+)
+check(
+    "…and asked for TLS, because Neon and Supabase both terminate it and neither says so in the URL",
+    "sslmode=require" in neon,
+    neon,
+)
+supabase = Settings(
+    database_url="postgresql://postgres:pw@aws-0-region.pooler.supabase.com:6543/postgres?sslmode=require"
+).database_url
+check(
+    "a URL that already names its TLS mode is not rewritten",
+    supabase.count("sslmode") == 1 and supabase.endswith("sslmode=require"),
+    supabase,
+)
+check(
+    "an explicit refusal of TLS is respected — it is a decision, not an omission",
+    Settings(
+        database_url="postgresql://u:p@remote-host.example:5432/db?sslmode=disable&pool=1"
+    ).database_url
+    == "postgresql+psycopg://u:p@remote-host.example:5432/db?sslmode=disable&pool=1",
+)
+check(
+    "a second query parameter does not push TLS off the end of the URL",
+    "sslmode=require"
+    in Settings(database_url="postgresql://u:p@remote-host.example:5432/db?options=-c%20x").database_url,
+)
+for local_host in ("localhost", "127.0.0.1", "postgres", "db"):
+    check(
+        f"a database on `{local_host}` is not told to use TLS it may not have",
+        "sslmode"
+        not in Settings(database_url=f"postgresql://u:p@{local_host}:5432/careerguide").database_url,
+        local_host,
+    )
+check(
+    "SQLite is left exactly as written",
+    Settings(database_url="sqlite:///./careerguide.db").database_url == "sqlite:///./careerguide.db",
 )
 
 # --------------------------------------------------------------------- 4. what is a token

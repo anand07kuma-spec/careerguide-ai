@@ -23,7 +23,7 @@ import { GuideAvatar, VoiceWave, Wordmark } from "@/components/brand";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { api, ApiError, BACKEND_URL, isOffline } from "@/lib/api";
-import { useT } from "@/lib/i18n";
+import { useT, useTf } from "@/lib/i18n";
 import { useSession } from "@/lib/session";
 import { cn } from "@/lib/utils";
 import { THEME_LABELS, type ConversationInfo, type ThemeKey } from "@/lib/types";
@@ -123,6 +123,7 @@ const FALLBACK_GREETING: Record<string, string> = {
 
 export default function VoiceCallPage() {
   const t = useT();
+  const tf = useTf();
   const { settings, user, isStudent } = useSession();
   const language = settings.language || user?.preferred_language || "hinglish";
   // Which language this call is actually running in right now. The guide
@@ -574,7 +575,9 @@ export default function VoiceCallPage() {
             <p className="max-w-md text-xs leading-relaxed text-white/60">
               {/localhost|127\.0\.0\.1/.test(BACKEND_URL) ? (
                 <>
-                  {t("The CareerGuide server is not reachable on port 8000.")}{" "}
+                  {tf("The CareerGuide server at {api} is not reachable.", {
+                    api: BACKEND_URL,
+                  })}{" "}
                   {t("Start it with this command:")}
                   <code className="mx-1 rounded bg-white/10 px-1.5 py-0.5">uvicorn app.main:app --reload</code>{" "}
                   {t("Then try again.")}

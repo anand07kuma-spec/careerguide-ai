@@ -1431,6 +1431,7 @@ export interface AdminDeployment {
   webhook_verifiable: boolean;
   razorpay_test_mode: boolean;
   cors_origins: string[];
+  frontend_url: string | null;
   public_site_url: string;
   public_repo_url: string;
   tenant_base_domain: string;
