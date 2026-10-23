@@ -53,6 +53,7 @@ from ..models import (
     Recommendation,
     Response as Answer,
     Result,
+    Resume,
     SavedCareer,
     SessionNote,
     StudentProfile,
@@ -106,6 +107,12 @@ def _removals(user_id: int) -> list[tuple[str, object]]:
         ("assessment_answers", delete(Answer).where(Answer.assessment_id.in_(assessments))),
         ("assessments", delete(Assessment).where(Assessment.user_id == user_id)),
         ("career_reports", delete(CareerReport).where(CareerReport.student_id == user_id)),
+        # A CV is the most first-person thing in this database: the class marks a child
+        # chose to write down, the skills they claim, the projects they said they did. It
+        # is keyed by the account rather than by a surrogate id, so this is one delete by
+        # the same number the session proved — and, as everywhere here, the database's own
+        # cascade is not relied on: SQLite ships `ondelete` in the schema and switched off.
+        ("resume", delete(Resume).where(Resume.user_id == user_id)),
         ("saved_careers", delete(SavedCareer).where(SavedCareer.student_id == user_id)),
         ("recommendations", delete(Recommendation).where(Recommendation.student_id == user_id)),
         # The items are a plan's own rows, and they say what the student meant to study.

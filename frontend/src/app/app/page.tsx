@@ -12,6 +12,7 @@ import {
   Compass,
   FileText,
   GraduationCap,
+  Handshake,
   Info,
   Lightbulb,
   MessagesSquare,
@@ -236,6 +237,22 @@ const PLACES: { href: string; label: string; icon: typeof Briefcase; tone: Tone;
       ],
       href: "/app/reports",
       cta: "Make a report",
+    },
+  },
+  {
+    href: "/interview-prep",
+    label: "Practice Interview",
+    icon: Handshake,
+    tone: "teal",
+    detail: {
+      title: "Practice Interview",
+      icon: <Handshake className="h-5 w-5" aria-hidden />,
+      lines: [
+        "Five questions about you for any job you pick, a short note after each answer, then a few things to try next time.",
+        "This tab holds the conversation and the server keeps nothing of it. With no AI configured you get this app's own questions, and no score.",
+      ],
+      href: "/interview-prep",
+      cta: "Start practising",
     },
   },
   {

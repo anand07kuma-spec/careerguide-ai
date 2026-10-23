@@ -55,6 +55,8 @@ const STORED = [
   "Consent records, kept per scope: profile, voice, history.",
   "Your conversations with the guide, and their text.",
   "Your interest answers, your saved careers, and your study plans with their step status.",
+  "The skill-gap note and the four-week plan written from a result’s scores. They sit on that result, on your account, and they are replaced only when you press the button that rewrites them.",
+  "If you write a resume: the job title you aimed it at, and the class rows, skills and projects you typed, kept as one document on your account. Printing happens in your own browser — this app builds no file and keeps no copy of a printed page.",
   "Report records, and any parent-link relationship you start with a sharing code.",
   "If you accept an invitation to a school's or a counsellor's portal: one membership row for that portal, holding its name, the role the invitation was written for, the date you joined, and your own switch for finished reports.",
   "If you send a study-abroad enquiry: the name, email address and optional phone number you typed, the stage chosen from a short list, which country or service page sent it, what you wrote in the message box, and the fact and time of the contact tick. Its own section below.",
@@ -70,6 +72,7 @@ const NOT_COLLECTED = [
   "We do not take photographs, and there is no camera feature to take them with.",
   "Raw microphone audio is never recorded and never uploaded. Speech-to-text happens inside your browser, using the Web Speech API, and only the resulting text leaves it.",
   "Nothing records or monitors in the background. The microphone is live only while the student is in an explicit listening state on the call screen.",
+  "A practice interview is kept nowhere. Its questions and the answers typed into them live in the browser tab and end when the tab closes — the server holds no row for them, so the account-erasure step has nothing to remove there. What leaves the tab while the screen is open is described under Groq below.",
   "The application's own code sets one cookie — the session one named under Cookies below — and stores no IP address against your account. The two measurement services described there can set cookies of their own, and only on a public page, only after an answer of Accept or a custom choice that switches them on, and never on a student's or a parent's screen.",
   "If the optional email sign-in is switched on and a student actually uses it, Clerk's own library keeps its session in that browser. That storage is Clerk's, under Clerk's policy, not this app's — and it exists only for the account that chose to connect an email.",
   "We do not infer anything from your voice — not ability, not personality, not a diagnosis. The voice is only turned into words.",
@@ -79,13 +82,14 @@ const USES = [
   "To reply in the conversation, and to remember what was already said when you come back.",
   "To keep the interest answers, saved careers and study plans in one place for this device.",
   "To show a student’s own progress to a parent they deliberately shared it with, and to nobody else.",
+  "To show a student’s own resume back to them when they come back to the screen, and to print it when they press the button.",
   "To know which consents have been given, so voice and history can be switched off again.",
 ];
 
 const RECEIVERS = [
   {
     name: "Groq",
-    body: "The text of the conversation is sent to the model openai/gpt-oss-120b, over Groq’s API, to generate the guide’s reply. Groq sees that text. Your voice never reaches it.",
+    body: "The text of the conversation is sent to the model openai/gpt-oss-120b, over Groq’s API, to generate the guide’s reply. Groq sees that text. Your voice never reaches it. The same kind of call happens on the resume screen: only the job title you type into the ✨ Suggest box is sent, so the model can name skills and project ideas for it. The rest of that document — the name, the marks, the schools, what you actually saved — is never sent anywhere. The ✨ Rewrite this plan with AI button on a result sends a different set: the score this app calculated for each area, as a number and a band, plus the career those scores pointed at and the skills our own notes list for it. The answers themselves are not in that request, and neither is your name or your school. Pressing it is optional — the plan on the page was written by this app’s own rules, and it stays there if you never press it. When you open the chat from a plan, the four weeks on your screen are put in front of the model so its reply is about the page you are looking at: nothing reaches the provider that is not already on your own result. The practice-interview screen sends the same kind of text: the answer just typed goes with the earlier questions and answers of that sitting, so the model can comment on it and ask the next question — and nothing of that sitting is kept on this app’s side. With no model configured, that screen asks its own five questions, sends nothing to anyone, and gives no feedback and no score, because nobody read the answers.",
   },
   {
     name: "Google Gemini text-to-speech",
@@ -136,7 +140,7 @@ const RIGHTS = [
   {
     right: "Deletion",
     status: "In the app",
-    body: "Settings → Delete account erases an account in one step: the conversations and messages, the assessments with their answers and results, the reports and the PDFs printed from them, the study plans and every item in them, saved careers, the profile, the settings, every consent given and any mail still queued are removed, and every session on every device signs out. The row that was the account is kept holding nothing but the date it was erased on, because a payment ledger and an operator log have to point at something. An erasure is final — the app keeps no copy to restore from — and an operator account cannot erase itself, which is the one case that goes through whoever runs the site. Clearing conversations and Settings → This device → Start over still work on their own, for someone who wants one without the other.",
+    body: "Settings → Delete account erases an account in one step: the conversations and messages, the assessments with their answers and results, the reports and the PDFs printed from them, the study plans and every item in them, saved careers, the resume as it was written, the profile, the settings, every consent given and any mail still queued are removed, and every session on every device signs out. The row that was the account is kept holding nothing but the date it was erased on, because a payment ledger and an operator log have to point at something. An erasure is final — the app keeps no copy to restore from — and an operator account cannot erase itself, which is the one case that goes through whoever runs the site. Clearing conversations and Settings → This device → Start over still work on their own, for someone who wants one without the other.",
   },
   {
     right: "Portability",

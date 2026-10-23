@@ -9,7 +9,7 @@ column.
 
 Two states a real database is actually in, and both are tested:
 
-* **Empty.** `upgrade head` has to build all thirty-nine tables from nothing. That is
+* **Empty.** `upgrade head` has to build all forty tables from nothing. That is
   the job `0000_baseline_schema` exists for: before it, revision 0001 pointed its foreign
   keys at a `users` table it expected somebody else to have made, which is a precondition
   SQLite lets you violate and PostgreSQL refuses outright with `relation "users" does not
@@ -106,6 +106,8 @@ TABLES = [
     # Dependency order again: an exam points at the door it belongs to.
     "exam_groups",
     "exams",
+    # Its primary key is the account, so `users` has to exist before it can.
+    "resumes",
     # Points at `users` and must survive its deletion, so it is last.
     "audit_events",
 ]
@@ -159,7 +161,10 @@ NINTH = "0009_observation_source_width"
 TENTH = "0010_hashed_device_and_token"
 ELEVENTH = "0011_exams"
 TWELFTH = "0012_user_erasure"
-HEAD = "0013_student_age"
+THIRTEENTH = "0013_student_age"
+FOURTEENTH = "0014_resume"
+FIFTEENTH = "0015_result_roadmap"
+HEAD = "0016_career_source"
 URL = os.environ["DATABASE_URL"]
 EMPTY_URL = f"sqlite:///{EMPTY.as_posix()}"
 
@@ -226,54 +231,49 @@ cfg = alembic_config()
 print("\n=== 1. the revision graph")
 script = ScriptDirectory.from_config(cfg)
 walked = list(script.walk_revisions())
-check("fourteen revisions are on file", len(walked) == 14, [revision.revision for revision in walked])
+check("seventeen revisions are on file", len(walked) == 17, [revision.revision for revision in walked])
 check("the newest is the one the file declares",
       walked[0].revision == HEAD, walked[0].revision)
 check("it is the head", script.get_current_head() == HEAD, script.get_current_head())
-# The newest revision only adds a column to a table the baseline already made, so it has to
-# sit on the erasure date rather than beside it, and the erasure date sits on the exam
-# catalogue rather than replacing it. Section 9 is the one that proves a device account
-# and a live session both survive 0010, wherever in the chain it now sits.
-check("the stated age builds on the erasure date rather than replacing it",
-      walked[0].revision == HEAD and walked[0].down_revision == TWELFTH,
-      [walked[0].revision, walked[0].down_revision])
-check("…and the erasure date builds on the exam catalogue rather than replacing it",
-      walked[1].revision == TWELFTH and walked[1].down_revision == ELEVENTH,
-      [walked[1].revision, walked[1].down_revision])
-check("…and the exam catalogue builds on the digested credentials rather than replacing them",
-      walked[2].revision == ELEVENTH and walked[2].down_revision == TENTH,
-      [walked[2].revision, walked[2].down_revision])
-check("…and the digested credentials build on the widened column rather than replacing it",
-      walked[3].revision == TENTH and walked[3].down_revision == NINTH,
-      [walked[3].revision, walked[3].down_revision])
-check("…and the widened column builds on the operator log rather than replacing it",
-      walked[4].revision == NINTH and walked[4].down_revision == EIGHTH,
-      [walked[4].revision, walked[4].down_revision])
-check("…and the operator log builds on the tenancy tables rather than replacing them",
-      walked[5].revision == EIGHTH and walked[5].down_revision == SEVENTH,
-      [walked[5].revision, walked[5].down_revision])
-check("…and the tenancy tables build on the study-abroad directory rather than replacing it",
-      walked[6].revision == SEVENTH and walked[6].down_revision == SIXTH,
-      [walked[6].revision, walked[6].down_revision])
-check("…and the study-abroad tables build on the email outbox",
-      walked[7].revision == SIXTH and walked[7].down_revision == FIFTH,
-      [walked[7].revision, walked[7].down_revision])
-check("…and the outbox builds on the payments revision",
-      walked[8].revision == FIFTH and walked[8].down_revision == FOURTH,
-      [walked[8].revision, walked[8].down_revision])
-check("…and payments builds on the email-sign-in revision",
-      walked[9].revision == FOURTH and walked[9].down_revision == THIRD,
-      [walked[9].revision, walked[9].down_revision])
-check("…and that one builds on the report revision",
-      walked[10].revision == THIRD and walked[10].down_revision == SECOND,
-      [walked[10].revision, walked[10].down_revision])
-check("…and that one on the assessment revision",
-      walked[11].revision == SECOND and walked[11].down_revision == FIRST,
-      [walked[11].revision, walked[11].down_revision])
-# The bottom of the chain, and the reason the thirteen above it can point at `users` at all.
-check("…and the assessment revision builds on the baseline rather than replacing it",
-      walked[12].revision == FIRST and walked[12].down_revision == BASELINE,
-      [walked[12].revision, walked[12].down_revision])
+# The newest revision widens two tables the baseline made, so it has to sit on the plan column
+# rather than beside it, and every pair below is the chain that was already there. It is walked
+# as a list rather than written out as sixteen indexed checks, because adding a revision used to
+# mean renumbering every line under it — which is a change no reviewer would notice getting wrong.
+# Section 9 is the one that proves a device account and a live session both survive 0010,
+# wherever in the chain it now sits.
+CHAIN: list[tuple[str, str, str]] = [
+    (HEAD, FIFTEENTH, "the source columns build on the plan column rather than replacing it"),
+    (FIFTEENTH, FOURTEENTH,
+     "…and the plan column builds on the resume table rather than replacing it"),
+    (FOURTEENTH, THIRTEENTH,
+     "…and the resume table builds on the stated age rather than replacing it"),
+    (THIRTEENTH, TWELFTH,
+     "…and the stated age builds on the erasure date rather than replacing it"),
+    (TWELFTH, ELEVENTH,
+     "…and the erasure date builds on the exam catalogue rather than replacing it"),
+    (ELEVENTH, TENTH,
+     "…and the exam catalogue builds on the digested credentials rather than replacing them"),
+    (TENTH, NINTH,
+     "…and the digested credentials build on the widened column rather than replacing it"),
+    (NINTH, EIGHTH,
+     "…and the widened column builds on the operator log rather than replacing it"),
+    (EIGHTH, SEVENTH,
+     "…and the operator log builds on the tenancy tables rather than replacing them"),
+    (SEVENTH, SIXTH,
+     "…and the tenancy tables build on the study-abroad directory rather than replacing it"),
+    (SIXTH, FIFTH, "…and the study-abroad tables build on the email outbox"),
+    (FIFTH, FOURTH, "…and the outbox builds on the payments revision"),
+    (FOURTH, THIRD, "…and payments builds on the email-sign-in revision"),
+    (THIRD, SECOND, "…and that one builds on the report revision"),
+    (SECOND, FIRST, "…and that one on the assessment revision"),
+    # The bottom of the chain, and the reason the sixteen above it can point at `users` at all.
+    (FIRST, BASELINE,
+     "…and the assessment revision builds on the baseline rather than replacing it"),
+]
+for _step, (_revision, _below, _label) in enumerate(CHAIN):
+    check(_label,
+          walked[_step].revision == _revision and walked[_step].down_revision == _below,
+          [walked[_step].revision, walked[_step].down_revision])
 check("the baseline has nothing before it, so a fresh database can be built from nothing",
       walked[-1].revision == BASELINE and walked[-1].down_revision is None,
       [walked[-1].revision, walked[-1].down_revision])
@@ -282,9 +282,9 @@ check("the baseline has nothing before it, so a fresh database can be built from
 check("…and it is exactly one revision, not a second root the chain would fork over",
       sum(1 for revision in walked if revision.down_revision is None) == 1,
       [revision.revision for revision in walked if revision.down_revision is None])
-check("…and it claims nineteen tables, which with the twenty the later revisions add is "
-      "the whole application",
-      len(ALL_TABLES) == len(set(ALL_TABLES)) == len(BASELINE_TABLES) + len(TABLES) == 39,
+check("…and it claims nineteen tables, which with the twenty-one the later revisions add "
+      "is the whole application",
+      len(ALL_TABLES) == len(set(ALL_TABLES)) == len(BASELINE_TABLES) + len(TABLES) == 40,
       [len(BASELINE_TABLES), len(TABLES)])
 
 print("\n=== 2. offline mode prints the SQL, which is the diff to read")
@@ -297,9 +297,9 @@ except Exception as caught:  # noqa: BLE001 - reported as a failed check
     error = caught
 printed = stream.getvalue()
 check("alembic upgrade head --sql runs", error is None, repr(error))
-check("…and emits forty CREATE TABLEs: the thirty-nine app tables plus its own "
+check("…and emits forty-one CREATE TABLEs: the forty app tables plus its own "
       "version table",
-      printed.count("CREATE TABLE") == 40, printed.count("CREATE TABLE"))
+      printed.count("CREATE TABLE") == 41, printed.count("CREATE TABLE"))
 check("…naming all of them", all(f"CREATE TABLE {table}" in printed for table in ALL_TABLES),
       [table for table in ALL_TABLES if f"CREATE TABLE {table}" not in printed])
 check("…starting with `users`, which is the table whose absence used to make this chain "
@@ -311,6 +311,34 @@ check("…starting with `users`, which is the table whose absence used to make t
 check("…and the stated age as a one-column ALTER on the table the baseline made",
       "ADD COLUMN age" in printed, [line for line in printed.splitlines()
                                     if "student_profiles" in line][:4])
+# 0015 has the same guard for the same reason, so a reviewer of the offline diff sees the
+# plan column being added even though a live database may already have had it since boot.
+# `assessment_results` is 0001's table rather than the baseline's, so the ordering is the
+# check here: the table is created without the column and widened later, which is what keeps
+# a database that stopped at 0001 upgradeable.
+check("…and the plan column as a one-column ALTER on the result table the first revision made",
+      "ADD COLUMN roadmap_json" in printed,
+      [line for line in printed.splitlines() if "assessment_results" in line][:4])
+created_results = printed.split("CREATE TABLE assessment_results", 1)[1].split(";", 1)[0] \
+    if "CREATE TABLE assessment_results" in printed else ""
+check("…which the create statement itself does not carry, because the column is 0015's",
+      "roadmap_json" not in created_results and created_results != "",
+      created_results[:200])
+# 0016 is the same shape again — nullable columns on tables the chain already made — so the
+# reviewer of this diff sees them arrive as three separate ALTERs, and sees that the statement
+# which created `careers` does not contain them. That ordering is the point: a database that
+# stopped at any earlier revision can still be widened to today's.
+check("…and the source columns as three one-column ALTERs, two pages and one date",
+      printed.count("ADD COLUMN source_url") == 2
+      and printed.count("ADD COLUMN verified_at") == 1,
+      [line.strip() for line in printed.splitlines()
+       if "ADD COLUMN" in line and ("source_url" in line or "verified_at" in line)])
+created_careers = printed.split("CREATE TABLE careers", 1)[1].split(";", 1)[0] \
+    if "CREATE TABLE careers" in printed else ""
+check("…which the careers create statement does not carry, because they are 0016's",
+      "source_url" not in created_careers and "verified_at" not in created_careers
+      and created_careers != "",
+      created_careers[:200])
 # The baseline is the one revision that must never grow a query: offline mode cannot run
 # Python that connects, so a `SELECT` in it would break `--sql` for the whole chain.
 check("…which is possible because the baseline is pure DDL, with no data step in it",
@@ -366,7 +394,7 @@ check("and the rest of the chain runs over that baseline without a collision",
       engine.connect().execute(text("select version_num from alembic_version")).scalar()
       == HEAD,
       engine.connect().execute(text("select version_num from alembic_version")).scalar())
-check("…reaching all thirty-nine tables", all(table in inspect(engine).get_table_names()
+check("…reaching all forty tables", all(table in inspect(engine).get_table_names()
                                                for table in ALL_TABLES),
       inspect(engine).get_table_names())
 check("…and nothing beyond them and its own version table",
@@ -514,7 +542,7 @@ engine.dispose()
 
 print("\n=== 4. every table the chain builds matches the table the models build")
 reference = create_engine(f"sqlite:///{FROM_MODELS.as_posix()}")
-# All thirty-nine at once: `create_all` puts them in dependency order for the same
+# All forty at once: `create_all` puts them in dependency order for the same
 # reason the baseline lists them in one, and this is the database the app would have made
 # on a laptop with no migrations in sight.
 Base.metadata.create_all(reference)
@@ -1272,7 +1300,7 @@ Base.metadata.create_all(prepared)
 prepared.dispose()
 os.environ["DATABASE_URL"] = STAMP_URL
 get_settings.cache_clear()
-check("it has all thirty-nine tables and no alembic_version, which is the state the "
+check("it has all forty tables and no alembic_version, which is the state the "
       "entrypoint looks for",
       sorted(tables_in(STAMP_URL)) == sorted(ALL_TABLES), tables_in(STAMP_URL))
 command.stamp(cfg, "head")
@@ -1643,6 +1671,22 @@ check("…as a nullable small integer, which is why the migration is allowed to 
       len(boot_columns) == 1 and boot_columns[0]["nullable"], boot_columns)
 with aged.begin() as conn:
     conn.execute(text("update student_profiles set age = 14 where user_id = 1"))
+    # The same window for the catalogue: the new code can certify a career row before the
+    # migration reaches it, which is the only way a green badge gets a date the chain would
+    # otherwise be about to erase by failing on a duplicate column.
+    conn.execute(
+        text("insert into careers (id, slug, title, category, summary, typical_activities, "
+             "useful_skills, school_subjects, education_pathways, entry_requirements, "
+             "preparation_stages, benefits, challenges, explore_activities, official_links, "
+             "related_slugs, interest_themes, min_class, needs_verification, created_at) "
+             "values (1, 'chartered-accountant', 'Chartered Accountant', 'commerce', 'A row "
+             "the app put a source on', '[]', '[]', '[]', '[]', '[]', '[]', '[]', '[]', '[]', "
+             "'[]', '[]', '[]', 6, 0, '2026-10-18 09:00:00')")
+    )
+    conn.execute(
+        text("update careers set source_url = 'https://www.icai.org', "
+             "verified_at = '2026-10-23 10:00:00' where id = 1")
+    )
 aged.dispose()
 
 error = None
@@ -1667,6 +1711,48 @@ check("…with the age the student typed during that window still stored, becaus
           text("select age, age_range from student_profiles where user_id = 1")
       ).all() == [(14, "11-12")],
       aged.connect().execute(text("select * from student_profiles")).all())
+# The same boot sync adds *every* nullable column the current models declare, so this
+# database reaches 0015 in exactly the state 0013 arrived at 0013 with: the column already
+# there, written by the running code rather than by a revision. Without 0015's own guard the
+# `upgrade head` above would have died on `duplicate column name: roadmap_json`, and the age
+# checks would have passed while the plan column was the one that broke the chain.
+check("…and the very same window is what 0015 has to survive, because boot sync widened "
+      "the plan column too",
+      "roadmap_json" in {column["name"]
+                         for column in inspect(aged).get_columns("assessment_results")},
+      sorted(column["name"] for column in inspect(aged).get_columns("assessment_results")))
+plan_columns = [column for column in inspect(aged).get_columns("assessment_results")
+                if column["name"] == "roadmap_json"]
+check("…leaving exactly one plan column, nullable, after the chain ran over it",
+      len(plan_columns) == 1 and plan_columns[0]["nullable"], plan_columns)
+# 0016 is three nullable columns on two more tables, so the identical boot sync hands it the
+# identical window. It is the newest revision, which means it is the one a laptop meets on the
+# very first boot after a `git pull` — and an unguarded ALTER there would strand every revision
+# written after it behind a `duplicate column name`.
+check("…and 0016 met the same window on the catalogue tables, source column and all",
+      {"source_url", "verified_at"} <= {column["name"]
+                                       for column in inspect(aged).get_columns("careers")},
+      sorted(column["name"] for column in inspect(aged).get_columns("careers")))
+check("…on the scheme table too, where only the page is new and the date already had a name",
+      "source_url" in {column["name"]
+                       for column in inspect(aged).get_columns("scholarships")}
+      and "verified_at" not in {column["name"]
+                                for column in inspect(aged).get_columns("scholarships")},
+      sorted(column["name"] for column in inspect(aged).get_columns("scholarships")))
+duplicates = {f"{table}.{column}": len([item for item in inspect(aged).get_columns(table)
+                                        if item["name"] == column])
+              for table, column in [("careers", "source_url"), ("careers", "verified_at"),
+                                    ("scholarships", "source_url")]}
+check("…leaving exactly one of each, so a badge has one date and one page to read",
+      all(count == 1 for count in duplicates.values()), duplicates)
+check("…with the source the app recorded during that window still on the row, because "
+      "skipping the DDL is what protects it",
+      aged.connect().execute(
+          text("select source_url, verified_at, needs_verification from careers where id = 1")
+      ).all() == [("https://www.icai.org", "2026-10-23 10:00:00", 0)],
+      aged.connect().execute(
+          text("select source_url, verified_at, needs_verification from careers where id = 1")
+      ).all())
 aged.dispose()
 
 os.environ["DATABASE_URL"] = URL

@@ -6,7 +6,8 @@ Create Date: 2026-10-20
 
 Both columns held something that *is* a credential. `auth_tokens.token` was the primary key
 and the bearer string, byte for byte, as issued — so a database read was a list of live
-sessions, and a backup that left the machine (see README §"Backing up the database") was a
+sessions, and a backup that left the machine (see docs/ARCHITECTURE_AND_TESTS.md §7,
+"Backing up the database") was a
 box of keys. `users.device_id` was the value `/api/auth/guest` accepts as the whole proof
 that a browser may have an account — stored in plaintext, it turned the same read into a way
 to reopen every device account on the site. Neither is plaintext any more.

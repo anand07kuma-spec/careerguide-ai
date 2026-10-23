@@ -75,6 +75,7 @@ from app.models import (  # noqa: E402
     Recommendation,
     Response as AssessmentResponse,
     Result,
+    Resume,
     SavedCareer,
     SessionNote,
     StudentProfile,
@@ -194,6 +195,15 @@ def populate(user_id: int) -> None:
         if db.scalar(select(ConsentRecord).where(ConsentRecord.user_id == user_id)) is None:
             db.add(ConsentRecord(user_id=user_id, scope="profile", granted=True, version="1"))
         db.add(EmailJob(user_id=user_id, purpose="welcome", status="queued", detail="a body with a name in it"))
+        db.add(
+            Resume(
+                user_id=user_id,
+                target_role="Software Engineer",
+                education=[{"class_level": "class-12", "school": "state board", "year": "2026", "result": "82%"}],
+                skills=[{"name": "Python", "level": "learning"}],
+                projects=[{"title": "A timetable app for my class", "year": "2026", "detail": "It worked, twice."}],
+            )
+        )
         db.commit()
 
 
@@ -234,6 +244,7 @@ with SessionLocal() as db:
         "settings": count(db, UserSettings, UserSettings.user_id, student_id),
         "consents": count(db, ConsentRecord, ConsentRecord.user_id, student_id),
         "emails": count(db, EmailJob, EmailJob.user_id, student_id),
+        "resume": count(db, Resume, Resume.user_id, student_id),
         "sessions": count(db, AuthToken, AuthToken.user_id, student_id),
     }
 check("the fixture really wrote a conversation", before["conversations"] == 1, str(before))
@@ -242,6 +253,7 @@ check("a report and the PDF printed from it", before["reports"] == 1 and before[
 check("a study plan, saved careers and suggestions", before["plans"] == 1 and before["saved"] == 1 and before["recommendations"] == 1)
 check("a profile, settings and the consents given", before["profile"] == 1 and before["settings"] == 1 and before["consents"] == 1)
 check("mail that was still queued about them", before["emails"] >= 1, str(before["emails"]))
+check("a resume the student had written", before["resume"] == 1, str(before["resume"]))
 check("and a session on each of two devices", before["sessions"] == 2, str(before["sessions"]))
 check(
     "the sign-in itself stored the profile the route will remove",
@@ -266,6 +278,11 @@ check(
     str(payload["removed"]),
 )
 check("it says which rows are kept, and why", len(payload["kept"]) >= 2, str(payload["kept"]))
+check(
+    "the resume is counted as a document the account held",
+    payload["removed"].get("resume") == 1,
+    str(payload["removed"]),
+)
 check(
     "the money ledger is one of them",
     any("payment" in line.lower() or "refund" in line.lower() for line in payload["kept"]),
@@ -293,6 +310,7 @@ with SessionLocal() as db:
         "settings": count(db, UserSettings, UserSettings.user_id, student_id),
         "consents": count(db, ConsentRecord, ConsentRecord.user_id, student_id),
         "emails": count(db, EmailJob, EmailJob.user_id, student_id),
+        "resume": count(db, Resume, Resume.user_id, student_id),
         "sessions": count(db, AuthToken, AuthToken.user_id, student_id),
     }
     orphan_messages = int(db.scalar(select(func.count()).select_from(Message)) or 0)

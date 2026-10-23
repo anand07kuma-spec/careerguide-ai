@@ -68,6 +68,8 @@ import type {
   Institution,
   InterestPrompt,
   InterestSummary,
+  InterviewLine,
+  InterviewTurn,
   InviteInput,
   InviteResult,
   Journey,
@@ -91,6 +93,9 @@ import type {
   Pricing,
   RecommendationSet,
   Resource,
+  Resume,
+  ResumeInput,
+  ResumeSuggestion,
   SavedCareer,
   Session,
   SessionNote,
@@ -441,10 +446,23 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ kind, language }),
     }),
-  sendMessage: async (sessionId: number, message: string, speak: boolean) => {
+  /**
+   * One message to the guide.
+   *
+   * `planOf` is the result whose "discuss this plan" button opened this chat, and it is
+   * sent only while that card is pinned. The server checks the id belongs to this student
+   * before it tells the model anything about the plan, and the field is left null for
+   * every other message so a plan never travels into an unrelated conversation.
+   */
+  sendMessage: async (
+    sessionId: number,
+    message: string,
+    speak: boolean,
+    planOf?: number | null,
+  ) => {
     const reply = await request<ChatReply>(`/api/conversations/${sessionId}/messages`, {
       method: "POST",
-      body: JSON.stringify({ message, speak }),
+      body: JSON.stringify({ message, speak, plan_of: planOf ?? null }),
     });
     return { ...reply, audio_url: mediaUrl(reply.audio_url) };
   },
@@ -512,6 +530,21 @@ export const api = {
       resultSchema,
       `/api/assessments/result/${resultId}${language ? `?language=${encodeURIComponent(language)}` : ""}`,
     ),
+  /**
+   * Ask the configured model to rewrite the plan on a finished result.
+   *
+   * The route answers with the whole result, not just the plan, because that is what the
+   * card needs and what a GET would have returned anyway. When the model cannot be reached
+   * or answers in a form nothing can use, the same payload comes back holding the rules
+   * plan plus one sentence saying which of the two failures happened — the plan is never
+   * quietly swapped for a different one under the student.
+   */
+  assessmentRoadmap: (resultId: number, language?: string) =>
+    checked<AssessmentResult>(
+      resultSchema,
+      `/api/assessments/result/${resultId}/roadmap${language ? `?language=${encodeURIComponent(language)}` : ""}`,
+      { method: "POST" },
+    ),
 
   // The printed version of a student's questionnaires. `language` is which language
   // the *page* is printed in; the answers keep the language they were given in.
@@ -547,6 +580,43 @@ export const api = {
   deletePlanItem: (planId: number, itemId: number) =>
     request<void>(`/api/study-plans/${planId}/items/${itemId}`, { method: "DELETE" }),
   deletePlan: (planId: number) => request<void>(`/api/study-plans/${planId}`, { method: "DELETE" }),
+
+  // A student's own CV. The first read of an account that has never saved one answers
+  // with an empty document rather than a 404, so the screen draws its form and no row
+  // is written just because somebody opened the page.
+  resume: () => request<Resume>("/api/resume"),
+  // The whole document, because the server replaces rather than patches: a screen that
+  // holds the entire CV on screen cannot half-save the list a student was editing.
+  saveResume: (payload: ResumeInput) =>
+    request<Resume>("/api/resume", { method: "POST", body: JSON.stringify(payload) }),
+  /**
+   * Skills and project ideas for one target role.
+   *
+   * The reply carries `provider` and `demo_generated`, and the screen has to show them:
+   * when no AI provider is configured — or the one configured could not be reached —
+   * these lists come from the career profiles inside this app, and calling that "AI
+   * suggested" would be a claim this project does not get to make.
+   */
+  resumeSuggest: (target_role: string) =>
+    request<ResumeSuggestion>("/api/ai/resume-suggest", {
+      method: "POST",
+      body: JSON.stringify({ target_role }),
+    }),
+  /**
+   * One turn of a practice interview.
+   *
+   * The transcript travels with every request and nothing is stored server-side, which is
+   * why this screen keeps it in memory: a practice interview holds whatever a student says
+   * about themselves, and the answer to "where is it kept" is "on your device, until you
+   * close the tab". `demo_generated` and `score` have to be read together by the screen —
+   * when no model answered, there is no feedback and no number, and saying otherwise would
+   * be a judgement about a child that nobody made.
+   */
+  mockInterview: (payload: { role: string; history: InterviewLine[]; language?: string }) =>
+    request<InterviewTurn>("/api/ai/mock-interview", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
 
   resources: (params: { search?: string; category?: string; kind?: string; language?: string } = {}) => {
     const query = new URLSearchParams(

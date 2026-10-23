@@ -22,8 +22,8 @@ from .database import Base, SessionLocal, engine
 from .middleware.cors import configure_cors
 from .middleware.rate_limit import register_rate_limiting
 from .routers import admin, assessments, auth, catalogue, careers, clerk, clerk_webhooks, conversations
-from .routers import email, exams, interests, journey, organizations, payments, recommendations
-from .routers import report_pdfs, reports, study_abroad, study_plans, users, voice
+from .routers import email, exams, interests, interview, journey, organizations, payments, recommendations
+from .routers import report_pdfs, reports, resume, study_abroad, study_plans, users, voice
 from .schema_sync import add_missing_columns
 from .schemas import HealthOut
 from .seed import seed_if_empty
@@ -115,6 +115,7 @@ for module in (
     organizations,
     payments,
     study_plans,
+    resume,
     study_abroad,
     catalogue,
     reports,
@@ -125,6 +126,12 @@ for module in (
 # `exams` is the first module with two routers: the public catalogue and the operator's
 # side of the same table, which carries its own `Depends(get_admin_user)` guard.
 app.include_router(exams.admin_router)
+# The same for `resume`: the document lives on `/api/resume`, and the helper that spends
+# an outside call to draft parts of it lives on `/api/ai/resume-suggest`.
+app.include_router(resume.ai_router)
+# `interview` has only the AI route: a practice interview writes no row, so there is no
+# document router to put beside it.
+app.include_router(interview.ai_router)
 
 
 @app.get("/api/health", response_model=HealthOut, tags=["meta"])

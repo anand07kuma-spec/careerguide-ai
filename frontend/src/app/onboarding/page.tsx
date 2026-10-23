@@ -14,6 +14,27 @@ import { cn } from "@/lib/utils";
 import type { Role } from "@/lib/types";
 
 /**
+ * Where each way in from `/welcome` lands, once the account exists.
+ *
+ * The welcome screen's two buttons are links with `?intent=` on them rather than
+ * a state handed over in code, because consent cannot be skipped: the backend
+ * refuses to store a profile without it, so every route into the app comes back
+ * through this screen. Reading the query at submit time — instead of holding it in
+ * state — keeps the first paint identical for every visitor, which is what lets
+ * this page prerender without a Suspense boundary around a search-param hook.
+ */
+const INTENT_HOME: Record<string, string> = {
+  chat: "/app/chat",
+  assessment: "/app/assessments",
+};
+
+function homeForIntent(): string {
+  if (typeof window === "undefined") return "/app";
+  const intent = new URLSearchParams(window.location.search).get("intent");
+  return (intent && INTENT_HOME[intent]) || "/app";
+}
+
+/**
  * One question: are you a student, or the parent of one?
  *
  * Class, age, interests, where a student studies and what a family can spend are
@@ -79,7 +100,7 @@ export default function OnboardingPage() {
         // default. The guide learns the class during the conversation.
         consent_age: "6-8",
       });
-      router.replace(role === "parent" ? "/parent" : "/app");
+      router.replace(role === "parent" ? "/parent" : homeForIntent());
     } catch (error) {
       setSubmitError(
         error instanceof Error

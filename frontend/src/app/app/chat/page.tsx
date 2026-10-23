@@ -1,8 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   AlertTriangle,
+  Compass,
   Mic,
   MicOff,
   MessagesSquare,
@@ -14,17 +16,19 @@ import {
   StopCircle,
   Trash2,
   Volume2,
+  X,
 } from "lucide-react";
 import { Screen } from "@/components/layout/app-shell";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, LinkButton } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState, ErrorState, LoadingPanel } from "@/components/ui/feedback";
 import { Toggle } from "@/components/ui/field";
 import { useToast } from "@/components/ui/toast";
 import { api, isOffline } from "@/lib/api";
+import type { RoadmapPlan } from "@/lib/assessments";
 import { useSession } from "@/lib/session";
-import { useT, useTf } from "@/lib/i18n";
+import { useT, useTf, useUiLang } from "@/lib/i18n";
 import { classLabel, cn } from "@/lib/utils";
 import { THEME_LABELS, type ChatMessage, type ConversationInfo, type ThemeKey } from "@/lib/types";
 import {
@@ -51,8 +55,32 @@ const FACT_NOTICES: Record<string, string> = {
   financial_context: "Cost preference",
 };
 
+/**
+ * The chat, and the plan it may have been opened from.
+ *
+ * A result page links here as `/app/chat?context=roadmap&result=12`. Reading that
+ * address needs `useSearchParams`, which has no value while a page is being
+ * prerendered — so the thread that reads it sits behind a boundary of its own, or the
+ * build stops shipping this route at all.
+ */
 export default function ChatPage() {
-  const { settings, user, reload } = useSession();
+  return (
+    <Suspense
+      fallback={
+        <Screen title="Chat with your guide">
+          <Card>
+            <LoadingPanel label="Opening your conversation…" />
+          </Card>
+        </Screen>
+      }
+    >
+      <ChatThread />
+    </Suspense>
+  );
+}
+
+function ChatThread() {
+  const { settings, user, reload, isParent } = useSession();
   const { toast } = useToast();
   const t = useT();
   const tf = useTf();
@@ -73,6 +101,10 @@ export default function ChatPage() {
   const [listRef, setListRef] = useState<HTMLDivElement | null>(null);
 
   const language = settings.language || user?.preferred_language || "hinglish";
+  // The interface language, which is what a plan card is written in. It is not the
+  // conversation language above: a plan is a document the student reads, and the result
+  // page they came from renders it in the interface, whatever they happen to be typing.
+  const uiLang = useUiLang();
   // The guide replies in whatever language the student last used, so spoken
   // playback and dictation follow that instead of the account default.
   const [spoken, setSpoken] = useState(language);
@@ -92,6 +124,53 @@ export default function ChatPage() {
       if (listRef) listRef.scrollTop = listRef.scrollHeight;
     });
   }, [listRef]);
+
+  // ---------------------------------------------------- the plan this chat opened from
+  const query = useSearchParams();
+  const planId = useMemo(() => {
+    if (query.get("context") !== "roadmap") return null;
+    const value = Number(query.get("result"));
+    return Number.isInteger(value) && value > 0 ? value : null;
+  }, [query]);
+  const [plan, setPlan] = useState<RoadmapPlan | null>(null);
+  const [planChecked, setPlanChecked] = useState(false);
+  const [planHidden, setPlanHidden] = useState(false);
+
+  // Read back through the same route the result page uses, so the words on this card are
+  // the words on that page. A failure is silent on purpose: the result may have been
+  // deleted, and a chat that cannot show a plan is still a working chat.
+  useEffect(() => {
+    if (!planId || isParent) return;
+    let active = true;
+    api
+      .assessmentResult(planId, uiLang)
+      .then((found) => {
+        if (!active) return;
+        setPlan(found.roadmap);
+        setPlanChecked(true);
+        if (found.roadmap) {
+          // Start the student off with the question they came here to ask, but only into a
+          // still-empty box — nothing they were typing gets overwritten by a card arriving.
+          setDraft((current) =>
+            current.trim()
+              ? current
+              : t("My 30-day plan is next to this chat — what should I do first this week?"),
+          );
+        }
+      })
+      .catch(() => {
+        if (!active) return;
+        setPlan(null);
+        setPlanChecked(true);
+      });
+    return () => {
+      active = false;
+    };
+  }, [isParent, planId, t, uiLang]);
+
+  // Shown and pinned together: the card only stays while the student can see it, so a
+  // plan never keeps being named in messages after it was put away.
+  const pinned = plan !== null && !planHidden;
 
   const openSession = useCallback(
     async (info: ConversationInfo, history: Turn[]) => {
@@ -189,7 +268,11 @@ export default function ChatPage() {
       dictation.reset();
 
       try {
-        const answer = await api.sendMessage(session.id, trimmed, speakOn);
+        // The result id travels with a message only while that plan is pinned on screen.
+        // The server re-reads the plan from its own row rather than trusting this number,
+        // and it refuses an id that is not this student's, so nothing here can hand over
+        // another family's answers.
+        const answer = await api.sendMessage(session.id, trimmed, speakOn, pinned ? planId : null);
         // The reply carries the guide's own judgement about whether this sounds
         // like a child asking for help, so a second request that fails cannot
         // decide whether the helpline card appears.
@@ -249,7 +332,7 @@ export default function ChatPage() {
         setSending(false);
       }
     },
-    [dictation, language, player, reload, sending, session, speakOn, t, tf],
+    [dictation, language, pinned, planId, player, reload, sending, session, speakOn, t, tf],
   );
 
   const canSend = Boolean(session) && draft.trim().length > 0 && !sending;
@@ -397,6 +480,75 @@ export default function ChatPage() {
                 </Button>
               </div>
             </div>
+          </Card>
+        ) : null}
+
+        {planId && !planChecked ? (
+          <p className="text-xs text-muted" role="status">
+            {t("Reading your plan…")}
+          </p>
+        ) : null}
+
+        {pinned && plan ? (
+          <Card className="border-brand/30 bg-brand-mist/40">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex min-w-0 items-start gap-3">
+                <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-surface text-brand-dark">
+                  <Compass className="h-4 w-4" aria-hidden />
+                </span>
+                <div className="min-w-0">
+                  <h2 className="text-base font-semibold leading-tight text-ink">
+                    {t("Your 30-day plan")}
+                  </h2>
+                  <p className="mt-1 text-sm leading-relaxed text-muted">
+                    {tf(
+                      "Aimed at {career}. Your guide is looking at these same four weeks, so you can ask about week two without describing it.",
+                      { career: plan.career.title ? t(plan.career.title) : t("this work") },
+                    )}
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={t("Put this plan away")}
+                onClick={() => setPlanHidden(true)}
+              >
+                <X className="h-4 w-4" aria-hidden />
+              </Button>
+            </div>
+            <ul className="mt-3 flex flex-wrap gap-1.5">
+              {plan.weeks.map((entry) => (
+                <li key={entry.week}>
+                  <Badge tone="brand">
+                    {tf("Week {n}", { n: entry.week })}: {entry.title}
+                  </Badge>
+                </li>
+              ))}
+            </ul>
+            <LinkButton href={`/app/assessments/result/${planId}`} variant="outline" size="sm" className="mt-3">
+              {t("Open the full plan")}
+            </LinkButton>
+          </Card>
+        ) : null}
+
+        {planId && plan && planHidden ? (
+          <Button variant="ghost" size="sm" onClick={() => setPlanHidden(false)}>
+            <Compass className="h-4 w-4" aria-hidden />
+            {t("Show the plan again")}
+          </Button>
+        ) : null}
+
+        {planId && planChecked && !plan ? (
+          <Card className="border-warning/40 bg-warning-mist">
+            <p className="text-sm leading-relaxed text-ink">
+              {t(
+                "That plan is not on this account any more, so your guide has not been shown one. This chat works exactly as it did before — and a questionnaire you answer now comes with a plan of its own.",
+              )}
+            </p>
+            <LinkButton href="/app/assessments" variant="ghost" size="sm" className="mt-2">
+              {t("Back to assessments")}
+            </LinkButton>
           </Card>
         ) : null}
 

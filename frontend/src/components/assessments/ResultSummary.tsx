@@ -3,6 +3,7 @@
 import { AlertTriangle, Briefcase, MessagesSquare, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { RadarChart } from "./RadarChart";
+import { RoadmapSection } from "./RoadmapSection";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { LinkButton } from "@/components/ui/button";
@@ -15,10 +16,11 @@ import { cn } from "@/lib/utils";
  * What a questionnaire came back as — and what it does not mean.
  *
  * The order is the honest one: how much was actually answered first, then the shape,
- * then each area with its band and its count, then careers, then the sentences that
- * bound all of it. A number is never shown without `answered of total` beside it,
- * because "Building and doing 100" from two answers is not the same claim as from
- * five, and the reader cannot tell the difference without being told.
+ * then each area with its band and its count, then careers, then the plan those careers
+ * point at, then the sentences that bound all of it. A number is never shown without
+ * `answered of total` beside it, because "Building and doing 100" from two answers is not
+ * the same claim as from five, and the reader cannot tell the difference without being
+ * told.
  */
 
 const BAND_TONES: Record<string, "neutral" | "brand" | "teal" | "success" | "warning"> = {
@@ -33,7 +35,16 @@ function bandTone(band: string) {
   return BAND_TONES[band] ?? "neutral";
 }
 
-export function ResultSummary({ result }: { result: AssessmentResult }) {
+export function ResultSummary({
+  result,
+  onRoadmap,
+}: {
+  result: AssessmentResult;
+  /** Hands the page the result that comes back from the ✨ request. It has to be
+   * required: a plan card whose rebuild button had nowhere to put the answer would be
+   * exactly the working-looking button this app promises never to ship. */
+  onRoadmap: (next: AssessmentResult) => void;
+}) {
   const t = useT();
   const tf = useTf();
 
@@ -206,6 +217,9 @@ export function ResultSummary({ result }: { result: AssessmentResult }) {
           </p>
         )}
       </Card>
+
+      {/* ------------------------------------------------ The gap and the plan */}
+      <RoadmapSection result={result} onRebuilt={onRoadmap} />
 
       {/* ------------------------------------------------ What this is not */}
       <Card className="border-teal/30 bg-teal-mist/30">

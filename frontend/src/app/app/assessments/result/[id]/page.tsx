@@ -20,7 +20,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button, LinkButton } from "@/components/ui/button";
 import { EmptyState, ErrorState, LoadingPanel } from "@/components/ui/feedback";
-import { type AssessmentType } from "@/lib/assessments";
+import { type AssessmentResult, type AssessmentType } from "@/lib/assessments";
 import { api } from "@/lib/api";
 import { useT, useTf, useUiLang } from "@/lib/i18n";
 import { useSession } from "@/lib/session";
@@ -84,8 +84,24 @@ export default function AssessmentResultPage() {
     valid && status === "ready" && !isParent,
   );
 
-  const result = panel.data;
+  // A plan rewritten by a model replaces what is on screen until this page is asked for
+  // again. The sitting and the interface language are stored with it because both matter:
+  // a Hindi plan from ten minutes ago must not stay on screen after the student switches
+  // to English, and a plan for one result is not this result's plan.
+  const [rebuilt, setRebuilt] = useState<{ key: string; result: AssessmentResult } | null>(
+    null,
+  );
+  const result =
+    rebuilt && rebuilt.key === `${resultId}:${language}` ? rebuilt.result : panel.data;
   const Icon = result ? ICONS[result.assessment_type] : ClipboardList;
+
+  /** The rebuild route answers with the whole result, because the plan it rewrote is a
+   * card inside one — and because the sentence about whether a model was reached belongs
+   * to this click, not to the stored document. */
+  const showRoadmap = useCallback(
+    (next: AssessmentResult) => setRebuilt({ key: `${resultId}:${language}`, result: next }),
+    [language, resultId],
+  );
 
   /** A failure stays on this page, in the server's own words: the result on screen is
    * unaffected by a PDF that could not be built, so it must not look spoiled. */
@@ -197,7 +213,7 @@ export default function AssessmentResultPage() {
           />
         ) : result ? (
           <>
-            <ResultSummary result={result} />
+            <ResultSummary result={result} onRoadmap={showRoadmap} />
 
             <p className="text-xs leading-relaxed text-muted print:hidden">
               {t(

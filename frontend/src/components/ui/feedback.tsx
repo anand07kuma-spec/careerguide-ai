@@ -21,6 +21,95 @@ export function SkeletonCard() {
   );
 }
 
+/**
+ * The signed-in screen a student is waiting for, drawn in grey.
+ *
+ * A centred spinner in an otherwise empty page is indistinguishable from a stuck
+ * one, and the wait here is a round trip to find out whether this browser already
+ * has an account. Drawn to the dashboard's own measurements instead — sidebar,
+ * header row, guide card, four stat tiles, the explore grid, three suggestion
+ * cards — so the page looks like it is arriving rather than like it forgot.
+ *
+ * `aria-hidden` because the shapes mean nothing to a screen reader; the caller
+ * puts a real `role="status"` sentence next to it.
+ */
+export function DashboardSkeleton() {
+  return (
+    <div
+      aria-hidden
+      className="min-h-dvh bg-canvas lg:grid lg:grid-cols-[264px_minmax(0,1fr)]"
+    >
+      {/* The sidebar, whose nav rows are the same height as the real ones. */}
+      <div className="hidden space-y-2.5 bg-navy/5 px-4 py-5 lg:block">
+        <Skeleton className="mb-4 h-7 w-40 rounded-lg bg-slate-200/60" />
+        <Skeleton className="h-4 w-24 rounded-md bg-slate-200/60" />
+        {Array.from({ length: 3 }, (_, i) => (
+          <Skeleton key={i} className="h-10 w-full rounded-xl bg-slate-200/60" />
+        ))}
+        <Skeleton className="mt-6 h-4 w-20 rounded-md bg-slate-200/60" />
+        {Array.from({ length: 4 }, (_, i) => (
+          <Skeleton key={i} className="h-10 w-full rounded-xl bg-slate-200/60" />
+        ))}
+      </div>
+
+      <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-5 sm:px-6 sm:py-8">
+        {/* Mobile header, which is what a phone shows above the content. */}
+        <div className="flex items-center gap-3 lg:hidden">
+          <Skeleton className="h-10 w-20 rounded-xl bg-slate-200/60" />
+          <Skeleton className="ml-auto h-9 w-9 rounded-full bg-slate-200/60" />
+        </div>
+
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-16 rounded-full bg-slate-200/60" />
+            <Skeleton className="h-7 w-44 rounded-lg" />
+          </div>
+          <Skeleton className="h-8 w-28 rounded-xl bg-slate-200/60" />
+        </div>
+
+        {/* Guide card: the avatar and the two ways in. */}
+        <div className="cg-card flex items-center gap-4 p-4 sm:gap-5 sm:p-5">
+          <Skeleton className="h-16 w-16 shrink-0 rounded-full sm:h-20 sm:w-20" />
+          <div className="min-w-0 flex-1 space-y-3">
+            <Skeleton className="h-4 w-2/3" />
+            <div className="flex gap-2">
+              <Skeleton className="h-9 w-24 rounded-xl" />
+              <Skeleton className="h-9 w-20 rounded-xl" />
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <Skeleton className="h-5 w-40 rounded-lg bg-slate-200/60" />
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            {Array.from({ length: 4 }, (_, i) => (
+              <Skeleton key={i} className="h-[88px]" />
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <Skeleton className="h-5 w-24 rounded-lg bg-slate-200/60" />
+          <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4 lg:grid-cols-8">
+            {Array.from({ length: 8 }, (_, i) => (
+              <Skeleton key={i} className="h-[86px] rounded-card" />
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <Skeleton className="h-5 w-56 rounded-lg bg-slate-200/60" />
+          <div className="grid gap-3 sm:grid-cols-3">
+            {Array.from({ length: 3 }, (_, i) => (
+              <Skeleton key={i} className="h-[104px]" />
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function LoadingPanel({ label = "Loading" }: { label?: string }) {
   const t = useT();
   return (

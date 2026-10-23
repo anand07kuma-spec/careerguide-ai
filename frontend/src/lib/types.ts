@@ -220,6 +220,11 @@ export interface Career extends CareerSummary {
   official_links: OfficialLink[];
   related_slugs: string[];
   needs_verification: boolean;
+  /** The page somebody actually opened, and the day they opened it. `verified_at` is
+   * stamped by the server when a row is certified, so a date here is a record rather
+   * than a claim; both are null until a person checks. */
+  source_url: string | null;
+  verified_at: string | null;
 }
 
 export interface Category {
@@ -351,6 +356,101 @@ export interface StudyPlan {
   items: PlanItem[];
 }
 
+/**
+ * The resume a student writes for themselves.
+ *
+ * `saved_at` is null until the first save: opening the screen answers with an empty
+ * document rather than a missing one, and nothing is written just because somebody
+ * looked. There is no name, phone or address here by design — the name at the top of a
+ * printed page is the one already on the account, which the erasure route already
+ * clears.
+ */
+export interface ResumeEducation {
+  /** Not nullable: the server refuses a line that does not say which class it is
+   * about, which is what keeps a printed CV from carrying an anonymous mark. */
+  class_level: string;
+  school: string | null;
+  year: string | null;
+  /** Marks, percentage, grade or "appearing" — whatever the student's board uses. */
+  result: string | null;
+}
+
+export interface ResumeSkill {
+  name: string;
+  /** A word the student picks, never a percentage. */
+  level: "" | "learning" | "comfortable" | "confident";
+}
+
+export interface ResumeProject {
+  title: string;
+  detail: string | null;
+  year: string | null;
+}
+
+export interface Resume {
+  target_role: string | null;
+  education: ResumeEducation[];
+  skills: ResumeSkill[];
+  projects: ResumeProject[];
+  saved_at: string | null;
+}
+
+/** What the save route takes: the document without the timestamp it does not accept. */
+export type ResumeInput = Omit<Resume, "saved_at">;
+
+/**
+ * A suggestion list, and the honest label that comes with it.
+ *
+ * `demo_generated` is true whenever the answers came from this app's own career
+ * catalogue rather than a configured AI provider — no provider set up, provider
+ * unreachable, or provider returned something unreadable. A screen that shows these
+ * under a plain "AI suggested" heading when the flag is true is claiming a model took
+ * part that did not, so the flag has to be repeated back to the student.
+ */
+export interface ResumeSuggestion {
+  skills: ResumeSkill[];
+  projects: ResumeProject[];
+  /** The career profile the list came from, or null when nothing matched. */
+  matched_career: string | null;
+  provider: string;
+  demo_generated: boolean;
+  error: string | null;
+}
+
+/**
+ * One line of a practice interview, as this browser holds it.
+ *
+ * `role` is who spoke, not a persona: `interviewer` is a question this app asked and
+ * `candidate` is the student's answer to it. The server counts the candidate lines to
+ * work out which question it is on, so the screen sends the transcript and nothing else —
+ * no question number, no score, no "please be harsh".
+ */
+export interface InterviewLine {
+  role: "interviewer" | "candidate";
+  text: string;
+}
+
+/**
+ * The next turn of `POST /api/ai/mock-interview`.
+ *
+ * `score` is null whenever nobody read the answers, and `feedback` is null beside it:
+ * the server refuses to send a scripted compliment about an answer no model opened, so
+ * the screen must not invent one either.
+ */
+export interface InterviewTurn {
+  question: string | null;
+  feedback: string | null;
+  question_number: number;
+  finished: boolean;
+  score: number | null;
+  tips: string[];
+  provider: string;
+  demo_generated: boolean;
+  needs_support: boolean;
+  error: string | null;
+  language: string;
+}
+
 export interface Resource {
   id: number;
   title: string;
@@ -376,6 +476,7 @@ export interface Scholarship {
   eligibility_summary: string;
   application_steps: string[];
   official_url: string;
+  source_url: string | null;
   verified: boolean;
   last_verified_at: string | null;
   disclaimer: string;
@@ -693,6 +794,10 @@ export interface UniversitySummary {
   kind: string;
   official_url: string;
   verified: boolean;
+  /** The page somebody read this row against, and the day they did it. Both null until
+   * someone does, which is what the list's badge reports. */
+  source_url: string | null;
+  verified_at: string | null;
   sponsored: boolean;
 }
 
@@ -706,8 +811,6 @@ export interface University extends UniversitySummary {
   application_urls: Record<string, string>;
   english_test_note: string | null;
   deadline_note: string | null;
-  source_url: string | null;
-  verified_at: string | null;
   sponsorship_disclosure: string | null;
   sort_order: number;
 }

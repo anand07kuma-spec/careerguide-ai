@@ -95,6 +95,7 @@ export default function DisclaimerPage() {
         <ul className="list-disc space-y-1.5 pl-5">
           <li>{t("A model can state something false in a well-written sentence, and the fluent part is what makes the false part convincing.")}</li>
           <li>{t("Two students asking the same question can get different answers, because the reply depends on the conversation leading up to it.")}</li>
+          <li>{t("A practice interview’s score and its notes are one model’s opinion about five answers in one sitting. They are not a mark, they are not a prediction of any real interview, and this app keeps nothing of them afterwards.")}</li>
           {GUIDE_RULES.map((line) => (
             <li key={line}>{t(line)}</li>
           ))}
@@ -129,6 +130,11 @@ export default function DisclaimerPage() {
         <p>
           {t(
             "Nothing here should be relied on for an application without checking the body that runs it. Where the app shows a scheme or an institution, it is describing what is stored in a demo table, and it never represents that data as live verified results.",
+          )}
+        </p>
+        <p>
+          {t(
+            "Some cards carry a date. It means a person opened the official page named on that card and read the row against it on that day; the page is stored with the date and linked from the card, so the claim can be checked rather than trusted. A date covers what that reading actually compared — for an institution, usually its name, its city and its own web address. It says nothing about a fee, a deadline or an eligibility rule unless the row names a source for those, and a card with no date is the app’s own note.",
           )}
         </p>
         <p>

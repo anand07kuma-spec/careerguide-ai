@@ -11,6 +11,7 @@ import {
   Compass,
   CreditCard,
   FileText,
+  FileUser,
   GraduationCap,
   Home,
   Landmark,
@@ -67,6 +68,9 @@ const NAV: NavItem[] = [
   { href: "/app/journey", label: "My Journey", short: "Journey", icon: Compass, group: "grow" },
   { href: "/app/plans", label: "Study & Skill Plans", short: "Plans", icon: GraduationCap, group: "grow" },
   { href: "/app/reports", label: "Reports", short: "Reports", icon: FileText, group: "grow" },
+  // No tile of its own either: Home's explore grid is eight tiles wide and a CV is a
+  // thing you come back to before an application, not a thing to be pointed at daily.
+  { href: "/app/resume", label: "My Resume", short: "Resume", icon: FileUser, group: "grow" },
   { href: "/parent", label: "Parent Dashboard", short: "Parent", icon: ShieldCheck, group: "family" },
   // `group: "family"` is not a label, it is a gate: a parent is shown only the
   // family rows, and the person who holds the card is a parent, so billing has to
@@ -443,7 +447,10 @@ export function Screen({
   const t = useT();
   return (
     <div className={cn("mx-auto w-full max-w-6xl px-4 py-5 sm:px-6 sm:py-8", className)}>
-      <div className="mb-5 flex flex-wrap items-start justify-between gap-3 sm:mb-7">
+      {/* The one printable thing inside a screen is the document the student wrote, not
+          this heading and its buttons — a CV that opens with the app's own page title is
+          the app printing itself on the child's paper. */}
+      <div className="mb-5 flex flex-wrap items-start justify-between gap-3 print:hidden sm:mb-7">
         <div className="min-w-0">
           {badge ? <div className="mb-2">{badge}</div> : null}
           <h1 className="text-xl font-semibold tracking-tight text-ink sm:text-2xl">{t(title)}</h1>

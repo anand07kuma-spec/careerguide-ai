@@ -52,6 +52,10 @@ class GuideContext:
     # guide picks these up one at a time as the student talks.
     missing_facts: list[str] = field(default_factory=list)
     asked_facts: list[str] = field(default_factory=list)
+    # The 30-day plan on a result page, when the student came here from that page's
+    # "discuss this plan" button. None for every other conversation, so the guide is
+    # not told about a plan the student never opened.
+    plan_note: str | None = None
 
 
 def _lang(language: str) -> str:
@@ -229,6 +233,32 @@ CONTINUE = {
     "hinglish": "Jab tum chahein explore kar sakte hain. Ab kis baare mein baat karna chahoge?",
 }
 
+# The scripted guide has no model behind it, so it does not pretend to have re-read the
+# student's plan. It says which four weeks are on the page and hands the choice back.
+PLAN_TALK = {
+    "en": [
+        "I can see you came here to talk about your 30-day plan.",
+        "It is the four weeks written on your result page — which one would you like to start with?",
+    ],
+    "hi": [
+        "आप अपना 30-दिन का योजना चर्चा करने आए हैं, यह मैं देख सकता हूँ।",
+        "वह आपकी रिज़ल्ट पेज पर चार सप्ताहों में लिखी है — किस सप्ताह से शुरू करना चाहेंगे?",
+    ],
+    "hinglish": [
+        "Tum apna 30-day plan discuss karne aaye ho, ye main dekh sakta hoon.",
+        "Wo tumhare result page par chaar weeks mein likha hai — kaunse week se shuru karna hai?",
+    ],
+}
+
+PLAN_WORDS = (
+    "plan",
+    "roadmap",
+    "week",
+    "सप्ताह",
+    "योजना",
+    "रोडमैप",
+)
+
 THEME_WORDS_HI = {
     "creative_exploration": "banana aur kalpana",
     "analytical_problem_solving": "problem solve karna",
@@ -311,6 +341,19 @@ def demo_respond(user_text: str, ctx: GuideContext) -> GuideReply:
         )
 
     stage = ctx.stage
+
+    # A student who came from the plan card and is asking about the plan gets the plan
+    # acknowledged, not another fact pulled out of them. The scripted guide cannot reason
+    # about four weeks, so it says which weeks are on the page and asks which one — the
+    # configured model gets the plan itself, in the system prompt.
+    if ctx.plan_note and any(word in user_text.lower() for word in PLAN_WORDS):
+        return GuideReply(
+            text=_sent(list(PLAN_TALK.get(language) or PLAN_TALK["en"])),
+            stage=max(stage, 6),
+            themes=combined,
+            provider="demo",
+            demo_generated=True,
+        )
 
     # Onboarding deliberately leaves the student's situation unknown, so the
     # guide asks for one missing fact at a time, only once the conversation has
@@ -434,6 +477,7 @@ async def _openai_compatible_respond(user_text: str, ctx: GuideContext, history:
         stage=ctx.stage,
         known_themes=ctx.known_themes,
         missing_facts=ctx.missing_facts,
+        plan_note=ctx.plan_note,
     )
     turns = [{"role": "system", "content": system}]
     for message in history[-12:]:

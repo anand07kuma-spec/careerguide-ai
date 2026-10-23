@@ -342,6 +342,8 @@ class CareerOut(CareerSummaryOut):
     official_links: list[dict]
     related_slugs: list[str]
     needs_verification: bool
+    source_url: str | None
+    verified_at: datetime | None
 
 
 class CategoryOut(BaseModel):
@@ -385,6 +387,11 @@ class MessageOut(ORMModel):
 class ChatIn(StrictIn):
     message: str = Field(min_length=1, max_length=2000)
     speak: bool = False
+    # Set only when the student opened this chat from the "discuss this plan" button on a
+    # result: the id of that result, which the route checks belongs to this student before
+    # the guide is told anything about it. Left out for every other message, so a plan is
+    # never quietly carried into an unrelated conversation.
+    plan_of: int | None = Field(default=None, ge=1)
 
 
 class ChatOut(BaseModel):
@@ -525,6 +532,152 @@ class PlanItemStatusIn(StrictIn):
     status: Literal["pending", "in_progress", "completed", "skipped"]
 
 
+# ---------------------------------------------------------------- the resume
+#
+# Every list on a resume is bounded twice over — by length and by count — because
+# the whole document arrives as one body and lands in one JSON column. Twelve
+# projects of two hundred characters is a normal student; twelve projects of sixty
+# thousand is a way to make this table the largest one in the database.
+#
+# The two text caps are set from the widest thing this app is asked to store in them,
+# measured rather than guessed: the career catalogue's verified skills run to 56
+# characters and its explore-activities to 142, and those sentences are what the
+# suggester offers a student to adopt. Cutting "Ask a doctor you know…" off mid-word to
+# fit a shorter field would damage the one text here that somebody already checked by
+# hand, so the fields clear the measured maximum with room for a student's own longer
+# phrasing. The counts are what bound the document as a whole.
+
+
+class ResumeEducationIn(StrictIn):
+    # The class the line is about, from the same vocabulary the rest of the app
+    # uses, so a resume printed from a profile cannot disagree with it.
+    class_level: ClassLevel
+    # Optional and freely worded: a school name, a board, "Open schooling". The
+    # app asks for no address and no enrolment number, and the screen says so.
+    school: str | None = Field(default=None, max_length=120)
+    year: str | None = Field(default=None, max_length=16)
+    # Marks, percentage, grade, "appearing" — whatever the student's board uses.
+    # Free text rather than a number because a 60% and a B+ and an 8.1 CGPA are the
+    # same line on a CV, and forcing one of them would be forcing a lie.
+    result: str | None = Field(default=None, max_length=48)
+
+
+class ResumeSkillIn(StrictIn):
+    name: str = Field(min_length=1, max_length=80)
+    # Three words a student can actually answer with, and no percentage. A number
+    # beside a skill invites an invented one.
+    level: Literal["", "learning", "comfortable", "confident"] = ""
+
+
+class ResumeProjectIn(StrictIn):
+    # Long enough to hold one verified sentence, because a suggestion a student has to
+    # rewrite before they can use is a suggestion they will not use.
+    title: str = Field(min_length=1, max_length=200)
+    detail: str | None = Field(default=None, max_length=600)
+    year: str | None = Field(default=None, max_length=16)
+
+
+class ResumeIn(StrictIn):
+    target_role: str | None = Field(default=None, max_length=120)
+    education: list[ResumeEducationIn] = Field(default_factory=list, max_length=8)
+    skills: list[ResumeSkillIn] = Field(default_factory=list, max_length=20)
+    projects: list[ResumeProjectIn] = Field(default_factory=list, max_length=10)
+
+
+class ResumeOut(ORMModel):
+    """The document, or an empty one.
+
+    A student who has never opened this screen gets the same shape as one who has,
+    with `saved_at` null — so the screen draws its form rather than branching on a
+    404, and nothing is written to the database just because somebody looked.
+    """
+
+    target_role: str | None
+    education: list[ResumeEducationIn]
+    skills: list[ResumeSkillIn]
+    projects: list[ResumeProjectIn]
+    saved_at: datetime | None = None
+
+
+# ------------------------------------------------------------------ the suggest
+
+
+class ResumeSuggestIn(StrictIn):
+    # The job being aimed at. Free text, because it is the student's own words
+    # ("cricket commentator", "hotel manager") and not a key into a catalogue.
+    target_role: str = Field(min_length=2, max_length=120)
+    language: Language | None = None
+
+
+class ResumeSuggestionOut(BaseModel):
+    skills: list[ResumeSkillIn] = Field(default_factory=list)
+    projects: list[ResumeProjectIn] = Field(default_factory=list)
+    # The career profile the built-in suggestions came from, when they did, so the
+    # screen can name where the list came from instead of saying only "AI".
+    matched_career: str | None = None
+    provider: str
+    # The project's honesty flag. True means no model was consulted and nobody
+    # reading this API may be told otherwise.
+    demo_generated: bool
+    error: str | None = None
+
+
+# --------------------------------------------------------- the mock interview
+
+
+class InterviewTurn(StrictIn):
+    """One line of the transcript the student's own browser is holding.
+
+    `role` is who spoke, not a persona: `interviewer` is a question this app asked,
+    `candidate` is the student's answer to it. The route counts the candidate lines to
+    work out which question it is on, so a caller cannot claim a sixth question by
+    describing the conversation differently — and cannot make the interviewer answer
+    for the student by labelling their own words as questions.
+    """
+
+    role: Literal["interviewer", "candidate"]
+    text: str = Field(min_length=1, max_length=1200)
+
+
+class MockInterviewIn(StrictIn):
+    # The job being practised for, in the student's own words. Free text rather than a
+    # catalogue key, for the same reason the resume's target role is: "cricket
+    # commentator" is a real answer and is not in any table here.
+    role: str = Field(min_length=2, max_length=120)
+    # Empty for the opening question. Capped well past a five-question sitting so a
+    # student who is asked to rephrase is not refused, and capped at all because this
+    # text goes to the configured provider and a body of any size would be a bill.
+    history: list[InterviewTurn] = Field(default_factory=list, max_length=14)
+    language: Language | None = None
+
+
+class MockInterviewOut(BaseModel):
+    """The next turn, or the end.
+
+    Exactly one of `question` / `finished` is the useful pair: while the interview runs
+    `question` holds what the interviewer asks next and `feedback` what they said about
+    the last answer; once it ends `question` is null and `score` / `tips` carry the
+    closing. `score` is null whenever nobody read the answers — a number invented by a
+    script would be the one thing here a student could not argue with.
+    """
+
+    question: str | None = None
+    feedback: str | None = None
+    # 1..5 while asking, 5 on the closing turn.
+    question_number: int
+    finished: bool
+    score: int | None = None
+    tips: list[str] = Field(default_factory=list)
+    provider: str
+    demo_generated: bool
+    # Set when the student's own last answer sounded like a child who is not safe. The
+    # screen has to put a helpline card in front of them instead of another question.
+    needs_support: bool = False
+    error: str | None = None
+    language: str = "en"
+
+
+
 # -------------------------------------------------------------- catalogue
 
 
@@ -553,6 +706,7 @@ class ScholarshipOut(ORMModel):
     eligibility_summary: str
     application_steps: list[str]
     official_url: str
+    source_url: str | None
     verified: bool
     last_verified_at: datetime | None
     disclaimer: str
@@ -740,7 +894,7 @@ class HealthOut(BaseModel):
     tts_ready: bool
     tts_last_attempt: TTSAttemptOut
     # Whether a key and a sending address both exist, which is the thing a person
-    # checks after pasting them: see the email section of the README.
+    # checks after pasting them: see the RESEND row of the settings table in docs/ARCHITECTURE_AND_TESTS.md §1.
     email_enabled: bool
     demo_mode: bool
 
@@ -797,6 +951,19 @@ class AssessmentResultOut(BaseModel):
     careers: list[dict]
     career_note: str
     caveats: list[str]
+    # The skill gap and the four weeks, already rendered into sentences for the
+    # language asked for. None when no plan has been written for this sitting — which
+    # is every result taken before the plan existed, and a result where nothing was
+    # answered strongly enough to aim a plan at. The screen says which, rather than
+    # showing an empty card.
+    roadmap: dict | None = None
+    # Whether the ✨ button on that card would reach a model at all. The frontend
+    # hides it when false, because a button that quietly returns the same rules plan
+    # is the kind of thing this app has promised not to ship.
+    roadmap_ai_available: bool = False
+    # When a plan was rebuilt and the provider refused to, the sentence about that.
+    # Transient by design: it describes one click, not the stored document.
+    roadmap_note: str | None = None
 
 
 class PdfGenerateIn(StrictIn):
@@ -1060,6 +1227,10 @@ class UniversitySummaryOut(ORMModel):
     kind: str
     official_url: str
     verified: bool
+    # The list carries the same two facts the profile page does, because the question
+    # "has anybody read this?" is asked at the list, not after opening a row.
+    source_url: str | None
+    verified_at: datetime | None
     sponsored: bool
 
 

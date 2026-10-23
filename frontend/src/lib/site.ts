@@ -149,7 +149,7 @@ export const PUBLIC_PAGES: PublicPage[] = [
  * `/app` and `/api` are the obvious ones. `/parent` is here because a parent's
  * dashboard is reached with a share code that lives in their browser, so the URL
  * is meaningless to anyone else and indexing it would only create a dead result.
- * `/onboarding`, `/sign-in`, `/sign-up` and `/account/*` are session shells.
+ * `/onboarding`, `/welcome`, `/sign-in`, `/sign-up` and `/account/*` are session shells.
  *
  * `/school` and `/counsellor` join them for the same reason as `/parent`: a portal
  * is only ever painted for a member, so an indexed dashboard is a page that shows
@@ -165,6 +165,7 @@ export const DISALLOWED_PATHS = [
   "/school",
   "/counsellor",
   "/join",
+  "/welcome",
   "/onboarding",
   "/sign-in",
   "/sign-up",

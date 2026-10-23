@@ -287,6 +287,42 @@ admin_limit = limiter.limit(
         "one — the change you already made is saved, and nothing was half-applied."
     ),
 )
+# `POST /api/ai/resume-suggest` — the one resume route that spends an outside call.
+# Saving a resume does not get a bucket of its own: it writes one row the student is
+# looking at, and a student who saves twice in a minute has hit a button twice.
+resume_limit = limiter.limit(
+    _rule("rate_limit_resume", "10 per minute"),
+    error_message=(
+        "Suggestions are being asked for faster than they can be made. Wait a minute — "
+        "anything already on your resume is saved."
+    ),
+)
+# `POST /api/assessments/result/{id}/roadmap` — the same shape of case: one route that
+# spends an outside call, on top of a plan the app can write by itself. Reading a
+# result needs no new bucket (it rides the read rule like every other GET), and a
+# student who presses the button twice in a minute has pressed it twice. Tighter than
+# the resume bucket by design: this one rewrites a document the student may have
+# already printed.
+roadmap_limit = limiter.limit(
+    _rule("rate_limit_roadmap", "6 per minute"),
+    error_message=(
+        "Plans are being asked for faster than they can be written. Wait a minute — the "
+        "plan already on your result is saved and unchanged."
+    ),
+)
+# `POST /api/ai/mock-interview` — one call per turn, so a sitting is six of them: five
+# questions and a closing. The bucket has to fit a whole interview at a comfortable
+# speaking pace and still leave room for a retry, because the failure this guard must
+# never cause is a student being cut off between a question and their answer. Looser than
+# the roadmap bucket on purpose: nothing here is overwritten and nothing is saved, so a
+# fast student is only spending the operator's AI budget, not destroying their own work.
+interview_limit = limiter.limit(
+    _rule("rate_limit_interview", "12 per minute"),
+    error_message=(
+        "The interview is being answered faster than questions can be written. Take your "
+        "time with the one in front of you — nothing you have said has been lost."
+    ),
+)
 
 
 # ------------------------------------------------------------------ the read bucket

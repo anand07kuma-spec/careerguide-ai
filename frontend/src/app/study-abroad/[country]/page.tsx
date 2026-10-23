@@ -12,7 +12,7 @@ import {
   NotInDirectory,
   OfficialPortal,
 } from "@/components/study-abroad/study-shell";
-import { Badge } from "@/components/ui/badge";
+import { Badge, SourceBadge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { LinkButton } from "@/components/ui/button";
 import { api, ApiError } from "@/lib/api";
@@ -245,15 +245,23 @@ export default async function StudyAbroadCountryPage({ params, searchParams }: {
                       {row.sponsored ? " · paid listing" : ""}
                     </p>
                   </div>
-                  <a
-                    href={row.official_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex shrink-0 items-center gap-1.5 text-xs font-semibold text-brand underline-offset-2 hover:underline"
-                  >
-                    Official site
-                    <ExternalLink className="h-3.5 w-3.5" aria-hidden />
-                  </a>
+                  <div className="flex shrink-0 items-center gap-3">
+                    <SourceBadge
+                      verified={row.verified}
+                      checkedAt={row.verified_at}
+                      sourceUrl={row.source_url}
+                      alternatives={[{ label: "The university's own site", url: row.official_url }]}
+                    />
+                    <a
+                      href={row.official_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand underline-offset-2 hover:underline"
+                    >
+                      Official site
+                      <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+                    </a>
+                  </div>
                 </li>
               ))}
             </ul>

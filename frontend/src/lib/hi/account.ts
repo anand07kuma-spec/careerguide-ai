@@ -137,8 +137,8 @@ export const HI: Record<string, string> = {
   "Your email sign-in status could not be checked.": "आपका ईमेल साइन इन चेक नहीं हो सका।",
   "Taking you to your dashboard…": "आपको आपके डैशबोर्ड पर ले जा रहे हैं…",
   "Delete this account": "यह अकाउंट हटाएँ",
-  "Erases what this account holds on the server — the messages, the assessments and their answers, the reports, the plans, the saved careers, the settings and every session on every device. Not everything goes: the dialog lists, before you press anything, exactly which few records stay and why.":
-    "इस अकाउंट पर सर्वर में जो-जो है वह मिट जाएगा — संदेश, असेसमेंट और उनके जवाब, रिपोर्ट, प्लान, सहेजे गए करियर, सेटिंग्स, और हर डिवाइस पर चल रहा सत्र। पर सब कुछ नहीं जाएगा: कोई बटन दबाने से पहले डायलॉग बताता है कि कौन-से रिकॉर्ड बचेंगे और क्यों।",
+  "Erases what this account holds on the server — the messages, the assessments and their answers, the reports, the plans, the saved careers, the resume you wrote, the settings and every session on every device. Not everything goes: the dialog lists, before you press anything, exactly which few records stay and why.":
+    "इस अकाउंट पर सर्वर में जो-जो है वह मिट जाएगा — संदेश, असेसमेंट और उनके जवाब, रिपोर्ट, प्लान, सहेजे गए करियर, आपका लिखा हुआ रिज़्यूमे, सेटिंग्स, और हर डिवाइस पर चल रहा सत्र। पर सब कुछ नहीं जाएगा: कोई बटन दबाने से पहले डायलॉग बताता है कि कौन-से रिकॉर्ड बचेंगे और क्यों।",
   "Delete account": "अकाउंट डिलीट करें",
   "Delete this account for good?": "यह अकाउंट हमेशा के लिए हटाएँ?",
   "There is no undo, and there is no email to confirm with: this browser's session is the only proof of whose account this is. That is why this dialog is the last step.":
@@ -154,6 +154,8 @@ export const HI: Record<string, string> = {
     "रिपोर्ट — करियर रिपोर्ट और उससे बनी कोई भी PDF।",
   "Study plans, journey counts, interest observations, saved careers and recommendations.":
     "पढ़ाई के प्लान, सफ़र की गिनतियाँ, दिलचस्पी के नोट, सहेजे गए करियर और सुझाव।",
+  "The resume you wrote — the job title, the class rows, the skills and projects, as one document.":
+    "आपका लिखा हुआ रिज़्यूमे — पद-नाम, कक्षा की पंक्तियाँ, स्किल और प्रोजेक्ट — एक ही दस्तावेज़ के रूप में।",
   "Your profile, your settings, every consent you recorded, and any family or portal link.":
     "आपकी प्रोफ़ाइल, आपकी सेटिंग्स, आपके द्वारा दर्ज हर सहमति, और परिवार या पोर्टल से जुड़ा हर लिंक।",
   "Every session on every device, so a second laptop signed in to this account stops working too.":

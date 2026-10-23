@@ -66,6 +66,16 @@ export const HI: Record<string, string> = {
   "Several signals": "कई संकेत",
   "Verified source": "स्रोत सत्यापित",
   "Verify on official site": "आधिकारिक साइट पर जाँचें",
+  "Not yet checked against a source": "अभी किसी स्रोत से जाँची नहीं गई",
+  "Where this record came from": "यह जानकारी कहाँ से आई",
+  "On {date} somebody opened the page below and read this record against it.":
+    "{date} को किसी ने नीचे दिया पृष्ठ खोला और यह जानकारी उससे मिलाकर पढ़ी।",
+  "Nobody has read this record against a source yet. It is the app's own note, and the numbers in it need checking before you plan around them.":
+    "किसी ने यह जानकारी अभी किसी स्रोत से मिलाकर नहीं पढ़ी। यह ऐप का अपना नोट है, और इसमें दी संख्याएँ योजना बनाने से पहले जाँच लें।",
+  "No page was recorded for this row.": "इस जानकारी के लिए कोई पृष्ठ दर्ज नहीं है।",
+  "The page that was read": "जो पृष्ठ पढ़ा गया",
+  "The university's own site": "विश्वविद्यालय की अपनी साइट",
+  "Where you apply": "जहाँ आवेदन होता है",
   "Class 6": "कक्षा 6",
   "Class 7": "कक्षा 7",
   "Class 8": "कक्षा 8",

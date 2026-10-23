@@ -17,7 +17,7 @@ import {
 import { Screen } from "@/components/layout/app-shell";
 import { Card, SectionHeading } from "@/components/ui/card";
 import { LinkButton } from "@/components/ui/button";
-import { Badge, VerificationBadge } from "@/components/ui/badge";
+import { Badge, SourceBadge } from "@/components/ui/badge";
 import { EmptyState, ErrorState, SkeletonCard } from "@/components/ui/feedback";
 import { Input, Select } from "@/components/ui/field";
 import { api } from "@/lib/api";
@@ -56,11 +56,6 @@ function levelLabel(value: string): string {
 
 function stateLabel(value: string): string {
   return value === "all-india" ? "All India" : value;
-}
-
-function checkedDate(iso: string): string {
-  const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString();
 }
 
 export default function ScholarshipsScreen() {
@@ -331,12 +326,12 @@ export default function ScholarshipsScreen() {
                     </div>
 
                     <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-line pt-3">
-                      <div className="flex flex-col gap-1">
-                        <VerificationBadge verified={scholarship.verified} />
-                        <span className="text-[11px] text-muted">
-                          {scholarship.last_verified_at ? `Last checked: ${checkedDate(scholarship.last_verified_at)}` : "Not yet verified"}
-                        </span>
-                      </div>
+                      <SourceBadge
+                        verified={scholarship.verified}
+                        checkedAt={scholarship.last_verified_at}
+                        sourceUrl={scholarship.source_url}
+                        alternatives={[{ label: "Where you apply", url: scholarship.official_url }]}
+                      />
                       <LinkButton href={scholarship.official_url} variant="outline" size="sm">
                         Official site
                         <ExternalLink className="h-3.5 w-3.5" aria-hidden />

@@ -115,6 +115,68 @@ const dimensionSchema = z.object({
   correct: z.number().nullable(),
 });
 
+/**
+ * The plan on a finished result: what the top career still asks for, and four weeks.
+ *
+ * This is the *rendered* plan, not the stored one. `services/roadmap.py` keeps
+ * language-neutral data and picks the sentences at read time, which is why the two
+ * sources arrive with slightly different shapes and this schema has to hold both:
+ *
+ * * `rules` — the app's own arithmetic. `strengths[].label` is a question-bank area
+ *   name already in the language the page asked for, `gaps[].label` is one of the eight
+ *   theme names in `hi/common.ts`, and a week title and step are finished sentences.
+ * * a model — prose in `text_language`, with `score: null` on every strength and no
+ *   `unmeasured` list, because the model was never shown which areas had too few answers.
+ *
+ * Nothing here is a claim about the child. `career_skills` are what the work asks for,
+ * and the copy on the page must keep saying so.
+ */
+export const roadmapSchema = z.object({
+  /** "rules", or the configured provider's name. Never inferred from a badge. */
+  source: z.string(),
+  /** True for the rules plan. The page labels the other kind as model-written. */
+  demo_generated: z.boolean(),
+  generated_at: z.string().nullable(),
+  /** Which language a model answered in. Null on a rules plan, which has no such thing. */
+  text_language: z.string().nullable(),
+  career: z
+    .object({
+      slug: z.string(),
+      title: z.string(),
+      category: z.string(),
+      needs_verification: z.boolean(),
+    })
+    .partial(),
+  summary: z.string(),
+  strengths: z.array(
+    z.object({
+      label: z.string(),
+      score: z.number().int().min(0).max(100).nullable(),
+      band_label: z.string().optional(),
+    }),
+  ),
+  gaps: z.array(
+    z.object({
+      label: z.string(),
+      /** "low", "middle", "unmeasured" from the rules, "ai" from a model. A string, not
+       * an enum: a new reason must not blank a child's whole result page. */
+      reason: z.string(),
+      detail: z.string(),
+    }),
+  ),
+  /** Areas with too few answers to score. Listed as unknown, never as a gap. */
+  unmeasured: z.array(z.object({ label: z.string() })),
+  career_skills: z.array(z.string()),
+  weeks: z.array(
+    z.object({
+      week: z.number().int(),
+      title: z.string(),
+      steps: z.array(z.object({ text: z.string() })),
+    }),
+  ),
+  note: z.string(),
+});
+
 export const resultSchema = z.object({
   result_id: z.number(),
   assessment_id: z.number(),
@@ -145,6 +207,15 @@ export const resultSchema = z.object({
   ),
   career_note: z.string(),
   caveats: z.array(z.string()),
+  /** The gap and the four weeks, or null when this sitting has no plan: either it was
+   * taken before plans existed, or no career matched its answers well enough to aim one
+   * at. The page says which rather than printing an empty card. */
+  roadmap: roadmapSchema.nullable(),
+  /** Whether the ✨ button would reach a model at all. The button is hidden when false —
+   * one that quietly returns the same rules plan is a dead button with a sparkly icon. */
+  roadmap_ai_available: z.boolean(),
+  /** Set only by the click that failed, for exactly one page load. */
+  roadmap_note: z.string().nullable(),
 });
 
 /**
@@ -202,6 +273,8 @@ export type AssessmentQuestion = AssessmentSession["items"][number];
 export type ScalePoint = AssessmentSession["scale"][number];
 export type AnswerReceipt = z.infer<typeof answerReceiptSchema>;
 export type AssessmentResult = z.infer<typeof resultSchema>;
+export type RoadmapPlan = z.infer<typeof roadmapSchema>;
+export type RoadmapWeek = RoadmapPlan["weeks"][number];
 export type PdfReport = z.infer<typeof pdfReportSchema>;
 export type Sitting = z.infer<typeof sittingSchema>;
 export type DimensionTrait = AssessmentResult["traits"][number];

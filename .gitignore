@@ -37,6 +37,10 @@ pg_dump*.log
 # generated speech audio
 backend/media/
 
+# Local server stdout, captured while starting uvicorn by hand. It prints absolute paths on
+# this machine and one access line per request; neither belongs in a public repository.
+backend/*.log
+
 # --- node / next --------------------------------------------------------------
 node_modules/
 .next/

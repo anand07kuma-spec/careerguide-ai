@@ -232,6 +232,7 @@ const ERASE_GOES = [
   "Your assessments: the sittings, the answers and the results scored from them.",
   "The reports — the career report and any PDF that was generated from it.",
   "Study plans, journey counts, interest observations, saved careers and recommendations.",
+  "The resume you wrote — the job title, the class rows, the skills and projects, as one document.",
   "Your profile, your settings, every consent you recorded, and any family or portal link.",
   "Every session on every device, so a second laptop signed in to this account stops working too.",
 ];
@@ -843,7 +844,7 @@ export default function SettingsScreen() {
             <p className="text-sm font-semibold text-ink">{t("Delete this account")}</p>
             <p className="mt-0.5 text-xs leading-relaxed text-muted">
               {t(
-                "Erases what this account holds on the server — the messages, the assessments and their answers, the reports, the plans, the saved careers, the settings and every session on every device. Not everything goes: the dialog lists, before you press anything, exactly which few records stay and why.",
+                "Erases what this account holds on the server — the messages, the assessments and their answers, the reports, the plans, the saved careers, the resume you wrote, the settings and every session on every device. Not everything goes: the dialog lists, before you press anything, exactly which few records stay and why.",
               )}
             </p>
           </div>
@@ -1170,7 +1171,7 @@ export default function SettingsScreen() {
                   <strong className="font-semibold text-ink">Delete account.</strong> The card at the
                   bottom of this screen erases this account in one step: the conversations and messages, the
                   assessments with their answers and results, the reports and the PDFs printed from them, the
-                  plans, saved careers, profile, settings and every consent go, and every device signs out.
+                  plans, saved careers, the resume as it was written, profile, settings and every consent go, and every device signs out.
                   There is no password, phone number or email to delete, because this account was never made
                   from one. The dialog lists the few records that stay, and why, before you press anything.
                   Clearing conversations and starting over on this device still work on their own, for

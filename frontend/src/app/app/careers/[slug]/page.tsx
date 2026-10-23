@@ -22,7 +22,7 @@ import {
 import { Screen } from "@/components/layout/app-shell";
 import { Card, CardHeader } from "@/components/ui/card";
 import { LinkButton } from "@/components/ui/button";
-import { Badge, VerificationBadge } from "@/components/ui/badge";
+import { Badge, SourceBadge } from "@/components/ui/badge";
 import { EmptyState, ErrorState, LoadingPanel } from "@/components/ui/feedback";
 import { useToast } from "@/components/ui/toast";
 import { api, ApiError } from "@/lib/api";
@@ -200,7 +200,12 @@ export default function CareerDetail() {
       badge={
         <div className="flex flex-wrap items-center gap-2">
           <Badge className={categoryTint(career.category)}>{career.category}</Badge>
-          <VerificationBadge verified={!career.needs_verification} />
+          <SourceBadge
+            verified={!career.needs_verification}
+            checkedAt={career.verified_at}
+            sourceUrl={career.source_url}
+            alternatives={career.official_links.map((link) => ({ label: link.label, url: link.url }))}
+          />
         </div>
       }
       action={
@@ -231,8 +236,8 @@ export default function CareerDetail() {
         {/* Main column */}
         <div className="space-y-5">
           {career.needs_verification ? (
-            <div className="flex items-start gap-2.5 rounded-2xl border border-warning/30 bg-warning-mist/60 px-4 py-3 text-sm text-amber-900">
-              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" aria-hidden />
+            <div className="flex items-start gap-2.5 rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-muted">
+              <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
               <p>
                 {t(
                   "The details on this page are a helpful starting point, but the numbers and rules here still need checking against official sources before you rely on them.",

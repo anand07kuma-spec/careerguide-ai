@@ -6,6 +6,7 @@ import { RefreshCw } from "lucide-react";
 import { Wordmark } from "@/components/brand";
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
+import { DashboardSkeleton } from "@/components/ui/feedback";
 import { useT } from "@/lib/i18n";
 import { useSession } from "@/lib/session";
 
@@ -16,6 +17,10 @@ const OTHER_HOME: Record<Exclude<Access, "any">, string> = {
   student: "/parent",
   parent: "/app",
 };
+
+/** A browser the server does not know yet goes to the welcome screen, which offers
+ * the two ways in, rather than being dropped on an empty dashboard. */
+const FIRST_STOP = "/welcome";
 
 export function RouteGuard({
   children,
@@ -33,7 +38,7 @@ export function RouteGuard({
     access === "any" || (access === "student" ? isStudent : isParent);
 
   const redirect =
-    status === "new-device" ? "/onboarding" : status === "ready" && !roleOk
+    status === "new-device" ? FIRST_STOP : status === "ready" && !roleOk
       ? OTHER_HOME[access === "student" ? "student" : "parent"]
       : null;
 
@@ -43,14 +48,14 @@ export function RouteGuard({
 
   if (status === "loading") {
     return (
-      <div className="flex min-h-dvh items-center justify-center bg-canvas">
-        <div className="flex flex-col items-center gap-3">
-          <Wordmark />
-          <p className="text-sm text-muted" role="status">
-            {t("Checking your account…")}
-          </p>
-        </div>
-      </div>
+      <>
+        <DashboardSkeleton />
+        {/* The skeleton is decorative, so the sentence stays for anyone who is
+            not looking at it. Reusing the existing key keeps the Hindi for free. */}
+        <p className="sr-only" role="status">
+          {t("Checking your account…")}
+        </p>
+      </>
     );
   }
 

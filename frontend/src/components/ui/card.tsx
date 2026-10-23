@@ -23,7 +23,9 @@ export function CardHeader({
 }) {
   const t = useT();
   return (
-    <div className={cn("flex items-start justify-between gap-3", className)}>
+    // Stacked below `sm`, because the action is `shrink-0`: on a phone a two-button action
+    // row leaves the title and its description in a column 60px wide, one word per line.
+    <div className={cn("flex flex-col items-start gap-3 sm:flex-row sm:justify-between", className)}>
       <div className="flex min-w-0 items-start gap-3">
         {icon ? (
           <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-mist text-brand-dark">

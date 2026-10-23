@@ -16,6 +16,7 @@ from ..models import (
     InterestObservation,
     JourneyEvent,
     Message,
+    Result,
     StudentProfile,
     User,
     UserSettings,
@@ -28,7 +29,7 @@ from ..schemas import (
     SessionStartIn,
 )
 from ..security import ensure_settings, get_current_user, require_student
-from ..services import ai_provider, entitlements, profile_facts, tts
+from ..services import ai_provider, entitlements, profile_facts, roadmap, tts
 from ..services.language import detect as detect_language
 from ..services.recommender import build_recommendations
 from .auth import CLASS_TO_AGE
@@ -161,6 +162,29 @@ async def send_message(
         elif "class_level" in learned and not profile.age_range:
             profile.age_range = CLASS_TO_AGE.get(learned["class_level"])
 
+    # The plan the button on a result page sent them here with, if this message came
+    # with one. Owned by this student or the request is refused — a plan is somebody's
+    # scores written down, and reading a stranger's would be the same mistake as
+    # reading their result, which `GET /api/assessments/result/{id}` already refuses.
+    plan_note: str | None = None
+    if payload.plan_of is not None:
+        planned = db.scalar(
+            select(Result).where(Result.id == payload.plan_of, Result.user_id == student_id)
+        )
+        if planned is None:
+            raise HTTPException(
+                status_code=404,
+                detail=(
+                    "There is no plan by that number on your account, so the guide was not "
+                    "shown one. Your result may have been deleted — the questionnaire can be "
+                    "taken again, and a new plan comes with it."
+                ),
+            )
+        rendered = roadmap.render(planned.roadmap_json, session.language)
+        # A result from before the plan existed, or one whose answers were too scattered to
+        # aim a plan at, has nothing to hand over. The chat continues as an ordinary chat.
+        plan_note = roadmap.guide_note(rendered) if rendered else None
+
     ctx = ai_provider.GuideContext(
         name=profile_user.display_name if profile_user else "friend",
         language=session.language,
@@ -170,6 +194,7 @@ async def send_message(
         known_themes=_known_themes(db, student_id),
         career_suggestions=_suggestion_titles(db, student_id),
         next_activity=None,
+        plan_note=plan_note,
         missing_facts=profile_facts.missing_facts(
             profile.class_level if profile else None,
             profile.age_range if profile else None,

@@ -6,7 +6,7 @@
 #     docker compose up
 #
 # The app runs without this file — `uvicorn` and `next dev` on a laptop are still the
-# documented way to work on it (README §1). This is for the case where you want the
+# documented way to work on it (docs/ARCHITECTURE_AND_TESTS.md §1). This is for the case where you want the
 # whole stack, on Postgres rather than SQLite, reachable from a phone on the same
 # network, or on a machine that is not your own.
 #
@@ -195,7 +195,7 @@ services:
   #
   #     17 2 * * * cd /srv/careerguide && docker compose run --rm db-backup >> /var/log/careerguide-backup.log 2>&1
   #
-  # README §"Backing up the database" has the same line with the `BACKUP_KEEP` and off-machine
+  # docs/ARCHITECTURE_AND_TESTS.md §7, "Backing up the database", has the same line with the `BACKUP_KEEP` and off-machine
   # copies, and why 02:17 UTC rather than midnight.
   db-backup:
     image: postgres:17-alpine

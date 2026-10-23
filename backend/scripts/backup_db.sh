@@ -37,7 +37,7 @@
 #     ./scripts/backup_db.sh --dest /mnt/nas/careerguide --keep 30
 #     ./scripts/backup_db.sh --dry-run            # what it would do, and to what database
 #
-# Then schedule it — see README §"Backing up the database" for the cron line. A backup that
+# Then schedule it — see docs/ARCHITECTURE_AND_TESTS.md §7, "Backing up the database", for the cron line. A backup that
 # only exists because somebody remembered to run it is not a backup.
 
 set -eu

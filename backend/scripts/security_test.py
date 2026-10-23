@@ -19,7 +19,7 @@ twenty-one, and it checks the five things a hardening pass usually gets wrong:
 
 The frontend half of this work — the Content-Security-Policy and the other four
 response headers — cannot be checked from here, and this file does not pretend to
-check it. It is verified in a browser and recorded in README section 5.
+check it. It is verified in a browser and recorded in docs/ARCHITECTURE_AND_TESTS.md section 5.
 
 Runs against a throwaway database, never ``careerguide.db``.
 

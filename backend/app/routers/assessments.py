@@ -16,7 +16,8 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from ..database import get_db
-from ..middleware.rate_limit import answer_limit, assessment_limit
+from ..config import get_settings
+from ..middleware.rate_limit import answer_limit, assessment_limit, roadmap_limit
 from ..models import (
     Assessment,
     Career,
@@ -37,7 +38,7 @@ from ..schemas import (
     SittingOut,
 )
 from ..security import get_current_user, require_student
-from ..services import assessment_bank, email_jobs, entitlements, scoring
+from ..services import assessment_bank, email_jobs, entitlements, roadmap, scoring
 from ..services.themes import THEMES
 
 router = APIRouter(prefix="/api/assessments", tags=["assessments"])
@@ -182,7 +183,9 @@ def _career_note(language: str) -> str:
     )
 
 
-def result_payload(db: Session, result: Result, language: str) -> AssessmentResultOut:
+def result_payload(
+    db: Session, result: Result, language: str, note: str | None = None
+) -> AssessmentResultOut:
     assessment = db.get(Assessment, result.assessment_id)
     scored = result.score_json or {}
     traits = scoring.traits(result.assessment_type, language, scored)
@@ -202,6 +205,9 @@ def result_payload(db: Session, result: Result, language: str) -> AssessmentResu
         careers=_career_suggestions(db, list((result.detail_json or {}).get("themes", [])), _class_number(profile.class_level if profile else None)),
         career_note=_career_note(language),
         caveats=scoring.caveats(result.assessment_type, language),
+        roadmap=roadmap.render(result.roadmap_json, language),
+        roadmap_ai_available=get_settings().ai_configured,
+        roadmap_note=note,
     )
 
 
@@ -501,13 +507,28 @@ def submit(
 
     scored = scoring.score_items([_for_scoring(item) for item in _bank(db, row.assessment_type)], answers)
     totals = scored["totals"]
+    themes = scoring.career_themes(row.assessment_type, scored)
+    profile = db.get(StudentProfile, student_id)
+    # The plan is written here, in the same transaction as the scores it reads, and by
+    # the app's own rules rather than by a model: a result that arrives with an empty
+    # plan card is a result the student has to work again to understand, and a model
+    # that is down would make this page depend on somebody else's uptime. The ✨ button
+    # on the card is the one that asks a model, and it is the student's own click.
+    plan = roadmap.plan_for(
+        db,
+        assessment_type=row.assessment_type,
+        scored=scored,
+        themes=themes,
+        class_number=_class_number(profile.class_level if profile else None),
+    )
     result = Result(
         assessment_id=row.id,
         user_id=student_id,
         assessment_type=row.assessment_type,
         score_json=scored,
         traits_json=[entry["dimension"] for entry in scoring.traits(row.assessment_type, "en", scored)],
-        detail_json={"themes": scoring.career_themes(row.assessment_type, scored)},
+        detail_json={"themes": themes},
+        roadmap_json=plan or {},
     )
     db.add(result)
     row.status = "submitted"
@@ -548,3 +569,55 @@ def result(
         )
     assessment = db.get(Assessment, row.assessment_id)
     return result_payload(db, row, _language(language or (assessment.language if assessment else "en")))
+
+
+@router.post("/result/{result_id}/roadmap")
+@roadmap_limit
+async def rebuild_roadmap(
+    request: Request,
+    result_id: int,
+    language: str = Query(default="", max_length=16),
+    student_id: int = Depends(require_student),
+    db: Session = Depends(get_db),
+) -> AssessmentResultOut:
+    """Ask the configured model to rewrite this result's plan. A POST because it
+    spends an outside call and replaces a document the student may have printed; the
+    whole answer is the fresh result payload, so the page re-renders from one round
+    trip rather than reading back a row it already has.
+
+    Ownership is the same rule as reading a result: a substituted id reaches a 404,
+    not somebody else's plan. And a failure is not a blank page — the rules plan that
+    was already there stays saved and the response carries the one true sentence
+    about why it did not change.
+    """
+    row = db.get(Result, result_id)
+    if row is None or row.user_id != student_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="That result does not belong to this account, or it has been deleted.",
+        )
+    assessment = db.get(Assessment, row.assessment_id)
+    chosen = _language(language or (assessment.language if assessment else "en"))
+
+    if not (row.roadmap_json or {}):
+        # A sitting from before the plan existed, or one whose answers matched no
+        # career. Write the rules version first: it is what the model's answer is
+        # built from, and it is what stays if the model cannot be reached.
+        profile = db.get(StudentProfile, student_id)
+        row.roadmap_json = (
+            roadmap.plan_for(
+                db,
+                assessment_type=row.assessment_type,
+                scored=row.score_json or {},
+                themes=list((row.detail_json or {}).get("themes", [])),
+                class_number=_class_number(profile.class_level if profile else None),
+            )
+            or {}
+        )
+        db.commit()
+
+    plan, note = await roadmap.plan_with_ai(row, chosen)
+    if plan is not None:
+        row.roadmap_json = plan
+        db.commit()
+    return result_payload(db, row, chosen, note=note)

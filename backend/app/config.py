@@ -176,6 +176,22 @@ class Settings(BaseSettings):
     # than the read bucket: an operator who wants to *change* sixty things a minute should
     # be using a script with its own auth, not a browser session.
     rate_limit_admin: str = "10 per minute"
+    # `POST /api/ai/resume-suggest`. Its own bucket rather than `rate_limit_chat`
+    # because the shape of the use is different: a student presses "suggest", reads
+    # the list, presses it again for a second idea. Half the rate of a chat, which
+    # is a message every few seconds, and the same cost per call outside.
+    rate_limit_resume: str = "10 per minute"
+    # `POST /api/assessments/result/{id}/roadmap`, where a student asks the configured
+    # model to rewrite the plan the app already wrote from their own scores. Tighter
+    # than the resume bucket on purpose: a resume suggestion is one list appended to a
+    # document being edited, while this replaces a plan the student may have already
+    # printed and read to a parent, so the useful rate is "once, then think about it".
+    rate_limit_roadmap: str = "6 per minute"
+    # `POST /api/ai/mock-interview`, where one call is one turn of a practice interview.
+    # Sized for a whole sitting (five questions plus the closing) at a normal speaking
+    # pace rather than for "once, then think about it" like the roadmap: a student who is
+    # mid-answer must not be the one who pays for the bucket.
+    rate_limit_interview: str = "12 per minute"
     # Where the counters live. Blank — the default, and what every deployment so far
     # uses — means this process's own memory, which is honest for one instance and a
     # soft ceiling on serverless hosting (see `app/middleware/rate_limit.py`).
@@ -220,6 +236,9 @@ class Settings(BaseSettings):
         "rate_limit_org_invite",
         "rate_limit_org",
         "rate_limit_admin",
+        "rate_limit_resume",
+        "rate_limit_roadmap",
+        "rate_limit_interview",
     )
     @classmethod
     def rule_is_a_real_limit(cls, value: str) -> str:

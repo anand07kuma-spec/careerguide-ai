@@ -157,6 +157,7 @@ class User(Base, TimestampMixin):
 
     profile: Mapped[StudentProfile | None] = relationship(uselist=False)
     settings: Mapped[UserSettings | None] = relationship(uselist=False)
+    resume: Mapped["Resume | None"] = relationship(uselist=False, back_populates="user")
 
 
 class AuthToken(Base, TimestampMixin):
@@ -321,6 +322,14 @@ class Career(Base, TimestampMixin):
     interest_themes: Mapped[list] = mapped_column(JSON, default=list)
     min_class: Mapped[int] = mapped_column(Integer, default=6)
     needs_verification: Mapped[bool] = mapped_column(Boolean, default=True)
+    # `official_links` above is where a family is sent to check. These two are the
+    # other side: the one page a person actually opened, and the day they opened it.
+    # `verified_at` is stamped by whoever writes it, never supplied with the claim, so
+    # a green badge can only ever mean "somebody read this on this date" — the same
+    # rule the university and exam rows run on. NULL means nobody has, and the page
+    # says so plainly rather than in a colour that reads as an error.
+    source_url: Mapped[str | None] = mapped_column(String(500))
+    verified_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
 
 
 class SavedCareer(Base, TimestampMixin):
@@ -495,6 +504,10 @@ class Scholarship(Base, TimestampMixin):
     eligibility_summary: Mapped[str] = mapped_column(Text)
     application_steps: Mapped[list] = mapped_column(JSON, default=list)
     official_url: Mapped[str] = mapped_column(String(500))
+    # The page the row was compared against, which for a scheme is often not the apply
+    # page above: a benefit amount usually lives in a notification or a brochure on the
+    # ministry's own domain, while `official_url` is the portal a student signs into.
+    source_url: Mapped[str | None] = mapped_column(String(500))
     verified: Mapped[bool] = mapped_column(Boolean, default=False)
     last_verified_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
     disclaimer: Mapped[str] = mapped_column(Text, default="")
@@ -529,6 +542,43 @@ class CareerReport(Base, TimestampMixin):
     student_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     content: Mapped[dict] = mapped_column(JSON, default=dict)
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
+# ------------------------------------------------------------------- the resume
+
+# A student's own CV, built for a career they have chosen rather than generated
+# from a profile of them. The three lists are JSON because they are read and
+# written as one document by one person, never queried row by row — splitting them
+# into tables would buy nothing and cost a join on every page load.
+#
+# `user_id` is the primary key rather than a column beside a surrogate id, exactly
+# as `UserSettings` does it: one resume per account is then something the database
+# enforces, not something every route has to remember to check. It also means the
+# route that saves can look the row up by the id the session proved, and cannot be
+# talked into writing somebody else's.
+#
+# No name, phone, address, email or photo is stored here. The name at the top of
+# the printed page is the one already on the account, and the erasure route
+# already clears that — a second copy in this table would be a copy left behind.
+
+
+class Resume(Base):
+    __tablename__ = "resumes"
+
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    # The job this CV is aimed at, e.g. "Software Engineer". It is the only thing
+    # the AI suggestions are asked about, so it is stored rather than retyped: a
+    # student who came back next month should not have to explain the target again.
+    target_role: Mapped[str | None] = mapped_column(String(120))
+    education: Mapped[list] = mapped_column(JSON, default=list)
+    skills: Mapped[list] = mapped_column(JSON, default=list)
+    projects: Mapped[list] = mapped_column(JSON, default=list)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, onupdate=utcnow)
+
+    user: Mapped[User] = relationship(back_populates="resume")
 
 
 # ----------------------------------------------------------------- assessments
@@ -631,6 +681,12 @@ class Result(Base, TimestampMixin):
     score_json: Mapped[dict] = mapped_column(JSON, default=dict)
     traits_json: Mapped[list] = mapped_column(JSON, default=list)
     detail_json: Mapped[dict] = mapped_column(JSON, default=dict)
+    # The skill gap and the four weeks that close a little of it, written by
+    # `services/roadmap.py`. Stored as data rather than sentences so the page can be
+    # read in either language, and kept on this row rather than in its own table
+    # because a plan belongs to exactly one sitting: delete the result and the plan
+    # goes with it, which is the only erase path this app has.
+    roadmap_json: Mapped[dict | None] = mapped_column(JSON, default=dict)
     completed_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
 
     assessment: Mapped[Assessment] = relationship(back_populates="result")
