@@ -49,7 +49,7 @@ redis==7.4.0
 # dependency of the optional email sign-in, not of the device account. Without a
 # CLERK_WEBHOOK_SIGNING_SECRET the endpoint refuses every delivery and this package
 # is never imported.
-svix==1.83.0
+svix==2.8.0
 
 # Email HTML. The six messages in app/templates/emails are Jinja2 templates rather
 # than string concatenation, because they interpolate an address, a child's result
