@@ -41,7 +41,7 @@ has a working default. Replies are demo-generated and labelled as such until you
 
 Check the API directly: http://127.0.0.1:8000/api/health · interactive docs: http://127.0.0.1:8000/docs
 
-If port 3000 is taken, Next silently moves to 3001 (which then needs adding to `CORS_ORIGINS`).
+If port 3000 is taken, Next silently moves to 3001 (which then needs putting in `FRONTEND_URL`).
 Free it instead:
 
 ```bash
@@ -56,9 +56,11 @@ frontend code, never in a commit, never pasted into chat or a screenshot.
 
 | Variable | Side | Default | Meaning |
 | --- | --- | --- | --- |
-| `DATABASE_URL` | backend | `sqlite:///./careerguide.db` | Any SQLAlchemy URL. Postgres works as written |
+| `DATABASE_URL` | backend | `sqlite:///./careerguide.db` | Any SQLAlchemy URL. A plain `postgres://` or `postgresql://` string — what Neon and Supabase hand out — is rewritten to `postgresql+psycopg://`, the driver in `requirements.txt`, and `sslmode=require` is appended when the host is not this machine and the URL names no TLS parameter of its own. `sslmode=disable` is a decision, so it is left byte-exact; an unparseable URL is left alone and warned about rather than encrypted by guesswork |
 | `DB_AUTO_SETUP` | backend | `true` | First boot creates tables and seeds. Set `false` once hosted |
-| `CORS_ORIGINS` | backend | localhost:3000 | Browser origins allowed to call the API |
+| `REQUIRE_POSTGRES` | backend | `false` | `true` together with a `sqlite:` URL means the disk is rebuilt on every deploy, so the app boots, answers `/api/health`, and returns `503` on every other `/api` route instead of accepting a child's account and losing it. Vercel needs no such switch — it sets a flag of its own that triggers the same guard; a host that sets no flag (Render, Fly, a VPS with an ephemeral filesystem) needs this one. `scripts/serverless_guard_test.py` covers both triggers |
+| `FRONTEND_URL` | backend | empty | The site's own origin, and the primary source of allowed browser origins. Comma-separated is accepted; no trailing slash, no path. Unset ⇒ the three local dev origins (`localhost:3000`, `127.0.0.1:3000`, `careerguide.localhost:3000`) **and a warning at boot saying the deployment will refuse every origin on the internet** — the failure is a laptop that works and a site that does not, which is why it is logged rather than silent |
+| `CORS_ORIGINS` | backend | empty | Origins **beyond** `FRONTEND_URL`, and nothing else: school and counsellor portal subdomains, a second deployment of the same site. It adds to the list, it never replaces `FRONTEND_URL`. `*` is refused with a log line, because a credentialed any-origin API is the same hole as no API |
 | `AI_PROVIDER` / `AI_API_KEY` / `AI_MODEL` | backend | `demo` / empty / empty | Any OpenAI-compatible provider. `groq` is what this build is wired to |
 | `AI_BASE_URL` | backend | `https://api.openai.com/v1` | Swap for a compatible gateway — Groq uses `https://api.groq.com/openai/v1` |
 | `TTS_PROVIDER` | backend | `auto` | `auto` · `gemini` · `azure` · `edge` |
@@ -212,13 +214,15 @@ built-in reply with the reason beside it instead of silence. (`openai/gpt-oss-20
 
 ---
 
-## 2. Deploy to Vercel
+## 2. Deploy
+
+### 2.1 Vercel
 
 Two projects from one repository.
 
 | Project | Root Directory | Environment (Production scope) |
 | --- | --- | --- |
-| `careerguide-api` | `backend` | `DATABASE_URL` (Postgres — without it every data endpoint answers 503), `DB_AUTO_SETUP=false`, `CORS_ORIGINS=https://<frontend-origin>` |
+| `careerguide-api` | `backend` | `DATABASE_URL` (Postgres — without it every data endpoint answers 503), `DB_AUTO_SETUP=false`, `CORS_ORIGINS=https://<frontend-origin>` (this project's live deployment sets the older variable; `FRONTEND_URL` is the primary setting now and either is honoured, because `CORS_ORIGINS` adds to the list rather than replacing it) |
 | `careerguide-web` | `frontend` | `NEXT_PUBLIC_BACKEND_URL=https://<backend-origin>` (set before the build) |
 
 **Root Directory is not optional.** A project that builds the repository root finds no
@@ -270,6 +274,137 @@ Serverless changed three things in the code:
   catalogue changes.
 * **One function, 60 s ceiling** (`backend/vercel.json`, `maxDuration: 60`), region `bom1` (Mumbai),
   small pools (2 + 3 overflow) because every warm instance opens its own.
+
+#### The frontend's variables, and the two rules that bite
+
+Every API call leaves the browser through one pair of functions — `request()` and `binary()` in
+`src/lib/api.ts`, both of which build `${apiBase()}${path}` — so "does this screen use the env var" is a
+question with one answer rather than one per screen. Server-rendered reads (`/sitemap.xml`, the public
+catalogue pages) go through `backendBase()` in `lib/site.ts`, and `src/middleware.ts` derives the
+`connect-src` / `media-src` backend origin from the same variable, which is why changing the API address
+without redeploying leaves a page that renders and refuses every request inside it. No `WebSocket` or
+`EventSource` is opened anywhere, and `public/sw.js` holds no origin at all.
+
+Three rules those files now enforce, since a Vercel misconfiguration of this kind fails silently:
+
+* **Blank counts as unset.** All three read sites previously used `??`, which only catches a variable
+  that does not exist — and a variable created in the dashboard with an empty box *does* exist, as `""`.
+  That builds a bundle where the API base is the empty string, so `/api/health` is requested from this
+  site's own origin and answered with a 404 page, which the app then reports as "the server is not
+  answering". `backendFrom()` in `lib/api.ts` trims and tests, `backendBase()` and `backendOrigin()` do
+  the same, and `BACKEND_INTERNAL_URL || NEXT_PUBLIC_BACKEND_URL` uses `||` so a blank internal address
+  falls through to the public one rather than stopping at the blank. The fallback is
+  `http://localhost:8000`, exported as `DEV_BACKEND_URL`.
+* **`NEXT_PUBLIC_*` must be an Environment Variable, not a Secret.** `NEXT_PUBLIC_` values are inlined
+  when the *client bundle is built*; stored as a Vercel Secret they are absent from the build and the
+  fallback ships instead — an app that works on a laptop and calls `localhost:8000` in production.
+* **Baked at build time.** Changing the value needs a redeploy, not a restart.
+
+| Variable | Value on Vercel | Required |
+| --- | --- | --- |
+| `NEXT_PUBLIC_BACKEND_URL` | the API's origin, `https://…` (or the Render URL) — **Environment Variable type** | **yes**, or every screen boots and then refuses to load |
+| `NEXT_PUBLIC_SITE_URL` | this site's own origin | no — unset falls back to `DEFAULT_ORIGIN`, which is `https://careerguide-web.vercel.app`, i.e. right for this project and wrong the moment it is renamed |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Clerk's browser key | no — with it absent the account screens say email sign-in is not switched on |
+| `NEXT_PUBLIC_TENANT_BASE_DOMAIN` | e.g. `careerguide.example` | only with portals |
+| `NEXT_PUBLIC_ALLOWED_LOGO_HOSTS` | hosts a school logo may load from, comma-separated | only with portals |
+| `NEXT_PUBLIC_GA_MEASUREMENT_ID`, `NEXT_PUBLIC_CLARITY_PROJECT_ID` | analytics ids | no — nothing loads, and nothing is requested, until consent says yes |
+| `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION` | the Search Console token | no |
+| `NEXT_PUBLIC_LEGAL_COMPANY` / `_OFFICER` / `_EMAIL` / `_ADDRESS` / `_CITY` / `_PHONE` / `_REPLY_DAYS` | the operator's real identity | no — until then the legal pages print sample values under a "Sample values" badge |
+| `RESEND_API_KEY`, `CONTACT_FROM_EMAIL`, `CONTACT_TO_EMAIL` | the contact-form mailbox (no prefix: `POST /api/contact` is a server route) | no — missing any of the three answers `503 not_configured` and the page says the message was **not** sent |
+| `BACKEND_INTERNAL_URL` | no prefix; only for a container that cannot resolve the public address | no — and never `NEXT_PUBLIC_`, a browser cannot resolve it |
+
+Preview deployments are the reason the fallback matters: a preview built without
+`NEXT_PUBLIC_BACKEND_URL` talks to `localhost:8000` on the visitor's own machine, which fails closed —
+every screen shows its offline state — instead of pointing a preview at the production database and
+writing test traffic into a real child's account. Production must set it, and only Production is checked
+when the site is judged to work.
+
+### 2.2 Render + Neon or Supabase (a long-lived host instead)
+
+`render.yaml` in the repository root is a Render blueprint: one web service built from `backend/`,
+region `singapore`, `pip install -r requirements.txt`, started with
+
+```yaml
+startCommand: gunicorn -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT app.main:app
+```
+
+`--bind 0.0.0.0:$PORT` is not decoration. Render chooses the port and tells the process through `$PORT`;
+a service that binds `127.0.0.1:8000` builds, starts, logs "Uvicorn running" and is then marked
+unhealthy. `uvicorn.workers.UvicornWorker` comes from `uvicorn[standard]`, already in the
+requirements; `gunicorn==26.2.0` was added to `backend/requirements.txt` for this line and is
+**POSIX-only** — local development on Windows keeps using the uvicorn command in §1, so this command has
+been read, parsed and diffed against the app's own boot path but never executed here. That is the honest
+state of §2.2: nothing in this section has been deployed to Render.
+
+`healthCheckPath: /api/health` points at the one `/api` route the storage guard always answers,
+database or not, so a misconfigured service reports its problem instead of failing the check and being
+pulled out of the rotation. `buildFilter.paths` (`backend/**`, `render.yaml`) keeps a frontend or
+documentation commit from rebuilding an API.
+
+**The database is yours to create.** This blueprint provisions nothing; `DATABASE_URL` comes from Neon or
+Supabase and is typed into Render's dashboard. Both pooler shapes work as shipped — the engine pre-pings,
+recycles every 300 s and skips server-side prepared statements, which is what PgBouncer in transaction
+mode needs. A plain `postgresql://…` string from either vendor is rewritten to the driver this project
+ships and given `sslmode=require` when the host is not local (§1); nothing else about it is touched.
+`-w 4` means four processes with their own 2 + 3 pools, so the ceiling is 20 connections: inside a free
+tier, and worth dropping to `-w 2` if the database complains.
+
+`REQUIRE_POSTGRES=true` is the second trigger of the guard §5 describes for Vercel: a SQLite URL on a
+host that rebuilds its disk would boot, pass `/api/health` and answer `503` on every data route naming
+the variable to fix, instead of accepting a child's account and losing it at the next push. Vercel needs
+no such switch because it sets a flag of its own; Render sets none this code relies on, so the blueprint
+states the condition instead.
+
+**Environment variables.** `sync: false` in the blueprint means "deliberately no value in Git" — Render
+keeps whatever the dashboard holds, and a secret never reaches a public repository. These are typed in
+the dashboard:
+
+| Variable | Value | Required |
+| --- | --- | --- |
+| `DATABASE_URL` | the Neon or Supabase URL, `postgresql://…` or `postgresql+psycopg://…` | **yes** — without it every data route is 503 |
+| `FRONTEND_URL` | the site's exact origin, scheme included, no trailing slash; comma-separated for more than one | **yes** — unset means the API answers only to `localhost` and logs that it does |
+| `AI_API_KEY` | the Groq key (`gsk_…`) | for real replies; blank ⇒ the labelled demo guide |
+| `GEMINI_API_KEY` | the Gemini key | for the voice; blank ⇒ browser `speechSynthesis` |
+| `RATE_LIMIT_REDIS_URL` | a Render Key Value / any Redis URL | no — see the `-w 4` note below |
+| `CORS_ORIGINS` | portal subdomains and any second deployment of the site, comma-separated | no — `FRONTEND_URL` is the primary list and this one adds to it |
+| `PUBLIC_SITE_URL` | the site's `https://` origin | no — also folded into the allowed origins |
+| `TENANT_BASE_DOMAIN` | e.g. `careerguide.example` | only with school/counsellor portals, and only once a wildcard DNS record and the matching portal origins exist |
+| `CLERK_SECRET_KEY`, `CLERK_WEBHOOK_SIGNING_SECRET` | from the Clerk dashboard | no — the four Clerk routes answer 503 while blank |
+| `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET` | from the Razorpay dashboard | no — payments stay disabled and the buttons say so while blank |
+| `RESEND_API_KEY`, `FROM_EMAIL`, `LEAD_NOTIFY_EMAIL` | mail provider settings | no — the outbox records `delivered: false` and says so |
+| `AZURE_SPEECH_KEY`, `AZURE_SPEECH_REGION` | Azure Speech | only when `TTS_PROVIDER` is `azure` |
+
+These are committed in `render.yaml`, because none of them is a secret and all of them are what this
+deployment means to be:
+
+| Variable | Value | Why |
+| --- | --- | --- |
+| `PYTHON_VERSION` | `3.12.7` | matches CI |
+| `REQUIRE_POSTGRES` | `true` | the storage guard above |
+| `DB_AUTO_SETUP` | `true` | a brand-new database is created and seeded on first boot — **flip to `false` once healthy**, then take schema changes through `alembic upgrade head` |
+| `AI_PROVIDER` | `groq` | |
+| `AI_MODEL` | `openai/gpt-oss-120b` | answers in Hindi, English and Hinglish; `gpt-oss-20b` spends the budget reasoning and comes back empty |
+| `AI_BASE_URL` | `https://api.groq.com/openai/v1` | |
+| `TTS_PROVIDER` | `gemini` | `auto` would try Microsoft's Edge endpoint first, and it answers `403` to datacenter egress IPs |
+| `PUBLIC_REPO_URL` | `https://github.com/anand07kuma-spec/careerguide-ai` | |
+| `TENANT_TRUST_FORWARDED_HOST` | `true` | Render is the proxy that overwrites `X-Forwarded-Host`; a client-written version of that header is a way to paint one school's branding onto another's screen |
+| `RATE_LIMIT_ENABLED` | `true` | |
+
+Everything else the app reads is left at the shipped default on purpose — `AUTH_COOKIE_SECURE=auto`
+(reads Render's `X-Forwarded-Proto`), `AUTH_COOKIE_SAMESITE=none` (the page and this API are different
+hosts, so anything narrower means nobody signs in), the `RATE_LIMIT_*` rules, `SESSION_*` TTLs, and
+`PLAN_LIMITS_ENFORCED=false` (turning that on is a decision for the day real prices exist, not a side
+effect of a deploy).
+
+**Three limitations of §2.2 as written.** `preDeployCommand: alembic upgrade head` is present but
+commented out, because on Render it is a paid-plan feature and a command the platform refuses is worse
+than none; until it runs, migrations are applied by hand with `alembic upgrade head` against
+`DATABASE_URL`. With `RATE_LIMIT_REDIS_URL` blank the counters live in each worker's memory, so `-w 4`
+makes every stated rule a **floor** — "20 per minute" can behave like 80 under load — and a second
+instance multiplies it again. And the brief asked for CORS read *strictly* from `FRONTEND_URL`; the code
+does treat it as the primary and only fallback source, but `CORS_ORIGINS` survived as an additive list,
+because the live Vercel deployment and the portal subdomains are configured through it and deleting the
+variable would have broken a working site to satisfy a word.
 
 ---
 
@@ -1268,6 +1403,91 @@ it asked for a "✅ Verified on [Date]" badge replacing the red one: the green b
 did a grey one for the rows that have no date — because replacing a warning with a certification, for 596
 rows that have none, would have moved the app from honest-but-alarming to calm-and-wrong.
 
+**On 2026-10-23, the backend was prepared for a long-lived host.** §2.2 is the guide; this is the
+measurement behind it. `render.yaml` (repository root) is new and parses as a Render blueprint — read
+back with the YAML parser, not by eye: `runtime: python`, `rootDir: backend`,
+`buildCommand: pip install -r requirements.txt`,
+`startCommand: gunicorn -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT app.main:app`,
+`healthCheckPath: /api/health`, **28** `envVars` of which **18** are `sync: false` (no value in Git) and
+**10** carry a committed non-secret. `gunicorn==26.2.0` joined `backend/requirements.txt`; `uvicorn.workers`
+comes from the `uvicorn[standard]` already there, so nothing else moved.
+
+`app/config.py` gained two helpers and one validator. `use_the_shipped_postgres_driver` rewrites a bare
+`postgres://` / `postgresql://` URL to `postgresql+psycopg://`. `require_tls_on_hosted_postgres` appends
+`sslmode=require` only when the parsed host is not one of the seven local names (`localhost`,
+`127.0.0.1`, `0.0.0.0`, `::1`, `host.docker.internal`, `db`, `postgres`) **and** the query string names
+neither `sslmode` nor `ssl` — the check is on parameter *names* after splitting each pair at `=`, which
+is the detail that matters: the first version compared whole `key=value` strings, so
+`?sslmode=require` from Neon's direct connection string got a second one bolted onto it and an explicit
+`sslmode=disable` was overwritten. Both bugs are now tests rather than lessons. A URL `urlsplit` cannot
+parse is returned untouched with a warning, because guessing about TLS in the dark is how a connection
+goes out unencrypted while looking configured.
+
+`app/middleware/cors.py` now builds the list in order — `FRONTEND_URL`, then `CORS_ORIGINS` added to it,
+then an `https://` `PUBLIC_SITE_URL` — deduplicated, trailing slashes and whitespace normalised, `*`
+refused in either variable rather than only in `CORS_ORIGINS`. `frontend_origins("")` returns exactly the
+three dev origins **and logs which ones**, because the shape of this failure is a laptop that works and a
+site that gets refused by every request. `app/main.py`'s storage guard gained a second trigger:
+`REQUIRE_POSTGRES=true` alongside a `sqlite:` URL, sitting beside the existing `VERCEL` check, with the
+comment stating plainly that Vercel is the flag that happens to be ambient and Render sets nothing this
+code trusts. The admin config snapshot reports the **resolved** origin list and `frontend_url` beside it
+(`app/routers/admin.py`, `app/schemas.py`, `frontend/src/lib/types.ts`), so an operator reads what the API
+will actually accept instead of one raw variable. Both rewrites now live in one function,
+`postgres_url()`, because `scripts/migrate_sqlite_to_postgres.py` builds its target engine from `--to`
+without passing through `Settings`: it read `os.environ["DATABASE_URL"]` raw, so the URL pasted from the
+Neon dashboard would have died in the cutover with `No module named 'psycopg2'` — and its own guard
+tested `startswith("postgresql")`, which refused `postgres://…` outright. The script now accepts both
+schemes, normalises through the same function, and prints the normalised target (password masked) so the
+rewrite is visible on the one run that must not fail halfway.
+
+**Measured here: `security_test.py` 146 → 162 checks, 0 failed** — 11 new CORS assertions (`FRONTEND_URL`
+alone decides the list; `CORS_ORIGINS` adds and cannot replace it; dedupe and the comma list; unset ⇒
+exactly the three dev origins; `*` refused in the new variable) plus a new `[3b] DATABASE_URL` section
+(Neon scheme + driver + TLS, Supabase's existing `?sslmode=require` not doubled, `sslmode=disable&pool=1`
+left byte-exact, `?options=…` still getting TLS, the local-host loop producing no `sslmode` at all,
+SQLite untouched). `serverless_guard_test.py` **10 → 11, 0 failed**: the existing subprocess harness now
+boots its throwaway app with `REQUIRE_POSTGRES=true` and no `VERCEL`, so the second trigger is proved on
+a real ASGI app rather than asserted about one, and the laptop case still answers 200.
+`admin_test.py` **135, 0 failed** (the snapshot gained a field, so its suite re-ran) and `smoke_test.py`
+**104, 0 failed** — both re-run after the `postgres_url()` refactor, not before it. On the frontend,
+`npx tsc --noEmit` exit **0** for the new `frontend_url` row. The cutover script was checked on its
+refusal path (`--to mysql://…` → refused, name masked, no connection attempted); its Postgres path needs
+a reachable database and was not run against Neon here.
+
+**What was not run, in this section's own words.** **gunicorn has never been executed** — it is
+POSIX-only and this machine is Windows, so the local pair still runs uvicorn on `:8100`; what is verified
+is the command's shape, `$PORT` binding included, and that `app.main:app` is the object it points at.
+**Nothing has been deployed to Render**, so §2.2 describes a configuration that has boots-tested its own
+guard and nothing else. The other **19** backend suites were **not** re-run for this change and their
+counts above stand from the earlier 2026-10-23 batteries; `RATE_LIMIT_REDIS_URL` was left blank, which is
+why §2.2 calls the shipped limits a floor under `-w 4` instead of quoting them as exact. And the brief's
+word was "strictly" — `CORS_ORIGINS` is still read, as an addition, for the reason §2.2 states: the live
+Vercel deployment and the portal subdomains are configured through it today.
+
+**The same day, the frontend was prepared for the Vercel build.** `src/lib/api.ts` gained
+`backendFrom()` and an exported `DEV_BACKEND_URL`; `lib/site.ts`'s `backendBase()` and
+`src/middleware.ts`'s `backendOrigin()` now treat a blank variable as a missing one, and the two strings
+that named a port to a student — `/app/chat`'s "The server at {api} is not answering" and `/app/call`'s
+"not reachable on port 8000", with its Hindi entry in `src/lib/hi/call.ts` — read the configured address
+instead. `frontend/.env.example` records the three rules. Nothing else about the wiring changed: every
+call already went through `request()` / `binary()` on `${apiBase()}${path}`, no `WebSocket` or
+`EventSource` exists, `public/sw.js` holds no origin, and the only literal absolute `fetch` in `src` is
+`https://api.resend.com/emails` inside the server-side `/api/contact` route.
+
+**Measured for that pass:** `npx tsc --noEmit` exit **0**, `npx eslint src` silent,
+`node scripts/hi-prose-check.mjs src/app/app/call/page.tsx src/app/app/chat/page.tsx` → **0** prose
+literals missing, `node scripts/hi-duplicates.mjs` → **2 212** keys and the same **3** pre-existing
+conflicts, so the re-keyed sentence left the dictionary no orphan. `npm run build` exit **0** and
+**64 page routes** twice over, once per configuration: built with `NEXT_PUBLIC_BACKEND_URL` genuinely
+absent (`.env.local` moved aside and put back afterwards), where `.next/static` contains `localhost:8000`
+in **1** file and `127.0.0.1:8100` — this machine's usual value — in **0**, which is the fallback baking
+in rather than a laptop address shipping; and built with `NEXT_PUBLIC_BACKEND_URL=https://careerguide-api-omega.vercel.app`,
+where that origin is baked into **1** client file. The no-env build also doubles as the no-Clerk-key,
+no-Razorpay-key, no-analytics build, and it compiles. **Not walked in a browser:** both changed sentences
+sit in offline branches, and this machine's backend was up the whole time, so what is proved about them
+is that they typecheck, lint and translate — not that they render. §5's standing note about the four
+`401`s per page load and the browser-test limits still applies.
+
 **On 2026-10-21, the age a student gives is a number they type, not a band they pick.** `StudentProfile.age`
 (SmallInteger, nullable, migration `0013_student_age`) holds what was said; `age_range` is derived from it by
 the server (`band_for_age`) on every write — a profile patch, and a fact read out of the chat — so the guide's
@@ -1685,7 +1905,7 @@ removed.
   browser does for any script on the page — `httpOnly` protects the *secret*, not the *session*. The
   weight on that side is carried by rules that do not depend on this header: every write demands a JSON
   body, so a form-shaped cross-site request cannot reach one; CORS answers only the origins named in
-  `CORS_ORIGINS`; which account a request speaks for comes from the session, never from an id in the
+  `FRONTEND_URL` and `CORS_ORIGINS`; which account a request speaks for comes from the session, never from an id in the
   body; and the throttles below cap what one tab can ask for. Dropping `'unsafe-inline'` needs a nonce,
   and a nonce needs every page rendered per request — a change to how this site is deployed, not a
   header edit, which is why it is written down instead of done.
@@ -1721,12 +1941,16 @@ removed.
   live in this process, so on serverless each instance keeps its own — they are a floor there, not a
   wall, and the defence that still matters on a come-back code is the 210 000-round PBKDF2, not this.
 * Only the origins this site is served from may call the API from a browser
-  (`backend/app/middleware/cors.py`). A `*` in `CORS_ORIGINS` is dropped with a log line instead of
-  obeyed, whitespace and trailing slashes are normalised away, the deployment's own public URL is folded
-  in once, and credentials are answered for only because a wildcard was already refused — a credentialed
+  (`backend/app/middleware/cors.py`). The list is built in order: `FRONTEND_URL` first, then
+  `CORS_ORIGINS` added to it, then `PUBLIC_SITE_URL` when it is an `https://` origin. A `*` in either of
+  the two variables is dropped with a log line instead of obeyed, whitespace, trailing slashes and
+  duplicates are normalised away, and with `FRONTEND_URL` unset the local dev origins are used and the
+  boot log says the deployment will therefore refuse the internet. Credentials are answered for only
+  because a wildcard was already refused — a credentialed
   `*` is the one combination that turns a visitor's browser into a way to read any family's data.
-  `security_test.py` asserts that a listed origin gets `access-control-allow-credentials: true` and that
-  a stranger's `Origin` comes back with no `access-control-allow-origin` attached to it at all.
+  `security_test.py` asserts that a listed origin gets `access-control-allow-credentials: true`, that
+  a stranger's `Origin` comes back with no `access-control-allow-origin` attached to it at all, that
+  `CORS_ORIGINS` cannot replace `FRONTEND_URL`, and that the unset fallback is exactly the three dev origins.
 * Every request body says what it will not accept. All **57** input models inherit `StrictIn`
   (`extra="forbid"` — count them with `grep -c 'class .*StrictIn)' app/schemas.py`), so an undocumented key is a `422` rather than a field someone *might* read later;
   every free-text field has a stated length; ids must be `ge=1`; a device id has a character class and a

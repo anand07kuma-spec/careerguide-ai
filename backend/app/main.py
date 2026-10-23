@@ -38,7 +38,14 @@ settings = get_settings()
 # there would silently lose accounts and conversations. Rather than crash the
 # whole function, the app boots, answers /api/health, and refuses to read or write
 # anything else until a real database is configured.
-storage_unusable = bool(os.environ.get("VERCEL")) and settings.database_url.startswith("sqlite")
+#
+# Two ways of knowing this is a hosted deployment: `VERCEL`, which that platform sets
+# by itself, and `REQUIRE_POSTGRES`, for a host that sets nothing and simply rebuilds
+# the container on every push — Render being the one this project is configured for.
+# A disk that is thrown away between deploys is the hazard, not a particular vendor.
+storage_unusable = (
+    bool(os.environ.get("VERCEL")) or settings.require_postgres
+) and settings.database_url.startswith("sqlite")
 
 STORAGE_UNAVAILABLE_DETAIL = (
     "This deployment has no database attached yet, so nothing can be saved or read. "

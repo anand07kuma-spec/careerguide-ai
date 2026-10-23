@@ -1,0 +1,160 @@
+# Render blueprint for the CareerGuide AI API.
+#
+# One web service, built from the `backend/` directory of this repository, talking to
+# a PostgreSQL database you create yourself (Neon or Supabase) and serving the browser
+# at `FRONTEND_URL`. Everything here is what Render reads; nothing here is a secret.
+#
+# The variables marked `sync: false` are deliberately without a value in this file:
+# Render will not overwrite what you type in its dashboard, and a value here would be
+# a value pushed to a public repository. `DATABASE_URL` in particular carries a
+# password, so it belongs only in the dashboard or your own local copy of this file,
+# never committed.
+#
+# Check before the first deploy:
+#   * `FRONTEND_URL` — the exact origin of the site, scheme included, no trailing
+#     slash. With it unset the API answers only to `localhost`, and it logs a warning
+#     saying so; a page on the internet would then fail every request in the browser.
+#   * `DATABASE_URL` — a Postgres URL from Neon or Supabase. A plain `postgresql://`
+#     is rewritten to the driver this project ships (`postgresql+psycopg://`), and
+#     `sslmode=require` is added when the host is not this machine and the URL did not
+#     already ask for a TLS mode. Nothing else about your string is touched.
+#   * `DB_AUTO_SETUP` — `true` here so a brand-new database is created and seeded on
+#     the first boot. Set it to `false` once the service is healthy, and take schema
+#     changes through `alembic upgrade head` instead (see the commented
+#     `preDeployCommand` below).
+#   * `RATE_LIMIT_REDIS_URL` — left blank, the counters live in each worker's own
+#     memory, and `-w 4` below means four of them: "20 per minute" quietly behaves
+#     like 80 on a busy deployment. The stated rules are a floor, not a ceiling, until
+#     a Redis URL is set. Render's free Key Value instance is enough.
+#
+# `gunicorn` is POSIX-only. Local development on Windows keeps using the uvicorn
+# command in docs/ARCHITECTURE_AND_TESTS.md §1; this file is for the Linux host.
+
+services:
+  - type: web
+    name: careerguide-api
+    runtime: python
+    rootDir: backend
+    plan: free
+    # Closest Render region to the students this is for. Change it if the database
+    # lives elsewhere — the round trip is the floor on every response time.
+    region: singapore
+    buildCommand: pip install -r requirements.txt
+    # `$PORT` is the port Render tells the proxy to reach; binding anything else is a
+    # service that builds, starts, logs "Uvicorn running on 127.0.0.1:8000" and is
+    # marked unhealthy.
+    startCommand: gunicorn -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT app.main:app
+    healthCheckPath: /api/health
+    autoDeploy: true
+    # Once DB_AUTO_SETUP is false, schema changes ride on this line instead. It is a
+    # paid-plan feature on Render and it needs a health check path set (it has one
+    # above), so it stays commented until the deployment is on a plan that runs it:
+    # an uncommented command Render refuses is worse than none at all.
+    # preDeployCommand: alembic upgrade head
+    #
+    # Only rebuild when the backend changes — the frontend lives in its own repo
+    # service and a documentation commit here should not restart an API.
+    buildFilter:
+      paths:
+        - backend/**
+        - render.yaml
+
+    envVars:
+      # --- The two the app cannot serve a browser or store a row without ----------
+      - key: DATABASE_URL # Neon or Supabase, Postgres 15+
+        sync: false
+      - key: FRONTEND_URL # https://the-site.example — the origin that may call this API
+        sync: false
+
+      # --- Build-time ------------------------------------------------------------------
+      - key: PYTHON_VERSION
+        value: 3.12.7
+
+      # --- Refuse a disk that is rebuilt on every deploy -------------------------------
+      # With this on, a `sqlite:` URL boots, answers /api/health and returns 503 on
+      # every data route instead of writing children's conversations to a container
+      # that disappears at the next push.
+      - key: REQUIRE_POSTGRES
+        value: "true"
+      - key: DB_AUTO_SETUP
+        value: "true" # flip to "false" after the first healthy boot
+
+      # --- The model that answers ------------------------------------------------------
+      - key: AI_PROVIDER
+        value: groq
+      - key: AI_API_KEY # gsk_… — never committed, never in a bundle
+        sync: false
+      - key: AI_MODEL
+        value: openai/gpt-oss-120b
+      - key: AI_BASE_URL
+        value: https://api.groq.com/openai/v1
+
+      # --- The voice that speaks -------------------------------------------------------
+      # Microsoft's Edge read-aloud endpoint answers 403 to datacenter egress IPs, so a
+      # host like this needs gemini or azure; `auto` would try Edge first.
+      - key: TTS_PROVIDER
+        value: gemini
+      - key: GEMINI_API_KEY
+        sync: false
+
+      # --- Where the site and its printed pages point ----------------------------------
+      - key: PUBLIC_SITE_URL # e.g. https://careerguide.example — also an allowed origin
+        sync: false
+      - key: PUBLIC_REPO_URL
+        value: https://github.com/anand07kuma-spec/careerguide-ai
+
+      # --- Behind a proxy that overwrites these headers (Render does) ------------------
+      # Both are the "only safe behind a proxy" switches: `X-Forwarded-Host` says which
+      # school's portal a request is standing in, and a client-written version of it is a
+      # way to paint one school's branding onto another's screen.
+      - key: TENANT_TRUST_FORWARDED_HOST
+        value: "true"
+      # The domain a portal hangs off, e.g. careerguide.example. Leave unset while no
+      # school portal is in use; a wildcard DNS record has to exist before it means
+      # anything, and each portal origin then belongs in CORS_ORIGINS below.
+      - key: TENANT_BASE_DOMAIN
+        sync: false
+      # Extra browser origins, comma-separated — the portal subdomains and nothing else.
+      # `FRONTEND_URL` is the primary setting; this list does not replace it.
+      - key: CORS_ORIGINS
+        sync: false
+
+      # --- Rate limiting ---------------------------------------------------------------
+      - key: RATE_LIMIT_ENABLED
+        value: "true"
+      # Blank keeps the counters in each worker's own memory. Set a Redis URL to make
+      # the stated rules exact across four workers and more than one instance.
+      - key: RATE_LIMIT_REDIS_URL
+        sync: false
+
+      # --- Optional services, each off until its key is set ----------------------------
+      # Every one of these is blank by default and blank is a supported state: the
+      # feature says it is unavailable on screen instead of pretending it worked.
+      - key: CLERK_SECRET_KEY
+        sync: false
+      - key: CLERK_WEBHOOK_SIGNING_SECRET
+        sync: false
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: RAZORPAY_WEBHOOK_SECRET
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: FROM_EMAIL
+        sync: false
+      - key: LEAD_NOTIFY_EMAIL
+        sync: false
+      - key: AZURE_SPEECH_KEY # only if TTS_PROVIDER is azure
+        sync: false
+      - key: AZURE_SPEECH_REGION
+        sync: false
+
+      # --- Defaults worth knowing about, left as the app ships them --------------------
+      # AUTH_COOKIE_SECURE=auto — `Secure` when the request came over https, which on
+      # Render it does through the proxy's X-Forwarded-Proto.
+      # AUTH_COOKIE_SAMESITE=none — the page and this API are different hosts, so a
+      # narrower value means the session cookie never travels and nobody signs in.
+      # PLAN_LIMITS_ENFORCED=false — turning it on is a decision for the day real
+      # prices go live, not a side effect of a deploy.

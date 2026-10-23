@@ -65,6 +65,7 @@ from sqlalchemy.orm import Session
 
 from ..config import get_settings
 from ..database import get_db
+from ..middleware.cors import browser_origins
 from ..middleware.rate_limit import admin_limit
 from ..models import (
     Assessment,
@@ -1012,7 +1013,8 @@ def deployment() -> AdminDeploymentOut:
         razorpay_configured=s.razorpay_configured,
         webhook_verifiable=s.webhook_verifiable,
         razorpay_test_mode=s.razorpay_test_mode,
-        cors_origins=[origin.strip() for origin in s.cors_origins.split(",") if origin.strip()],
+        cors_origins=browser_origins(s),
+        frontend_url=s.frontend_url or None,
         public_site_url=s.public_site_url,
         public_repo_url=s.public_repo_url,
         tenant_base_domain=s.tenant_base_domain,

@@ -2092,7 +2092,16 @@ class AdminDeploymentOut(BaseModel):
     razorpay_configured: bool
     webhook_verifiable: bool
     razorpay_test_mode: bool
+    # Every origin a browser may call this API from, as the running process resolved
+    # it: `FRONTEND_URL` first, then `CORS_ORIGINS`, then `PUBLIC_SITE_URL` when that
+    # is an https address. A wildcard never appears in this list even if somebody
+    # typed one, which is the point of showing the resolved list rather than the raw
+    # variable — the raw one is what an operator believes they set.
     cors_origins: list[str]
+    # What `FRONTEND_URL` says, or null when it is unset. Null here means this
+    # deployment is answering to the local development origins only, and the startup
+    # log says so out loud.
+    frontend_url: str | None
     public_site_url: str
     public_repo_url: str
     tenant_base_domain: str

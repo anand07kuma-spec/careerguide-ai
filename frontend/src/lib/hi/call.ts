@@ -69,8 +69,8 @@ export const HI: Record<string, string> = {
   "I have read this": "मैंने यह पढ़ लिया है",
 
   // Server not reachable
-  "The CareerGuide server is not reachable on port 8000.":
-    "CareerGuide सर्वर port 8000 पर नहीं मिल रहा।",
+  "The CareerGuide server at {api} is not reachable.":
+    "CareerGuide सर्वर {api} पर नहीं मिल रहा।",
   "Start it with this command:": "इस कमांड से सर्वर शुरू करें:",
   "Then try again.": "फिर दोबारा कोशिश करें।",
   "The CareerGuide server is not reachable just now. Your call was not recorded. Try again in a moment, or switch to text.":

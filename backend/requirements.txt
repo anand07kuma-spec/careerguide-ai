@@ -57,3 +57,11 @@ svix==1.83.0
 # containing `<` from breaking the layout or smuggling markup into a family's inbox.
 # Pure Python, no system libraries, so it costs a deployment nothing.
 jinja2==3.1.6
+
+# The process manager a long-running host starts, where uvicorn alone is the
+# development server. Render's Python runtime runs the *start command* as given, so
+# `gunicorn -w 4 -k uvicorn.workers.UvicornWorker app.main:app` needs this package
+# present and `uvicorn[standard]` (above) supplies the worker class it loads.
+# POSIX-only by design: local Windows development keeps using `uvicorn` directly,
+# which is what the README's §1 command does.
+gunicorn==26.2.0

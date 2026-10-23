@@ -7,9 +7,12 @@ visitor's cookie can open. `allow_credentials` is therefore the setting that mak
 the exactness of this list load-bearing rather than merely tidy: it is only ever
 true beside a list of named origins, and `browser_origins` below keeps it that way.
 
-Origins come from `CORS_ORIGINS`, plus the site's own public address, so that a
-deployment which has set `PUBLIC_SITE_URL` cannot be left in the common broken
-state where the page loads and every request inside it fails.
+Origins come from `FRONTEND_URL` first — the one setting that says where the site is
+actually served from — then `CORS_ORIGINS` for the additional origins a deployment may
+have (a school portal's own subdomain), then the site's own public address, so that a
+deployment which has set `PUBLIC_SITE_URL` cannot be left in the common broken state
+where the page loads and every request inside it fails. With no `FRONTEND_URL` at all the
+list falls back to the local dev pair and a warning names every origin it guessed.
 """
 
 from __future__ import annotations
@@ -19,7 +22,7 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from ..config import Settings
+from ..config import Settings, frontend_origins
 
 log = logging.getLogger(__name__)
 
@@ -37,13 +40,33 @@ ALLOWED_HEADERS = ["Authorization", "Content-Type"]
 
 
 def browser_origins(settings: Settings) -> list[str]:
-    configured = [origin.strip().rstrip("/") for origin in settings.cors_origins.split(",")]
-    kept = [origin for origin in configured if origin and origin != "*"]
-    if len(kept) != len([origin for origin in configured if origin]):
-        log.warning("CORS_ORIGINS contained '*' — ignored. List the site's own origins.")
+    """Every origin a browser may call from, deduplicated, `*` never among them."""
+    kept: list[str] = []
+
+    def add(origin: str) -> None:
+        cleaned = origin.strip().rstrip("/")
+        if not cleaned:
+            return
+        if cleaned == "*":
+            log.warning(
+                "An origin of '*' was configured — ignored. This API answers with a "
+                "child's conversations and takes a session cookie; list the origins."
+            )
+            return
+        if cleaned not in kept:
+            kept.append(cleaned)
+
+    for origin in frontend_origins(settings.frontend_url):
+        add(origin)
+    for origin in settings.cors_origins.split(","):
+        add(origin)
+
     site = settings.public_site_url.strip().rstrip("/")
-    if site.startswith("https://") and site not in kept:
-        kept.append(site)
+    # `https` only, and only this one: a public URL typed as plain http is a mistake,
+    # and quietly allowing it would mean a page whose own origin is not trusted here
+    # could still read a session.
+    if site.startswith("https://"):
+        add(site)
     return kept
 
 
@@ -51,8 +74,16 @@ def configure_cors(app: FastAPI, settings: Settings) -> None:
     origins = browser_origins(settings)
     if not origins:
         log.warning(
-            "No browser origin is allowed (CORS_ORIGINS is empty), so a page on any "
-            "origin will be refused. Non-browser clients are unaffected."
+            "No browser origin is allowed (FRONTEND_URL and CORS_ORIGINS are both "
+            "empty), so a page on any origin will be refused. Non-browser clients "
+            "are unaffected."
+        )
+    if settings.frontend_url.strip() == "" and settings.cors_origins.strip() == "":
+        log.warning(
+            "FRONTEND_URL is unset and CORS_ORIGINS is empty, so this deployment is "
+            "answering to the local dev origins only — %s. Set FRONTEND_URL to the "
+            "site's own origin before a family opens it.",
+            ", ".join(origins) or "(none)",
         )
     app.add_middleware(
         CORSMiddleware,
@@ -64,4 +95,8 @@ def configure_cors(app: FastAPI, settings: Settings) -> None:
         allow_methods=ALLOWED_METHODS,
         allow_headers=ALLOWED_HEADERS,
     )
-    log.info("CORS: %d origin(s) allowed to call this API from a browser", len(origins))
+    log.info(
+        "CORS: %d origin(s) allowed to call this API from a browser — %s",
+        len(origins),
+        ", ".join(origins) or "none",
+    )
