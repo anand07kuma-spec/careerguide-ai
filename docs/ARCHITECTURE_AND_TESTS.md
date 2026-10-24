@@ -1887,6 +1887,40 @@ PostgreSQL 17 container reproduced the same state through the actual `add_missin
 migrating clean. Nothing in the `careerguide` compose stack was touched, and the scratch container is
 removed.
 
+**2026-10-24: the two console lines a visitor's browser prints, measured at both ends.** Two reports came
+in about the browser console on the deployed site, and both turned out to be about things the console does
+on its own rather than things this code does:
+
+* `'unsafe-eval'` attributed to a `content.js`. The live document header was fetched
+  (`curl -sI https://careerguide-web.vercel.app/`) and its `script-src` is
+  `'self' 'unsafe-inline' https://checkout.razorpay.com` — no `'unsafe-eval'`, because `evalForDev` in
+  `src/middleware.ts:178` is a `NODE_ENV` ternary and Next inlines that value when it bundles the
+  middleware. The same request against `next dev -p 3000` does return `'unsafe-eval'`, so both halves of
+  the rule were observed rather than assumed, and the only `unsafe-eval` string left anywhere in the built
+  middleware chunk is a CSP keyword list inside a dependency. `content.js` is not a file this site ships
+  (`find .next/static -name content.js` → nothing): it belongs to an installed browser extension asking a
+  page to let it compile code at runtime. Granting that would open `eval` to every script running on a
+  child's screen to make one line disappear from a developer's console, so the policy stays as it is and
+  the line stays with the extension.
+* A red `401` on `/api/auth/me`. One per load of the homepage, measured from a browser that had never been
+  here, and `grep -rn "console\." src/` returns nothing: the application never logs it. `reload()` already
+  caught it, asked `POST /api/auth/guest` (which answers 200 with `known: false` for a stranger), and the
+  page finished rendering with no error state on screen. The line itself is the browser's own record of a
+  response status, printed before the promise reaches the `catch`, so no page-side code can suppress it —
+  the only way to remove it is for the first probe not to answer 401, which is a backend decision about
+  `/api/auth/me` and not a frontend edit.
+
+What did change is the sentence next to that `catch`: `reload()` no longer treats *every* failure that is
+not a network error as "the server refused my session". A 503 from a cold server or a 429 from a rate
+limit used to fall through to the guest probe, which for a browser whose account is reachable only by
+cookie answers `known: false` and routes the child toward starting over. Now only a 401 continues to the
+probe; anything else lands on the retry screen, which says nothing on this device was cleared. Verified by
+pointing the local backend at SQLite with `REQUIRE_POSTGRES=true` so that `/api/auth/me` answers 503: the
+screen showed "The server is not answering" with a *Try again* button, the guest probe was never called,
+and with the backend restarted normally the same button brought the existing session back — no onboarding,
+no lost account. `tsc --noEmit`, `eslint` and `next build` all pass; the 23 backend suites were not
+re-run, because nothing in `backend/` changed.
+
 ## 6. Rules the code enforces (not only the UI)
 
 * A browser is told what it may load. `frontend/src/middleware.ts` answers **every** route that can
