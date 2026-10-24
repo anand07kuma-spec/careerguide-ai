@@ -19,6 +19,11 @@ type Status = "loading" | "new-device" | "ready" | "offline";
  * leave the student under "Checking your account…" with no way out. */
 const CHECK_TIMEOUT_MS = 12000;
 
+/** Only a 401 is evidence that this tab's credential was refused. */
+function refusedByServer(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 401;
+}
+
 /**
  * How often an open page asks the server to keep its session going.
  *
@@ -106,14 +111,21 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       apply(await withDeadline(api.me(), CHECK_TIMEOUT_MS));
       return;
     } catch (error) {
-      if (isOffline(error)) {
-        // The cookie *is* the account: there is no password to type again. A network
-        // that is merely down or slow must not throw away a session that still works.
+      // A 401 is an answer, not a fault: this browser holds nothing the server
+      // recognises, which is true of every first visit. It is consumed here and never
+      // written to the console — the line a developer sees in the Network log is the
+      // browser's own record of the status code, printed before this `catch` runs, and
+      // no page code can suppress it. The next block is the same conversation continued.
+      //
+      // Anything else says nothing about this session, so it must not read as signed
+      // out. A 503 from a cold server or a 429 from a rate limit used to fall through to
+      // the guest probe below, and a browser whose account is only reachable by cookie
+      // would be answered `known: false` and sent toward starting over. Now they reach
+      // the retry screen, which says that nothing on this device was cleared.
+      if (!refusedByServer(error)) {
         setStatus("offline");
         return;
       }
-      // 401, or a shape this page cannot read. Either way the server has refused what
-      // this tab was holding, including any header it minted for itself a minute ago.
       setAuthToken(null);
     }
 
