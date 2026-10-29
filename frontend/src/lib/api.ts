@@ -342,7 +342,17 @@ export const api = {
    * answer, not an error, so the app can go straight to the one question. */
   guest: (device_id: string) =>
     request<GuestResult>("/api/auth/guest", { method: "POST", body: JSON.stringify({ device_id }) }),
-  me: () => request<Session>("/api/auth/me"),
+  /**
+   * Ask who this browser is. `null` is the ordinary answer for a browser that has never
+   * been here: the server replies 204, which `request` reads as no body, rather than 401.
+   *
+   * That distinction is the whole point. A 401 was caught here without a word of its own,
+   * but the browser still logs every failed response, so a first visit showed a red
+   * console line for something that is simply a new visitor. 204 is a success status, so
+   * the console stays clean and this call answers the question it was asked. A session
+   * that has ended still answers 401, so a sign-out keeps its signal.
+   */
+  me: () => request<Session | null>("/api/auth/me"),
   /**
    * Ask the server to push this session's expiry back. It needs a session to work, and
    * it cannot create one — the point of calling it from a timer is that a questionnaire

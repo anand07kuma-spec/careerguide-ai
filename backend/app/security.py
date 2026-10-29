@@ -328,20 +328,40 @@ def _bearer_or_raise(authorization: str | None) -> str:
     return raw
 
 
-def _presented_token(request: Request, authorization: str | None) -> str:
+def _presented_token_or_none(request: Request, authorization: str | None) -> str | None:
     """The session this request claims: its header if it wrote one, else its cookie.
 
     A header that is present but unusable is a refusal, not a cue to try the jar. Falling
     back there would mean a typo in an `Authorization` line silently authenticates as
     whoever the browser also happens to be, and the caller would never know which of the
     two the answer came from.
+
+    `None` answers a different question from raising: this request offered no credential
+    at all, as opposed to offering one that cannot be honoured. Only `GET /api/auth/me`
+    acts on the difference, because a first visit from a fresh browser is not a sign-in
+    that failed.
     """
     if authorization:
         return _bearer_or_raise(authorization)
     cookie = (request.cookies.get(get_settings().auth_cookie_name) or "").strip()
     if cookie and TOKEN_SHAPE.fullmatch(cookie):
         return cookie
-    raise CREDENTIALS_EXC
+    return None
+
+
+def _presented_token(request: Request, authorization: str | None) -> str:
+    """`_presented_token_or_none`, with no credential read as a refusal."""
+    token = _presented_token_or_none(request, authorization)
+    if token is None:
+        raise CREDENTIALS_EXC
+    return token
+
+
+def _record_for_token(db: Session, token: str) -> AuthToken:
+    record = db.get(AuthToken, token_hash_of(token))
+    if record is None or record.expires_at < datetime.now(timezone.utc):
+        raise CREDENTIALS_EXC
+    return record
 
 
 def get_current_session(
@@ -356,10 +376,7 @@ def get_current_session(
     sign-in minted". `get_current_user` is built on this, so every route that reads a
     user gets the same lookup and the same expiry check.
     """
-    record = db.get(AuthToken, token_hash_of(_presented_token(request, authorization)))
-    if record is None or record.expires_at < datetime.now(timezone.utc):
-        raise CREDENTIALS_EXC
-    return record
+    return _record_for_token(db, _presented_token(request, authorization))
 
 
 def renew_session(db: Session, record: AuthToken) -> AuthToken:
@@ -390,10 +407,7 @@ def renew_session(db: Session, record: AuthToken) -> AuthToken:
     return record
 
 
-def get_current_user(
-    record: AuthToken = Depends(get_current_session),
-    db: Session = Depends(get_db),
-) -> User:
+def _user_of_session(db: Session, record: AuthToken) -> User:
     user = db.get(User, record.user_id)
     if user is None or not user.is_active:
         raise CREDENTIALS_EXC
@@ -407,6 +421,35 @@ def get_current_user(
     ):
         renew_session(db, record)
     return user
+
+
+def get_current_user(
+    record: AuthToken = Depends(get_current_session),
+    db: Session = Depends(get_db),
+) -> User:
+    return _user_of_session(db, record)
+
+
+def get_optional_user(
+    request: Request,
+    authorization: str | None = Header(default=None),
+    db: Session = Depends(get_db),
+) -> User | None:
+    """The signed-in user, or `None` when the request offered no credential at all.
+
+    This exists for `GET /api/auth/me` and nothing else. Every other route keeps
+    `get_current_user`, so nothing that reads a child's data can be served by a request
+    that forgot to prove itself.
+
+    The distinction it makes is the one the browser cannot state: no credential means
+    this device has never been here, and that is a normal first load rather than a
+    session ending. A credential that is offered and no longer good still raises 401,
+    because the app has to tell a sign-out apart from a stranger.
+    """
+    token = _presented_token_or_none(request, authorization)
+    if token is None:
+        return None
+    return _user_of_session(db, _record_for_token(db, token))
 
 
 def revoke_session(db: Session, raw_token: str) -> None:

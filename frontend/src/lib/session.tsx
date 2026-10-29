@@ -103,8 +103,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     // cookie the server wrote. Nothing is read out of storage, because nothing was ever
     // put there — a token a script could read is a token a script could hand over.
     try {
-      apply(await withDeadline(api.me(), CHECK_TIMEOUT_MS));
-      return;
+      const answer = await withDeadline(api.me(), CHECK_TIMEOUT_MS);
+      if (answer) {
+        apply(answer);
+        return;
+      }
+      // `null` is the 204: no credential was offered, so nothing is being held that could
+      // need dropping, and no exception is raised for a first visit. Fall through and ask
+      // by device id, quietly.
     } catch (error) {
       if (isOffline(error)) {
         // The cookie *is* the account: there is no password to type again. A network
