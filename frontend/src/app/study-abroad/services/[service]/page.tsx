@@ -4,13 +4,15 @@ import { cache } from "react";
 import { connection } from "next/server";
 import { Check, Minus } from "lucide-react";
 
-import { PublicSiteHeader } from "@/components/careers/public-careers-shell";
+import { PublicLangNotice, PublicSiteHeader } from "@/components/careers/public-careers-shell";
 import { LeadForm } from "@/components/study-abroad/lead-form";
 import { DirectoryUnavailable, NotInDirectory } from "@/components/study-abroad/study-shell";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { LinkButton } from "@/components/ui/button";
 import { api, ApiError } from "@/lib/api";
+import { publicLang } from "@/lib/request-lang";
+import { makeT, makeTf } from "@/lib/public-i18n";
 import { pageMeta } from "@/lib/site";
 import type { StudyService } from "@/lib/types";
 
@@ -25,9 +27,15 @@ import type { StudyService } from "@/lib/types";
  * exists to prevent, and it is the reason the visa page in particular is written
  * this way: what is offered there is reading the government page with a family, not
  * regulated immigration advice this platform is not licensed to give.
+ *
+ * Hindi is resolved per request like the destination page. The row's own text —
+ * title, summary, detail, steps, what it covers and what it never will — is the
+ * directory's English record and stays English, so the page says that under its own
+ * heading instead of leaving a Hindi frame over untranslated paragraphs.
  */
 
 type Params = Promise<{ service: string }>;
+type PageQuery = Promise<{ lang?: string }>;
 
 const loadService = cache(async (slug: string): Promise<StudyService | null> => {
   try {
@@ -68,9 +76,20 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 /** A service read at request time from a slug that is a runtime value. */
 export const instant = false;
 
-export default async function StudyAbroadServicePage({ params }: { params: Params }) {
+export default async function StudyAbroadServicePage({
+  params,
+  searchParams,
+}: {
+  params: Params;
+  searchParams: PageQuery;
+}) {
   const { service: slug } = await params;
+  const query = await searchParams;
   await connection();
+  const lang = await publicLang(query);
+  const t = makeT(lang);
+  const tf = makeTf(lang);
+  const qs = lang === "hi" ? "?lang=hi" : "";
 
   let service: StudyService | null = null;
   try {
@@ -78,9 +97,9 @@ export default async function StudyAbroadServicePage({ params }: { params: Param
   } catch {
     return (
       <div className="min-h-dvh bg-canvas">
-        <PublicSiteHeader current="/study-abroad" />
+        <PublicSiteHeader current="/study-abroad" lang={lang} path={`/study-abroad/services/${slug}`} />
         <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
-          <DirectoryUnavailable what={`the service “${slug}”`} />
+          <DirectoryUnavailable what={tf("the service “{slug}”", { slug })} lang={lang} />
         </main>
       </div>
     );
@@ -89,9 +108,9 @@ export default async function StudyAbroadServicePage({ params }: { params: Param
   if (!service) {
     return (
       <div className="min-h-dvh bg-canvas">
-        <PublicSiteHeader current="/study-abroad" />
+        <PublicSiteHeader current="/study-abroad" lang={lang} path={`/study-abroad/services/${slug}`} />
         <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
-          <NotInDirectory kind="service" value={slug} />
+          <NotInDirectory kind="service" value={slug} lang={lang} />
         </main>
       </div>
     );
@@ -99,11 +118,18 @@ export default async function StudyAbroadServicePage({ params }: { params: Param
 
   return (
     <div className="min-h-dvh bg-canvas">
-      <PublicSiteHeader current="/study-abroad" />
+      <PublicSiteHeader
+        current="/study-abroad"
+        lang={lang}
+        path={`/study-abroad/services/${service.slug}`}
+      />
 
       <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6 sm:py-14">
-        <Link href="/study-abroad" className="text-sm text-brand underline-offset-2 hover:underline">
-          Study abroad
+        <Link
+          href={`/study-abroad${qs}`}
+          className="text-sm text-brand underline-offset-2 hover:underline"
+        >
+          {t("Study abroad")}
         </Link>
 
         <div className="mt-4 flex flex-wrap items-center gap-3">
@@ -113,15 +139,16 @@ export default async function StudyAbroadServicePage({ params }: { params: Param
           {service.available ? (
             <Badge tone="success">
               <Check className="h-3 w-3" aria-hidden />
-              Offered
+              {t("Offered")}
             </Badge>
           ) : (
             <Badge tone="warning">
               <Minus className="h-3 w-3" aria-hidden />
-              Not offered yet
+              {t("Not offered yet")}
             </Badge>
           )}
         </div>
+        <PublicLangNotice lang={lang} what="the service description" />
 
         <p className="mt-5 text-base leading-relaxed text-ink">{service.summary}</p>
         {service.detail ? (
@@ -129,14 +156,16 @@ export default async function StudyAbroadServicePage({ params }: { params: Param
         ) : null}
         {service.who_for ? (
           <p className="mt-4 text-sm leading-relaxed text-muted">
-            <span className="font-semibold text-heading">Who it is for: </span>
+            <span className="font-semibold text-heading">{t("Who it is for:")} </span>
             {service.who_for}
           </p>
         ) : null}
 
         {service.steps.length > 0 ? (
           <section className="mt-10">
-            <h2 className="text-lg font-bold tracking-tight text-heading sm:text-xl">How it goes</h2>
+            <h2 className="text-lg font-bold tracking-tight text-heading sm:text-xl">
+              {t("How it goes")}
+            </h2>
             <ol className="mt-4 space-y-2.5">
               {service.steps.map((step, index) => (
                 <li key={step} className="flex gap-3 text-sm leading-relaxed text-ink">
@@ -153,7 +182,7 @@ export default async function StudyAbroadServicePage({ params }: { params: Param
         <div className="mt-10 grid gap-4 sm:grid-cols-2">
           {service.includes.length > 0 ? (
             <Card className="p-5">
-              <h2 className="text-sm font-bold tracking-tight text-heading">What you get</h2>
+              <h2 className="text-sm font-bold tracking-tight text-heading">{t("What you get")}</h2>
               <ul className="mt-3 space-y-2 text-sm leading-relaxed text-ink">
                 {service.includes.map((item) => (
                   <li key={item} className="flex gap-2.5">
@@ -166,7 +195,9 @@ export default async function StudyAbroadServicePage({ params }: { params: Param
           ) : null}
           {service.not_included.length > 0 ? (
             <Card className="border-danger/25 p-5">
-              <h2 className="text-sm font-bold tracking-tight text-heading">What this never covers</h2>
+              <h2 className="text-sm font-bold tracking-tight text-heading">
+                {t("What this never covers")}
+              </h2>
               <ul className="mt-3 space-y-2 text-sm leading-relaxed text-ink">
                 {service.not_included.map((item) => (
                   <li key={item} className="flex gap-2.5">
@@ -181,12 +212,12 @@ export default async function StudyAbroadServicePage({ params }: { params: Param
 
         {service.fees_note ? (
           <section className="mt-10">
-            <h2 className="text-lg font-bold tracking-tight text-heading sm:text-xl">Money</h2>
+            <h2 className="text-lg font-bold tracking-tight text-heading sm:text-xl">{t("Money")}</h2>
             <p className="mt-3 text-sm leading-relaxed text-ink">{service.fees_note}</p>
             <p className="mt-3 text-xs leading-relaxed text-muted">
-              No amount is printed on this page because no amount is fixed here: a fee is quoted for
-              the work a family actually needs, before any of it starts, and nothing is charged
-              automatically.
+              {t(
+                "No amount is printed on this page because no amount is fixed here: a fee is quoted for the work a family actually needs, before any of it starts, and nothing is charged automatically.",
+              )}
             </p>
           </section>
         ) : null}
@@ -195,11 +226,14 @@ export default async function StudyAbroadServicePage({ params }: { params: Param
           {service.available ? (
             <>
               <h2 className="text-lg font-bold tracking-tight text-heading sm:text-xl">
-                Ask about {service.title.toLowerCase()}
+                {tf("Ask about {name}", { name: service.title.toLowerCase() })}
               </h2>
               <div className="mt-4 rounded-card border border-line bg-surface p-5 sm:p-6">
                 <LeadForm
-                  intro={`Say that you are asking about ${service.title.toLowerCase()} and what stage the student is at. A person reads every one of these.`}
+                  intro={tf(
+                    "Say that you are asking about {name} and what stage the student is at. A person reads every one of these.",
+                    { name: service.title.toLowerCase() },
+                  )}
                   serviceSlug={service.slug}
                   serviceName={service.title}
                 />
@@ -208,22 +242,22 @@ export default async function StudyAbroadServicePage({ params }: { params: Param
           ) : (
             <div className="rounded-card border border-warning/40 bg-warning-mist p-5">
               <h2 className="text-base font-semibold text-heading">
-                This one cannot be asked for yet
+                {t("This one cannot be asked for yet")}
               </h2>
               <p className="mt-2 text-sm leading-relaxed text-ink">
-                {service.title} is described above because the boundary it sits inside matters even
-                when nobody is offering the service: what is written here is what a family should
-                expect from anybody who does. There is deliberately no enquiry form on this page —
-                sending a request for work that is not being taken on would only put a family on a
-                list nobody reads.
+                {tf(
+                  "{name} is described above because the boundary it sits inside matters even when nobody is offering the service: what is written here is what a family should expect from anybody who does. There is deliberately no enquiry form on this page — sending a request for work that is not being taken on would only put a family on a list nobody reads.",
+                  { name: service.title },
+                )}
               </p>
               <p className="mt-3 text-sm leading-relaxed text-ink">
-                A question that needs a registered adviser should be taken to one. For anything else,
-                the contact page is the channel a person watches.
+                {t(
+                  "A question that needs a registered adviser should be taken to one. For anything else, the contact page is the channel a person watches.",
+                )}
               </p>
               <div className="mt-4">
                 <LinkButton size="sm" href="/contact">
-                  Go to the contact page
+                  {t("Go to the contact page")}
                 </LinkButton>
               </div>
             </div>

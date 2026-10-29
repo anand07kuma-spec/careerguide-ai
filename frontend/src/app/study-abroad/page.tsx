@@ -3,13 +3,15 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { ArrowRight, Check, Globe2, Minus } from "lucide-react";
 
-import { PublicSiteHeader } from "@/components/careers/public-careers-shell";
+import { PublicLangNotice, PublicSiteHeader } from "@/components/careers/public-careers-shell";
 import { LeadForm } from "@/components/study-abroad/lead-form";
 import { DirectoryUnavailable } from "@/components/study-abroad/study-shell";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { LinkButton } from "@/components/ui/button";
 import { api } from "@/lib/api";
+import { publicLang } from "@/lib/request-lang";
+import { makeT, makeTf, type PublicLang } from "@/lib/public-i18n";
 import { pageMeta } from "@/lib/site";
 import type { StudyCountryCard, StudyService, StudyStory } from "@/lib/types";
 
@@ -27,6 +29,15 @@ import type { StudyCountryCard, StudyService, StudyStory } from "@/lib/types";
  * session cannot be the one a crawler is sent to. The enquiry form is the single
  * client island on the page, because it is the only control here that can change
  * anything.
+ *
+ * The language is read the same way `/careers` reads it, which is why this page
+ * takes a `searchParams` prop even though it has no filters of its own: the toggle
+ * is a link carrying `?lang=hi`, resolved on the server before the HTML exists, and
+ * it falls back to the `careerguide.ui-lang` cookie the toggle writes so that a
+ * Hindi reader who clicks through to a destination does not land back in English.
+ * What is translated is the page's own prose; the directory records — country names,
+ * overviews, service summaries — are the backend's English rows, and the notice
+ * under the heading says so in Hindi instead of leaving the reader to notice it.
  *
  * There are no success stories on this page and that is deliberate: `study_stories`
  * is empty until a named person agrees to being named. The empty state says so
@@ -48,26 +59,38 @@ export const metadata: Metadata = pageMeta({
   ],
 });
 
+type PageQuery = Promise<{ lang?: string }>;
+
 /** The list, the services and the stories are all read from the running backend at
  * request time, so nothing here is prerendered with somebody else's snapshot in it. */
 export const instant = false;
 
-function Unavailable({ what }: { what: string }) {
+function Unavailable({ what, lang }: { what: string; lang: PublicLang }) {
+  const t = makeT(lang);
   return (
     <div className="min-h-dvh bg-canvas">
-      <PublicSiteHeader current="/study-abroad" />
+      <PublicSiteHeader current="/study-abroad" lang={lang} path="/study-abroad" />
       <main className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
-        <h1 className="text-3xl font-bold tracking-tight text-heading sm:text-4xl">Study abroad</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-heading sm:text-4xl">
+          {t("Study abroad")}
+        </h1>
         <div className="mt-6">
-          <DirectoryUnavailable what={what} />
+          <DirectoryUnavailable what={what} lang={lang} />
         </div>
       </main>
     </div>
   );
 }
 
-export default async function StudyAbroadPage() {
+export default async function StudyAbroadPage({ searchParams }: { searchParams: PageQuery }) {
   await connection();
+  const query = await searchParams;
+  const lang = await publicLang(query);
+  const t = makeT(lang);
+  const tf = makeTf(lang);
+  // Every internal link from a Hindi page carries the language, because there
+  // is no client store on this route to remember it.
+  const qs = lang === "hi" ? "?lang=hi" : "";
 
   let countries: StudyCountryCard[] = [];
   let services: StudyService[] = [];
@@ -79,68 +102,75 @@ export default async function StudyAbroadPage() {
       api.studyStories(),
     ]);
   } catch {
-    return <Unavailable what="the destinations, the services and the published stories" />;
+    return (
+      <Unavailable
+        what={t("the destinations, the services and the published stories")}
+        lang={lang}
+      />
+    );
   }
 
   const totalUniversities = countries.reduce((sum, country) => sum + country.universities, 0);
 
   return (
     <div className="min-h-dvh bg-canvas">
-      <PublicSiteHeader current="/study-abroad" />
+      <PublicSiteHeader current="/study-abroad" lang={lang} path="/study-abroad" />
 
       <main className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-14">
         <Badge tone="teal" className="mb-5">
-          Study abroad
+          {t("Study abroad")}
         </Badge>
         <h1 className="text-balance text-3xl font-bold leading-tight tracking-tight text-heading sm:text-5xl">
-          Study abroad made simple
+          {t("Study abroad made simple")}
         </h1>
+        <PublicLangNotice lang={lang} what="the destination and service descriptions" />
         <p className="mt-5 max-w-2xl text-base leading-relaxed text-ink sm:text-lg">
-          {countries.length} destinations explained in the language a family actually argues in,{" "}
-          {totalUniversities} universities with each one&rsquo;s own official site attached, and a
-          plain description of what a paid adviser does at every stage — from a class 9 profile to a
-          visa document list.
+          {tf(
+            "{n} destinations explained in the language a family actually argues in, {m} universities with each one’s own official site attached, and a plain description of what a paid adviser does at every stage — from a class 9 profile to a visa document list.",
+            { n: countries.length, m: totalUniversities },
+          )}
         </p>
         <p className="mt-4 max-w-2xl text-sm leading-relaxed text-muted">
-          What this directory does not do is quote a number it has not read from a source. Tuition,
-          living costs, application deadlines and visa rules are the four things that change every
-          year, so a page here that has not been re-read says so and links to the government or
-          university page that owns the answer. An estimate would look more finished and be worth
-          less.
+          {t(
+            "What this directory does not do is quote a number it has not read from a source. Tuition, living costs, application deadlines and visa rules are the four things that change every year, so a page here that has not been re-read says so and links to the government or university page that owns the answer. An estimate would look more finished and be worth less.",
+          )}
         </p>
 
         <div className="mt-8 flex flex-wrap gap-2">
           <LinkButton href="#enquiry">
-            Book a free consultation
+            {t("Book a free consultation")}
             <ArrowRight className="h-4 w-4" aria-hidden />
           </LinkButton>
-          <LinkButton variant="outline" href="/careers">
-            Browse career profiles instead
+          <LinkButton variant="outline" href={`/careers${qs}`}>
+            {t("Browse career profiles instead")}
           </LinkButton>
         </div>
         <p className="mt-3 text-xs leading-relaxed text-muted">
-          &ldquo;Book&rdquo; here means an enquiry, not a calendar slot: nothing is scheduled until
-          somebody replies. See the form at the bottom of this page.
+          {t(
+            "“Book” here means an enquiry, not a calendar slot: nothing is scheduled until somebody replies. See the form at the bottom of this page.",
+          )}
         </p>
 
         {/* ---------------------------------------------------------------- destinations */}
         <section className="mt-14" aria-labelledby="destinations">
           <h2 id="destinations" className="text-2xl font-bold tracking-tight text-heading">
-            Destinations
+            {t("Destinations")}
           </h2>
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted">
-            Each country page covers the same five things: how admission works there, when the
-            intakes are, what the money question looks like, which English test the universities
-            accept, and which official portal owns the visa rule.
+            {t(
+              "Each country page covers the same five things: how admission works there, when the intakes are, what the money question looks like, which English test the universities accept, and which official portal owns the visa rule.",
+            )}
           </p>
 
           {countries.length === 0 ? (
             <Card className="mt-6 p-5">
-              <h3 className="text-base font-semibold text-heading">No destination is listed yet</h3>
+              <h3 className="text-base font-semibold text-heading">
+                {t("No destination is listed yet")}
+              </h3>
               <p className="mt-2 text-sm leading-relaxed text-muted">
-                The directory table is empty on this deployment, which means the seed has not been
-                run — not that studying abroad is impossible. Nothing has been invented to fill
-                these cards.
+                {t(
+                  "The directory table is empty on this deployment, which means the seed has not been run — not that studying abroad is impossible. Nothing has been invented to fill these cards.",
+                )}
               </p>
             </Card>
           ) : (
@@ -150,7 +180,7 @@ export default async function StudyAbroadPage() {
                   <div className="flex items-start justify-between gap-2">
                     <h3 className="text-base font-semibold text-heading">
                       <a
-                        href={`/study-abroad/${country.slug}`}
+                        href={`/study-abroad/${country.slug}${qs}`}
                         className="hover:text-brand hover:underline hover:underline-offset-2"
                       >
                         {country.name}
@@ -165,11 +195,13 @@ export default async function StudyAbroadPage() {
                     {country.overview}
                   </p>
                   <p className="mt-3 text-xs font-medium text-ink">
-                    {country.universities}{" "}
-                    {country.universities === 1 ? "university listed" : "universities listed"}
+                    {country.universities === 1
+                      ? tf("{n} university listed", { n: country.universities })
+                      : tf("{n} universities listed", { n: country.universities })}
                     <span className="font-normal text-muted">
                       {" "}
-                      &mdash; {country.checked_at ? "copy re-checked" : "copy not yet re-checked"}
+                      &mdash;{" "}
+                      {country.checked_at ? t("copy re-checked") : t("copy not yet re-checked")}
                     </span>
                   </p>
                 </Card>
@@ -181,23 +213,23 @@ export default async function StudyAbroadPage() {
         {/* -------------------------------------------------------------------- services */}
         <section className="mt-14" aria-labelledby="services">
           <h2 id="services" className="text-2xl font-bold tracking-tight text-heading">
-            What we do, and what we refuse to do
+            {t("What we do, and what we refuse to do")}
           </h2>
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted">
-            Four services, each with the part it will not take on written next to it. The refusal is
-            the more useful half of the description: a statement of purpose has to be the
-            student&rsquo;s own words, and a visa decision is not anybody&rsquo;s to promise.
+            {t(
+              "Four services, each with the part it will not take on written next to it. The refusal is the more useful half of the description: a statement of purpose has to be the student’s own words, and a visa decision is not anybody’s to promise.",
+            )}
           </p>
 
           {services.length === 0 ? (
             <Card className="mt-6 p-5">
-              <h3 className="text-base font-semibold text-heading">No service is listed yet</h3>
+              <h3 className="text-base font-semibold text-heading">{t("No service is listed yet")}</h3>
               <p className="mt-2 text-sm leading-relaxed text-muted">
-                The services table is empty on this deployment. Read the careers guide or the{" "}
+                {t("The services table is empty on this deployment. Read the careers guide or the")}{" "}
                 <Link className="text-brand underline underline-offset-2" href="/contact">
-                  contact page
+                  {t("contact page")}
                 </Link>{" "}
-                in the meantime.
+                {t("in the meantime.")}
               </p>
             </Card>
           ) : (
@@ -207,7 +239,7 @@ export default async function StudyAbroadPage() {
                   <div className="flex items-start justify-between gap-3">
                     <h3 className="text-base font-semibold text-heading">
                       <a
-                        href={`/study-abroad/services/${service.slug}`}
+                        href={`/study-abroad/services/${service.slug}${qs}`}
                         className="hover:text-brand hover:underline hover:underline-offset-2"
                       >
                         {service.title}
@@ -216,12 +248,12 @@ export default async function StudyAbroadPage() {
                     {service.available ? (
                       <Badge tone="success">
                         <Check className="h-3 w-3" aria-hidden />
-                        Offered
+                        {t("Offered")}
                       </Badge>
                     ) : (
                       <Badge tone="warning">
                         <Minus className="h-3 w-3" aria-hidden />
-                        Not offered yet
+                        {t("Not offered yet")}
                       </Badge>
                     )}
                   </div>
@@ -229,7 +261,7 @@ export default async function StudyAbroadPage() {
                   <p className="mt-3 text-xs leading-relaxed text-ink">
                     {service.not_included.length > 0 ? (
                       <>
-                        <span className="font-semibold">Never covers: </span>
+                        <span className="font-semibold">{t("Never covers:")} </span>
                         {service.not_included[0]}
                       </>
                     ) : null}
@@ -243,18 +275,19 @@ export default async function StudyAbroadPage() {
         {/* --------------------------------------------------------------------- stories */}
         <section className="mt-14" aria-labelledby="stories">
           <h2 id="stories" className="text-2xl font-bold tracking-tight text-heading">
-            Success stories
+            {t("Success stories")}
           </h2>
           {stories.length === 0 ? (
             <Card className="mt-6 p-5">
               <p className="text-sm leading-relaxed text-ink">
-                There are none yet, and there will not be a fabricated one to fill this space. A
-                story appears here when a student or a parent has agreed by name to it being
-                published, with the year and the destination they are willing to be quoted on.
+                {t(
+                  "There are none yet, and there will not be a fabricated one to fill this space. A story appears here when a student or a parent has agreed by name to it being published, with the year and the destination they are willing to be quoted on.",
+                )}
               </p>
               <p className="mt-3 text-sm leading-relaxed text-muted">
-                If that describes you, the enquiry form below is the place to say so — a quote is
-                added only after it is written down and confirmed.
+                {t(
+                  "If that describes you, the enquiry form below is the place to say so — a quote is added only after it is written down and confirmed.",
+                )}
               </p>
             </Card>
           ) : (
@@ -276,7 +309,7 @@ export default async function StudyAbroadPage() {
         {/* ----------------------------------------------------------------------- enquiry */}
         <section className="mt-14" aria-labelledby="enquiry" id="enquiry">
           <h2 id="enquiry" className="text-2xl font-bold tracking-tight text-heading">
-            Ask for a free consultation
+            {t("Ask for a free consultation")}
           </h2>
           <div className="mt-4 rounded-card border border-line bg-surface p-5 sm:p-6">
             <LeadForm
