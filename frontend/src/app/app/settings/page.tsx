@@ -90,6 +90,17 @@ function voiceGroupFor(language: string): string {
   return language === "hi" ? "hi" : "en";
 }
 
+/**
+ * The three configuration names the email sign-in card prints inside `<code>` chips.
+ *
+ * They are env-var names and a route, not interface text: the server looks for exactly
+ * these bytes, so they are held as constants and drawn verbatim in every language
+ * instead of being dictionary keys someone could "translate".
+ */
+const CLERK_SECRET_ENV = "CLERK_SECRET_KEY";
+const CLERK_PUBLISHABLE_ENV = "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY";
+const CLERK_WEBHOOK_ROUTE = "POST /api/webhooks/clerk";
+
 /** Same bounds the server refuses outside of: `AGE_MIN`/`AGE_MAX` in
  * `backend/app/services/profile_facts.py` and `ge=3, le=99` on `ProfileIn.age`. */
 const AGE_MIN = 3;
@@ -624,8 +635,9 @@ export default function SettingsScreen() {
   const sessionCount = (conversations.data ?? []).length;
   const grantedCount = CONSENT_SCOPES.filter((entry) => consentByScope.get(entry.scope)?.granted).length;
   const guardianCount = (guardians.data ?? []).length;
-  const languageLabel =
-    LANGUAGE_OPTIONS.find((option) => option.value === language)?.label ?? language;
+  const languageLabel = t(
+    LANGUAGE_OPTIONS.find((option) => option.value === language)?.label ?? language,
+  );
   const interestCount = (view.interest_areas ?? []).length;
 
   // `tts_ready` only says the settings are complete. This verdict comes from the
@@ -636,22 +648,30 @@ export default function SettingsScreen() {
     attempt && attempt.ok !== null && attempt.provider === health.data?.tts_provider
       ? attempt
       : null;
+  // Every branch names a service or a timestamp the server chose, so the sentence
+  // around it is a template and the data goes in through `{…}` — the Hindi entry puts
+  // the provider name where Hindi wants it, not where English does.
   const voiceStatusLine =
     health.state === "loading"
-      ? "Asking the server which speech service it uses…"
+      ? t("Asking the server which speech service it uses…")
       : health.state === "error"
-        ? "The server could not be reached, so its voice is unknown."
+        ? t("The server could not be reached, so its voice is unknown.")
         : lastVoiceTry?.ok === true
-          ? `${lastVoiceTry.provider} turned a reply into real audio${
-              lastVoiceTry.checked_at ? ` ${relativeTime(lastVoiceTry.checked_at)}` : ""
-            }.`
+          ? tf("{provider} turned a reply into real audio{when}.", {
+              provider: lastVoiceTry.provider ?? t("the server"),
+              when: lastVoiceTry.checked_at ? ` ${relativeTime(lastVoiceTry.checked_at)}` : "",
+            })
           : lastVoiceTry?.ok === false
-            ? `${lastVoiceTry.provider} was asked and refused: ${
-                lastVoiceTry.reason ?? "no audio came back"
-              } Replies are read by your browser's own voice instead.`
-            : `Nothing has been spoken by ${
-                health.data?.tts_provider ?? "the server"
-              } yet. Run the test below to ask it for audio.`;
+            ? tf(
+                "{provider} was asked and refused: {reason} Replies are read by your browser's own voice instead.",
+                {
+                  provider: lastVoiceTry.provider ?? t("the server"),
+                  reason: lastVoiceTry.reason ?? t("no audio came back"),
+                },
+              )
+            : tf("Nothing has been spoken by {provider} yet. Run the test below to ask it for audio.", {
+                provider: health.data?.tts_provider ?? t("the server"),
+              });
 
   const classOptions = [...CLASS_OPTIONS].map((option) => ({ ...option }));
 
@@ -687,7 +707,7 @@ export default function SettingsScreen() {
       description="Each line opens one part of this account. Everything here is yours to change."
       badge={
         <Badge tone="brand" icon={<ShieldCheck className="h-3.5 w-3.5" aria-hidden />}>
-          {isStudent ? "Student account" : "Parent account"}
+          {t(isStudent ? "Student account" : "Parent account")}
         </Badge>
       }
     >
@@ -701,23 +721,23 @@ export default function SettingsScreen() {
             <p className="truncate text-base font-semibold text-ink">{user?.display_name}</p>
             <p className="mt-0.5 truncate text-sm text-muted">
               {isStudent
-                ? [classLabel(profile?.class_level) ?? "Class not set", languageLabel].join(" · ")
-                : "Parent account · sees only what a child shares"}
+                ? `${classLabel(profile?.class_level) ?? t("Class not set")} · ${languageLabel}`
+                : t("Parent account · sees only what a child shares")}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
             {isStudent ? (
               <LinkButton href="/app" variant="outline" size="sm">
-                Dashboard
+                {t("Dashboard")}
               </LinkButton>
             ) : (
               <LinkButton href="/parent" variant="outline" size="sm">
-                Parent dashboard
+                {t("Parent dashboard")}
               </LinkButton>
             )}
             <Button variant="ghost" size="sm" onClick={() => setSection("device")}>
               <Smartphone className="h-4 w-4" aria-hidden />
-              This device
+              {t("This device")}
             </Button>
           </div>
         </Card>
@@ -820,20 +840,21 @@ export default function SettingsScreen() {
         {/* ---------------------------------------------------------- This device */}
         <Card className="flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-ink">There is nothing to sign out of</p>
+            <p className="text-sm font-semibold text-ink">{t("There is nothing to sign out of")}</p>
             <p className="mt-0.5 text-xs leading-relaxed text-muted">
-              This browser is the account, so just close the tab — everything will be waiting next
-              time you open it from here. Use start over only if somebody else will use this device.
+              {t(
+                "This browser is the account, so just close the tab — everything will be waiting next time you open it from here. Use start over only if somebody else will use this device.",
+              )}
             </p>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" onClick={() => setSection("device")}>
               <Info className="h-4 w-4" aria-hidden />
-              How this works
+              {t("How this works")}
             </Button>
             <Button variant="secondary" size="sm" onClick={() => setResetModal(true)}>
               <RotateCcw className="h-4 w-4" aria-hidden />
-              Start over
+              {t("Start over")}
             </Button>
           </div>
         </Card>
@@ -861,13 +882,17 @@ export default function SettingsScreen() {
         onClose={closeSection}
         title="Language and voice"
         description="How the guide speaks and listens to you."
-        footer={<Button variant="outline" onClick={closeSection}>Done</Button>}
+        footer={
+          <Button variant="outline" onClick={closeSection}>
+            {t("Done")}
+          </Button>
+        }
       >
         <div className="space-y-4">
           <div className="space-y-2.5 rounded-2xl bg-canvas p-4">
             <p className="flex items-center gap-1.5 text-sm font-semibold text-ink">
               <LanguagesIcon className="h-4 w-4 text-brand-dark" aria-hidden />
-              Interface language
+              {t("Interface language")}
             </p>
             <PillGroup
               items={[
@@ -878,9 +903,9 @@ export default function SettingsScreen() {
               onChange={(next) => setUiLang(next === "hi" ? "hi" : "en")}
             />
             <p className="text-xs leading-relaxed text-muted">
-              This changes the menus, buttons and page titles on this device, and it stays as you left
-              it. Nothing else switches it — not even a Hindi conversation. Reply language below is a
-              separate thing, and that one does follow how you actually talk.
+              {t(
+                "This changes the menus, buttons and page titles on this device, and it stays as you left it. Nothing else switches it — not even a Hindi conversation. Reply language below is a separate thing, and that one does follow how you actually talk.",
+              )}
             </p>
           </div>
 
@@ -911,7 +936,7 @@ export default function SettingsScreen() {
                       ? "Voice — Hindi"
                       : group.language === "en"
                         ? "Voice — English (also used for Hinglish)"
-                        : `Voice — ${group.language}`
+                        : tf("Voice — {language}", { language: group.language })
                   }
                   options={group.voices.map((voice) => ({ value: voice.id, label: voice.label }))}
                   placeholder="Use the default voice"
@@ -935,7 +960,7 @@ export default function SettingsScreen() {
               label={
                 <span className="inline-flex items-center gap-1.5">
                   <Volume2 className="h-4 w-4 text-brand-dark" aria-hidden />
-                  Read replies aloud
+                  {t("Read replies aloud")}
                 </span>
               }
               description="Replies are read aloud by the server's speech service — the one named just below — and by your browser's own voice if that fails. Either way it is not a human voice, and the words stay on screen."
@@ -946,7 +971,7 @@ export default function SettingsScreen() {
               label={
                 <span className="inline-flex items-center gap-1.5">
                   <Mic className="h-4 w-4 text-brand-dark" aria-hidden />
-                  Hands-free conversation on calls
+                  {t("Hands-free conversation on calls")}
                 </span>
               }
               description="Keeps listening during an open call so you do not tap each turn. It never listens between calls, and nothing is recorded."
@@ -955,7 +980,7 @@ export default function SettingsScreen() {
 
           <div className="space-y-2.5 rounded-2xl bg-canvas p-4">
             <div className="flex items-center justify-between gap-3">
-              <p className="text-sm font-semibold text-ink">The server&apos;s voice</p>
+              <p className="text-sm font-semibold text-ink">{t("The server's voice")}</p>
               <Button
                 variant="outline"
                 size="sm"
@@ -963,7 +988,7 @@ export default function SettingsScreen() {
                 onClick={() => void testVoice()}
               >
                 <Volume2 className="h-4 w-4" aria-hidden />
-                Test the voice
+                {t("Test the voice")}
               </Button>
             </div>
             <p className="text-xs leading-relaxed text-muted">{voiceStatusLine}</p>
@@ -975,10 +1000,12 @@ export default function SettingsScreen() {
                   voiceTest.ok ? "bg-success-mist text-green-900" : "bg-warning-mist/60 text-ink",
                 )}
               >
-                {voiceTest.message}
+                {voiceTest.message}{" "}
                 {voiceTest.ok
-                  ? " If you heard it, replies are spoken by the server in this browser."
-                  : " Your browser's own voice still reads replies aloud, and it sounds different."}
+                  ? t("If you heard it, replies are spoken by the server in this browser.")
+                  : t(
+                      "Your browser's own voice still reads replies aloud, and it sounds different.",
+                    )}
               </p>
             ) : null}
           </div>
@@ -986,8 +1013,9 @@ export default function SettingsScreen() {
           {health.state === "ready" && health.data?.demo_mode ? (
             <p className="flex items-start gap-1.5 rounded-xl bg-warning-mist/60 px-3.5 py-2.5 text-xs leading-relaxed text-ink">
               <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-700" aria-hidden />
-              Answers come from a built-in demo guide until an AI key is added on the server. The demo
-              still walks you through real exploration — but replies are scripted samples.
+              {t(
+                "Answers come from a built-in demo guide until an AI key is added on the server. The demo still walks you through real exploration — but replies are scripted samples.",
+              )}
             </p>
           ) : null}
           {health.state === "error" ? (
@@ -1010,7 +1038,11 @@ export default function SettingsScreen() {
             ? "Only coarse details are stored — never your full name at school, address, documents, Aadhaar, bank details or passwords. We do not ask for those, ever."
             : "You are signed in as a parent, so your profile has no class, age or interests — those belong to your child's own account."
         }
-        footer={<Button variant="outline" onClick={closeSection}>Done</Button>}
+        footer={
+          <Button variant="outline" onClick={closeSection}>
+            {t("Done")}
+          </Button>
+        }
       >
         {isStudent ? (
           <div className="space-y-4">
@@ -1028,7 +1060,7 @@ export default function SettingsScreen() {
 
             <div>
               <p className="mb-1.5 block text-sm font-medium text-ink">
-                Interests <span className="text-xs font-normal text-muted">(pick up to 12)</span>
+                {t("Interests")} <span className="text-xs font-normal text-muted">{t("(pick up to 12)")}</span>
               </p>
               <div className="flex flex-wrap gap-2">
                 {INTEREST_OPTIONS.map((interest) => {
@@ -1046,14 +1078,15 @@ export default function SettingsScreen() {
                           : "border-line bg-surface text-muted hover:border-brand-light hover:text-ink",
                       )}
                     >
-                      {interest}
+                      {t(interest)}
                     </button>
                   );
                 })}
               </div>
               <p className="mt-2 text-xs text-muted">
-                Interests are things you might enjoy trying — they never decide what you are allowed to
-                become.
+                {t(
+                  "Interests are things you might enjoy trying — they never decide what you are allowed to become.",
+                )}
               </p>
             </div>
 
@@ -1078,7 +1111,9 @@ export default function SettingsScreen() {
           <div>
             <Input label="Display name" value={user?.display_name ?? ""} readOnly disabled />
             <p className="mt-1.5 text-xs text-muted">
-              Your child&apos;s name and profile live on their account and can only be changed by them.
+              {t(
+                "Your child's name and profile live on their account and can only be changed by them.",
+              )}
             </p>
           </div>
         )}
@@ -1090,23 +1125,31 @@ export default function SettingsScreen() {
         onClose={closeSection}
         title="Account and email sign-in"
         description="How this account is held, what you can add to it, and what it does not have."
-        footer={<Button variant="outline" onClick={closeSection}>Done</Button>}
+        footer={
+          <Button variant="outline" onClick={closeSection}>
+            {t("Done")}
+          </Button>
+        }
       >
         <div className="space-y-5">
           <div className="rounded-2xl bg-canvas p-4">
             <p className="flex items-center gap-2 text-sm font-semibold text-ink">
               <Mail className="h-4 w-4 shrink-0 text-brand-dark" aria-hidden />
-              {clerk.data?.linked ? "An email opens this account too" : "This browser is the account"}
+              {clerk.data?.linked
+                ? t("An email opens this account too")
+                : t("This browser is the account")}
             </p>
             <p className="mt-1.5 text-xs leading-relaxed text-muted">
               {clerk.state === "loading"
-                ? "Asking the server whether an email is connected…"
+                ? t("Asking the server whether an email is connected…")
                 : clerk.state === "error"
                   ? clerk.error
-                  : clerk.data?.note}
+                  : t(clerk.data?.note ?? "")}
             </p>
             {clerk.data?.linked && clerk.data.linked_at ? (
-              <p className="mt-1.5 text-xs text-muted">Connected {relativeTime(clerk.data.linked_at)}.</p>
+              <p className="mt-1.5 text-xs text-muted">
+                {t("Connected")} {relativeTime(clerk.data.linked_at)}.
+              </p>
             ) : null}
           </div>
 
@@ -1114,7 +1157,7 @@ export default function SettingsScreen() {
             {clerkEnabled() && !clerk.data?.linked ? (
               <LinkButton href="/account/connect" size="sm">
                 <Mail className="h-4 w-4" aria-hidden />
-                Connect an email
+                {t("Connect an email")}
               </LinkButton>
             ) : null}
             {clerk.data?.linked ? (
@@ -1125,24 +1168,27 @@ export default function SettingsScreen() {
                 disabled={disconnecting}
               >
                 <KeyRound className="h-4 w-4" aria-hidden />
-                {disconnecting ? "Disconnecting…" : "Disconnect the email"}
+                {disconnecting ? t("Disconnecting…") : t("Disconnect the email")}
               </Button>
             ) : null}
             <LinkButton href="/app/profile" variant="outline" size="sm">
               <UserRound className="h-4 w-4" aria-hidden />
-              My profile
+              {t("My profile")}
             </LinkButton>
           </div>
 
           {!clerkEnabled() ? (
             <p className="rounded-2xl border border-line p-4 text-xs leading-relaxed text-muted">
-              Email sign-in is not switched on for this site, and that is the operator&apos;s choice, not
-              yours: it needs both <code className="font-mono">CLERK_SECRET_KEY</code> on the backend and{" "}
-              <code className="font-mono">NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY</code> on the frontend, plus a
-              webhook pointed at <code className="font-mono">POST /api/webhooks/clerk</code>. Until then
-              nothing is different here — this browser keeps your work, and there is no email or password
-              that could be lost. The one control that can end this account is the Delete account card at
-              the bottom of this screen, and only you can press it.
+              {t(
+                "Email sign-in is not switched on for this site, and that is the operator's choice, not yours: it needs both",
+              )}{" "}
+              <code className="font-mono">{CLERK_SECRET_ENV}</code> {t("on the backend and")}{" "}
+              <code className="font-mono">{CLERK_PUBLISHABLE_ENV}</code>{" "}
+              {t("on the frontend, plus a webhook pointed at")}{" "}
+              <code className="font-mono">{CLERK_WEBHOOK_ROUTE}</code>
+              {t(
+                ". Until then nothing is different here — this browser keeps your work, and there is no email or password that could be lost. The one control that can end this account is the Delete account card at the bottom of this screen, and only you can press it.",
+              )}
             </p>
           ) : null}
 
@@ -1152,30 +1198,28 @@ export default function SettingsScreen() {
               <li className="flex gap-2">
                 <BellOff className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-500" aria-hidden />
                 <span>
-                  <strong className="font-semibold text-ink">Notifications.</strong> Nothing in this app
-                  messages you, reminds you or rings you — you come to it when you want to. So there is
-                  no notification switch to offer, and no switch is hiding somewhere else.
+                  <strong className="font-semibold text-ink">{t("Notifications.")}</strong>{" "}
+                  {t(
+                    "Nothing in this app messages you, reminds you or rings you — you come to it when you want to. So there is no notification switch to offer, and no switch is hiding somewhere else.",
+                  )}
                 </span>
               </li>
               <li className="flex gap-2">
                 <Download className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-500" aria-hidden />
                 <span>
-                  <strong className="font-semibold text-ink">Export.</strong> The report PDF on your
-                  Reports page is the only export there is today. There is no button yet that hands over
-                  every conversation, every saved career and every answer at once.
+                  <strong className="font-semibold text-ink">{t("Export.")}</strong>{" "}
+                  {t(
+                    "The report PDF on your Reports page is the only export there is today. There is no button yet that hands over every conversation, every saved career and every answer at once.",
+                  )}
                 </span>
               </li>
               <li className="flex gap-2">
                 <Trash2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-500" aria-hidden />
                 <span>
-                  <strong className="font-semibold text-ink">Delete account.</strong> The card at the
-                  bottom of this screen erases this account in one step: the conversations and messages, the
-                  assessments with their answers and results, the reports and the PDFs printed from them, the
-                  plans, saved careers, the resume as it was written, profile, settings and every consent go, and every device signs out.
-                  There is no password, phone number or email to delete, because this account was never made
-                  from one. The dialog lists the few records that stay, and why, before you press anything.
-                  Clearing conversations and starting over on this device still work on their own, for
-                  someone who wants one without the other.
+                  <strong className="font-semibold text-ink">{t("Delete account.")}</strong>{" "}
+                  {t(
+                    "The card at the bottom of this screen erases this account in one step: the conversations and messages, the assessments with their answers and results, the reports and the PDFs printed from them, the plans, saved careers, the resume as it was written, profile, settings and every consent go, and every device signs out. There is no password, phone number or email to delete, because this account was never made from one. The dialog lists the few records that stay, and why, before you press anything. Clearing conversations and starting over on this device still work on their own, for someone who wants one without the other.",
+                  )}
                 </span>
               </li>
             </ul>
@@ -1189,7 +1233,11 @@ export default function SettingsScreen() {
         onClose={closeSection}
         title="Privacy, consent and display"
         description="What gets stored, what you have agreed to, and how to erase it."
-        footer={<Button variant="outline" onClick={closeSection}>Done</Button>}
+        footer={
+          <Button variant="outline" onClick={closeSection}>
+            {t("Done")}
+          </Button>
+        }
       >
         <div className="space-y-5">
           <div className="space-y-4">
@@ -1207,7 +1255,7 @@ export default function SettingsScreen() {
                 label={
                   <span className="inline-flex items-center gap-1.5">
                     <Accessibility className="h-4 w-4 text-brand-dark" aria-hidden />
-                    Reduce motion
+                    {t("Reduce motion")}
                   </span>
                 }
                 description="Turns off animations and transitions across the whole app."
@@ -1218,7 +1266,7 @@ export default function SettingsScreen() {
                 label={
                   <span className="inline-flex items-center gap-1.5">
                     <Contrast className="h-4 w-4 text-brand-dark" aria-hidden />
-                    High contrast
+                    {t("High contrast")}
                   </span>
                 }
                 description="Darker text and stronger borders for easier reading."
@@ -1230,7 +1278,7 @@ export default function SettingsScreen() {
               <div className="space-y-2 border-t border-line pt-3.5">
                 <p className="flex items-center gap-1.5 text-sm font-medium text-ink">
                   <Sun className="h-4 w-4 text-brand-dark" aria-hidden />
-                  Theme
+                  {t("Theme")}
                 </p>
                 <PillGroup
                   items={[
@@ -1244,9 +1292,9 @@ export default function SettingsScreen() {
                   }
                 />
                 <p className="text-xs leading-relaxed text-muted">
-                  This changes light and dark on this device only, and it stays as you left it. System
-                  follows whatever your phone or browser is set to, including when it changes by itself in
-                  the evening.
+                  {t(
+                    "This changes light and dark on this device only, and it stays as you left it. System follows whatever your phone or browser is set to, including when it changes by itself in the evening.",
+                  )}
                 </p>
               </div>
             </div>
@@ -1255,15 +1303,20 @@ export default function SettingsScreen() {
           {isStudent ? (
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line p-4">
               <div className="min-w-0">
-                <p className="text-sm font-medium text-ink">Delete my conversation history</p>
+                <p className="text-sm font-medium text-ink">{t("Delete my conversation history")}</p>
                 <p className="mt-0.5 text-xs leading-relaxed text-muted">
                   {conversations.state === "loading"
-                    ? "Checking your stored conversations…"
+                    ? t("Checking your stored conversations…")
                     : conversations.state === "error"
                       ? conversations.error
                       : sessionCount === 0
-                        ? "No conversations are stored right now."
-                        : `${sessionCount} conversation${sessionCount === 1 ? "" : "s"} stored. Deleting ends each one and removes its messages.`}
+                        ? t("No conversations are stored right now.")
+                        : tf(
+                            sessionCount === 1
+                              ? "{count} conversation stored. Deleting ends each one and removes its messages."
+                              : "{count} conversations stored. Deleting ends each one and removes its messages.",
+                            { count: sessionCount },
+                          )}
                 </p>
               </div>
               <Button
@@ -1276,21 +1329,23 @@ export default function SettingsScreen() {
                 }}
               >
                 <Trash2 className="h-4 w-4" aria-hidden />
-                Delete history
+                {t("Delete history")}
               </Button>
             </div>
           ) : (
             <p className="rounded-2xl border border-line p-4 text-xs leading-relaxed text-muted">
-              Your parent account does not store conversations. Conversation history belongs to each
-              child&apos;s own account, and only they can view or delete it.
+              {t(
+                "Your parent account does not store conversations. Conversation history belongs to each child's own account, and only they can view or delete it.",
+              )}
             </p>
           )}
 
           <div className="space-y-3">
             <SubHeading>Consent records</SubHeading>
             <p className="text-xs text-muted">
-              Exactly what you have agreed to, with the date. You can withdraw any of these here at any
-              time — that is what this screen is for.
+              {t(
+                "Exactly what you have agreed to, with the date. You can withdraw any of these here at any time — that is what this screen is for.",
+              )}
             </p>
             {consent.state === "loading" ? (
               <LoadingPanel label="Loading your consent records…" />
@@ -1311,10 +1366,13 @@ export default function SettingsScreen() {
                     />
                     <p className="mt-2 text-[11px] text-muted">
                       {record
-                        ? `Last updated ${relativeTime(record.created_at)} · consent version ${record.version}`
-                        : "No decision recorded yet — treating this as not granted."}
+                        ? tf("Last updated {time} · consent version {version}", {
+                            time: relativeTime(record.created_at),
+                            version: record.version,
+                          })
+                        : t("No decision recorded yet — treating this as not granted.")}
                       {" · "}
-                      {entry.withdraw}
+                      {t(entry.withdraw)}
                     </p>
                   </div>
                 );
@@ -1323,10 +1381,9 @@ export default function SettingsScreen() {
           </div>
 
           <p className="rounded-xl bg-brand-mist/50 px-3.5 py-2.5 text-xs leading-relaxed text-brand-dark">
-            What this app protects: your conversations are not shared with parents by default, links
-            only exist because a student chose them, and there are no ads or payments. What it does not
-            protect: this is a demo build without a legal/compliance certification — do not enter real
-            personal documents, and get qualified review before using it with actual children.
+            {t(
+              "What this app protects: your conversations are not shared with parents by default, links only exist because a student chose them, and there are no ads or payments. What it does not protect: this is a demo build without a legal/compliance certification — do not enter real personal documents, and get qualified review before using it with actual children.",
+            )}
           </p>
         </div>
       </Modal>
@@ -1337,7 +1394,11 @@ export default function SettingsScreen() {
         onClose={closeSection}
         title="Family access"
         description="A parent can only see a summary if you give them this code — they cannot attach by guessing. You can revoke it any time."
-        footer={<Button variant="outline" onClick={closeSection}>Done</Button>}
+        footer={
+          <Button variant="outline" onClick={closeSection}>
+            {t("Done")}
+          </Button>
+        }
       >
         <div className="space-y-5">
           <div>
@@ -1353,7 +1414,7 @@ export default function SettingsScreen() {
                     <div className="flex flex-wrap items-end justify-between gap-3">
                       <div className="min-w-0">
                         <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-                          Give this to a parent
+                          {t("Give this to a parent")}
                         </p>
                         <p className="mt-1 font-mono text-2xl font-bold tracking-[0.28em] text-ink sm:text-3xl">
                           {shareCode.data.code}
@@ -1369,14 +1430,16 @@ export default function SettingsScreen() {
                         ) : (
                           <Copy className="h-4 w-4" aria-hidden />
                         )}
-                        {copied === "share" ? "Copied" : "Copy"}
+                        {copied === "share" ? t("Copied") : t("Copy")}
                       </Button>
                     </div>
                   ) : (
-                    <p className="text-sm font-medium text-ink">Sharing is currently switched off</p>
+                    <p className="text-sm font-medium text-ink">{t("Sharing is currently switched off")}</p>
                   )}
                   {shareCode.data?.note ? (
-                    <p className="mt-2 text-xs leading-relaxed text-muted">{shareCode.data.note}</p>
+                    <p className="mt-2 text-xs leading-relaxed text-muted">
+                      {t(shareCode.data.note)}
+                    </p>
                   ) : null}
                   <div className="mt-3 flex flex-wrap gap-2">
                     <Button
@@ -1387,7 +1450,7 @@ export default function SettingsScreen() {
                       onClick={() => void rotateCode()}
                     >
                       <KeyRound className="h-4 w-4" aria-hidden />
-                      Generate a new code
+                      {t("Generate a new code")}
                     </Button>
                     {shareCode.data?.code ? (
                       <Button
@@ -1398,7 +1461,7 @@ export default function SettingsScreen() {
                         onClick={() => void revokeCode()}
                       >
                         <EyeOff className="h-4 w-4" aria-hidden />
-                        Stop sharing
+                        {t("Stop sharing")}
                       </Button>
                     ) : null}
                   </div>
@@ -1435,7 +1498,7 @@ export default function SettingsScreen() {
                             ) : null}
                           </p>
                           <p className="mt-0.5 text-xs text-muted">
-                            Linked {relativeTime(link.linked_at)} · sees summary only
+                            {t("Linked")} {relativeTime(link.linked_at)} {t("· sees summary only")}
                           </p>
                         </div>
                         <Button
@@ -1446,7 +1509,7 @@ export default function SettingsScreen() {
                             setRemoveTarget(link);
                           }}
                         >
-                          Remove
+                          {t("Remove")}
                         </Button>
                       </div>
                       <div className="mt-3 border-t border-line pt-3">
@@ -1454,8 +1517,15 @@ export default function SettingsScreen() {
                           checked={link.can_see_transcripts}
                           disabled={busyToggle === `transcripts:${link.guardianship_id}`}
                           onChange={(next) => void setTranscripts(link, next)}
-                          label={`Conversation text shared: ${link.can_see_transcripts ? "yes" : "no"}`}
-                          description={`Themes and progress are shared either way. Only turn this on if you want ${link.name} to read the actual messages.`}
+                          label={t(
+                            link.can_see_transcripts
+                              ? "Conversation text shared: yes"
+                              : "Conversation text shared: no",
+                          )}
+                          description={tf(
+                            "Themes and progress are shared either way. Only turn this on if you want {name} to read the actual messages.",
+                            { name: link.name },
+                          )}
                         />
                       </div>
                     </li>
@@ -1473,44 +1543,49 @@ export default function SettingsScreen() {
         onClose={closeSection}
         title="This device"
         description="This prototype has no login, so this browser is what your work belongs to."
-        footer={<Button variant="outline" onClick={closeSection}>Done</Button>}
+        footer={
+          <Button variant="outline" onClick={closeSection}>
+            {t("Done")}
+          </Button>
+        }
       >
         <div className="space-y-4">
           <div className="rounded-2xl bg-canvas p-4">
             <p className="flex items-center gap-2 text-sm font-semibold text-ink">
               <Smartphone className="h-4 w-4 shrink-0 text-brand-dark" aria-hidden />
-              How you are recognised
+              {t("How you are recognised")}
             </p>
             <p className="mt-1.5 text-xs leading-relaxed text-muted">
-              The first time this site was opened here, the browser made up a long random number and
-              kept it in its own storage. The server files your work under that number. It is not a
-              name, an email or a password, so there is nothing to remember, write down or lose.
+              {t(
+                "The first time this site was opened here, the browser made up a long random number and kept it in its own storage. The server files your work under that number. It is not a name, an email or a password, so there is nothing to remember, write down or lose.",
+              )}
             </p>
           </div>
 
           <ul className="space-y-2 text-xs leading-relaxed text-muted">
             <li className="flex gap-2">
               <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-teal" aria-hidden />
-              Same phone or laptop, same browser: your conversations, saved careers and settings are
-              waiting when you come back.
+              {t(
+                "Same phone or laptop, same browser: your conversations, saved careers and settings are waiting when you come back.",
+              )}
             </li>
             <li className="flex gap-2">
               <EyeOff className="mt-0.5 h-3.5 w-3.5 shrink-0 text-teal" aria-hidden />
-              A different device, a private window, or cleared site data starts a brand-new student.
-              That is the price of having no sign-in — nothing can bring the old work back, so please
-              do not use a shared or public computer.
+              {t(
+                "A different device, a private window, or cleared site data starts a brand-new student. That is the price of having no sign-in — nothing can bring the old work back, so please do not use a shared or public computer.",
+              )}
             </li>
             <li className="flex gap-2">
               <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-teal" aria-hidden />
-              Starting over gives this browser a new identity and stops the current session on the
-              server right away. It deletes nothing by itself: to clear what is stored, delete your
-              conversations from the privacy section first.
+              {t(
+                "Starting over gives this browser a new identity and stops the current session on the server right away. It deletes nothing by itself: to clear what is stored, delete your conversations from the privacy section first.",
+              )}
             </li>
           </ul>
 
           <Button variant="secondary" size="sm" onClick={() => setResetModal(true)}>
             <RotateCcw className="h-4 w-4" aria-hidden />
-            Start over on this device
+            {t("Start over on this device")}
           </Button>
         </div>
       </Modal>
@@ -1524,18 +1599,18 @@ export default function SettingsScreen() {
         footer={
           <>
             <Button variant="outline" onClick={() => setResetModal(false)} disabled={resetting}>
-              Keep my work
+              {t("Keep my work")}
             </Button>
             <Button variant="danger" loading={resetting} onClick={() => void doStartOver()}>
-              Start over
+              {t("Start over")}
             </Button>
           </>
         }
       >
         <p className="text-sm leading-relaxed text-muted">
-          You will be taken back to the one question, and whatever is in this session now will not be
-          reachable from this browser again. If the goal is a clean slate for the messages rather than
-          a new student, delete the conversation history in the privacy section instead.
+          {t(
+            "You will be taken back to the one question, and whatever is in this session now will not be reachable from this browser again. If the goal is a clean slate for the messages rather than a new student, delete the conversation history in the privacy section instead.",
+          )}
         </p>
       </Modal>
 
@@ -1609,13 +1684,17 @@ export default function SettingsScreen() {
         onClose={closeSection}
         title="About this build"
         description="Honest limitations, in plain words."
-        footer={<Button variant="outline" onClick={closeSection}>Done</Button>}
+        footer={
+          <Button variant="outline" onClick={closeSection}>
+            {t("Done")}
+          </Button>
+        }
       >
         <ul className="space-y-3 text-sm leading-relaxed text-muted">
           {BUILD_NOTES.map((note) => (
             <li key={note.text} className="flex gap-2.5">
               <note.icon className="mt-0.5 h-4 w-4 shrink-0 text-teal" aria-hidden />
-              {note.text}
+              {t(note.text)}
             </li>
           ))}
         </ul>
@@ -1626,22 +1705,32 @@ export default function SettingsScreen() {
         open={historyModal}
         onClose={() => !clearingHistory && setHistoryModal(false)}
         title="Delete your conversation history?"
-        description={`This ends and clears ${sessionCount} conversation${sessionCount === 1 ? "" : "s"} — the messages, not your saved careers or themes.`}
+        description={tf(
+          sessionCount === 1
+            ? "This ends and clears {count} conversation — the messages, not your saved careers or themes."
+            : "This ends and clears {count} conversations — the messages, not your saved careers or themes.",
+          { count: sessionCount },
+        )}
         footer={
           <>
             <Button variant="outline" onClick={() => setHistoryModal(false)} disabled={clearingHistory}>
-              Keep them
+              {t("Keep them")}
             </Button>
             <Button variant="danger" loading={clearingHistory} onClick={() => void clearAllHistory()}>
-              Delete {sessionCount} conversation{sessionCount === 1 ? "" : "s"}
+              {tf(
+                sessionCount === 1
+                  ? "Delete {count} conversation"
+                  : "Delete {count} conversations",
+                { count: sessionCount },
+              )}
             </Button>
           </>
         }
       >
         <p className="text-sm leading-relaxed text-muted">
-          This cannot be undone from this screen. Saved careers, interest themes and your journey
-          counts stay — only the message text is deleted. If you want everything gone, that is fine:
-          delete the history, then remove careers you saved from the explorer.
+          {t(
+            "This cannot be undone from this screen. Saved careers, interest themes and your journey counts stay — only the message text is deleted. If you want everything gone, that is fine: delete the history, then remove careers you saved from the explorer.",
+          )}
         </p>
       </Modal>
 
@@ -1650,22 +1739,28 @@ export default function SettingsScreen() {
         open={removeTarget !== null}
         onClose={() => !removing && setRemoveTarget(null)}
         title="Remove this adult's access?"
-        description={removeTarget ? `${removeTarget.name} will no longer see your summary.` : undefined}
+        description={
+          removeTarget
+            ? tf("{name} will no longer see your summary.", { name: removeTarget.name })
+            : undefined
+        }
         footer={
           <>
             <Button variant="outline" onClick={() => setRemoveTarget(null)} disabled={removing}>
-              Keep the link
+              {t("Keep the link")}
             </Button>
             <Button variant="danger" loading={removing} onClick={() => void confirmRemoveGuardian()}>
-              Remove access
+              {t("Remove access")}
             </Button>
           </>
         }
       >
         <p className="text-sm leading-relaxed text-muted">
-          Removing access is your choice and takes effect immediately. Nothing about your account is
-          deleted — if you ever want {removeTarget?.name ?? "this adult"} to see a summary again, you
-          would share a new code.
+          {t(
+            "Removing access is your choice and takes effect immediately. Nothing about your account is deleted — if you ever want",
+          )}{" "}
+          {removeTarget?.name ?? t("this adult")}{" "}
+          {t("to see a summary again, you would share a new code.")}
         </p>
       </Modal>
     </Screen>
