@@ -43,7 +43,7 @@ import { useToast } from "@/components/ui/toast";
 import { api, ApiError } from "@/lib/api";
 import { useSession } from "@/lib/session";
 import type { Health, Journey, RecommendationSet, SavedCareer } from "@/lib/types";
-import { classLabel } from "@/lib/utils";
+import { classLabel, cn } from "@/lib/utils";
 
 /**
  * The dashboard is an instrument panel, not an article: a number, an icon, and
@@ -93,13 +93,28 @@ const TONE = {
 
 type Tone = keyof typeof TONE;
 
-/** The places a student can go, described once so the tile itself can stay quiet. */
-const PLACES: { href: string; label: string; icon: typeof Briefcase; tone: Tone; detail: Detail }[] = [
+/**
+ * The places a student can go, described once so the tile itself can stay quiet.
+ *
+ * `inBar` marks the three the phone's bottom bar already owns. Their tiles wait for
+ * a screen wide enough to have no bar — otherwise the same destination sits in the
+ * grid and under the thumb at once, and the grid is eight tiles wide on a phone
+ * already.
+ */
+const PLACES: {
+  href: string;
+  label: string;
+  icon: typeof Briefcase;
+  tone: Tone;
+  detail: Detail;
+  inBar?: boolean;
+}[] = [
   {
     href: "/app/careers",
     label: "Careers",
     icon: Briefcase,
     tone: "brand",
+    inBar: true,
     detail: {
       title: "Career Explorer",
       icon: <Briefcase className="h-5 w-5" aria-hidden />,
@@ -164,6 +179,7 @@ const PLACES: { href: string; label: string; icon: typeof Briefcase; tone: Tone;
     label: "Plans",
     icon: GraduationCap,
     tone: "teal",
+    inBar: true,
     detail: {
       title: "Study & Skill Plans",
       icon: <GraduationCap className="h-5 w-5" aria-hidden />,
@@ -260,6 +276,7 @@ const PLACES: { href: string; label: string; icon: typeof Briefcase; tone: Tone;
     label: "Journey",
     icon: Compass,
     tone: "warning",
+    inBar: true,
     detail: {
       title: "My Journey",
       icon: <Compass className="h-5 w-5" aria-hidden />,
@@ -278,18 +295,23 @@ function Tile({
   label,
   tone,
   onClick,
+  className,
 }: {
   icon: typeof Briefcase;
   label: string;
   tone: Tone;
   onClick: () => void;
+  className?: string;
 }) {
   const t = useT();
   return (
     <button
       type="button"
       onClick={onClick}
-      className="group flex flex-col items-center gap-2 rounded-card border border-line bg-surface px-2 py-4 text-center transition-all hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-lift"
+      className={cn(
+        "group flex flex-col items-center gap-2 rounded-card border border-line bg-surface px-2 py-4 text-center transition-all hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-lift",
+        className,
+      )}
     >
       <span
         className={`flex h-11 w-11 items-center justify-center rounded-2xl ${TONE[tone]} transition-transform group-hover:scale-105`}
@@ -545,6 +567,7 @@ export default function StudentHome() {
                 icon={place.icon}
                 label={place.label}
                 tone={place.tone}
+                className={place.inBar ? "hidden lg:flex" : undefined}
                 onClick={() => setDetail(place.detail)}
               />
             ))}
