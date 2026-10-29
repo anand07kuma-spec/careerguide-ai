@@ -170,4 +170,61 @@ export const HI: Record<string, string> = {
   "a year": "हर साल",
   "Online payment is not switched on for this deployment, so this button does nothing yet. Everything this plan promises is still free to read about.":
     "इस डिप्लॉयमेंट पर ऑनलाइन पेमेंट चालू नहीं है, इसलिए यह बटन अभी कुछ नहीं करता। इस प्लान के बारे में जो कुछ वादा किया गया है, उसे पढ़ना फिर भी मुफ़्त है।",
+
+  // ---------------------------------------------------------- The plan copy itself
+  // Names, taglines, feature rows and their one-line explanations are served by
+  // `GET /api/payments/plans` from `backend/app/services/plans.py`, so they reach the
+  // screen as data and no source literal in this app ever names them. They are still
+  // product copy a family reads before paying, so they are translated here — the only
+  // place the Hindi can live without moving the words out of the pricing service.
+  //
+  // The free plan's limits arrive as "3 chats a day", built from `FREE_DAILY_CHATS`.
+  // Those keys carry `{n}` instead of the number, which is why `PlanCard` and
+  // `FeatureTable` translate their values with `useTNumeric()`. `billing.ts` already
+  // owns the "{n} chats a day" line — the same server string on the same screen pair.
+  "{n} questionnaire, once": "सिर्फ़ {n} प्रश्नावली, एक बार",
+  "{n} a day": "दिन में {n} बार",
+  "about {amount} a month": "लगभग {amount} हर महीने",
+  "Pro Yearly": "Pro सालाना",
+  "School Plan": "स्कूल प्लान",
+  forever: "हमेशा के लिए",
+  "Everything about careers, with a limited number of conversations.":
+    "करियर के बारे में सब कुछ, पर बातचीत सीमित संख्या में।",
+  "Unlimited conversation, every questionnaire, a printed report.":
+    "अनलिमिटेड बातचीत, हर तरह की प्रश्नावली, और एक प्रिंट होने वाली रिपोर्ट।",
+  "The same Pro, paid for a year at about 30% less.":
+    "वही Pro, साल भर का एक साथ — लगभग 30% कम में।",
+  "Bulk licences for a class or a whole school, priced with a person.":
+    "पूरी क्लास या पूरे स्कूल के लिए ज़्यादा लाइसेंस — दाम इंसान से बात करके तय होता है।",
+  "Every type, repeatable": "हर तरह की, कितनी बार चाहें",
+  "Any number, with a come-back code": "किसी भी डिवाइस से, बस वापसी कोड से",
+  "One device": "एक ही डिवाइस",
+  "Unlimited for every student": "हर स्टूडेंट के लिए अनलिमिटेड",
+  "Managed seats": "सीटें स्कूल संभालता है",
+  "Talk with the guide": "गाइड से बात करें",
+  "Careers, streams, exams, resources, scholarships, institutes":
+    "करियर, स्ट्रीम, एग्ज़ाम, संसाधन, स्कॉलरशिप और संस्थान",
+  "Spoken replies and read-aloud": "बोलकर जवाब, और पढ़कर सुनाना",
+  "Printable PDF report": "प्रिंट करने लायक PDF रिपोर्ट",
+  "Coming back on another device": "दूसरे डिवाइस पर वापस आना",
+  "English, Hindi and Hinglish": "अंग्रेज़ी, हिन्दी और Hinglish",
+  "See, export and delete your own data": "अपना डेटा खुद देखें, निकालें और मिटाएँ",
+  "The chat and the spoken call use the same conversation, so the guide keeps what it already learned about you.":
+    "चैट और वॉइस कॉल एक ही बातचीत में चलते हैं, इसलिए गाइड वह याद रखता है जो आपने पहले बताया था।",
+  "Interest, aptitude and stream-readiness questionnaires, each with a scored result page.":
+    "रुचि, योग्यता और स्ट्रीम की तैयारी की प्रश्नावलियाँ — हर एक का स्कोर और रिज़ल्ट पेज।",
+  "Free on every plan, and stays free. Selling access to this is selling what a child is allowed to find out.":
+    "हर प्लान में मुफ़्त, और हमेशा मुफ़्त रहेगा। इस तक पहुँच बेचना यानी बच्चे के जानने के हक़ को बेचना।",
+  "The server voice, with your own browser's voice as the fallback.":
+    "सर्वर की आवाज़ — वह न मिले तो आपके ब्राउज़र की अपनी आवाज़।",
+  "One document with every finished questionnaire, in English or Hindi.":
+    "हर पूरी हुई प्रश्नावली एक ही दस्तावेज़ में, अंग्रेज़ी या हिन्दी में।",
+  "A guardian's view of progress, opened only by a code the student chooses to share. Transcripts stay private unless the student says otherwise.":
+    "अभिभावक को प्रगति दिखती है, और वह भी तभी जब स्टूडेंट खुद कोड शेयर करे। पढ़ाई की पूरी जानकारी निजी रहती है, जब तक स्टूडेंट ख़ुद कुछ और न कहे।",
+  "A come-back code, plus optional email sign-in where it is configured.":
+    "वापसी का कोड, और जहाँ सेटअप किया गया हो वहाँ ई-मेल साइन-इन भी।",
+  "The guide answers in the language you used, in the same conversation.":
+    "आपने जिस भाषा में सवाल पूछा, गाइड उसी भाषा में और उसी बातचीत में जवाब देता है।",
+  "On every plan. Deleting an account is never something a paid plan has to unlock, and a free account that stopped paying keeps its deletion path.":
+    "हर प्लान में। खाता मिटाना कभी पैसों से खुलने वाली चीज़ नहीं रही, और जो फ़्री अकाउंट भुगतान करना छोड़ दे उसके पास भी मिटाने का रास्ता बहरहाल खुला रहता है।",
 };

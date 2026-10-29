@@ -18,13 +18,16 @@ export function rupees(paise: number | null | undefined): string {
 }
 
 /**
- * What a paid period works out to per month, always rounded *down* and always labelled
- * "about". Rounding up would advertise a saving the invoice does not deliver: ₹2,499 over
- * twelve months is ₹208.25, and the honest word for that is about ₹208.
+ * What a paid period works out to per month, always rounded *down*. Rounding up would
+ * advertise a saving the invoice does not deliver: ₹2,499 over twelve months is
+ * ₹208.25, and the honest word for that is about ₹208.
+ *
+ * The amount only. The sentence around it belongs to the caller, because "about" is
+ * UI copy and UI copy is what the Hindi dictionary is allowed to translate.
  */
-export function aboutPerMonth(paise: number | null | undefined, months: number): string {
+export function perMonthAmount(paise: number | null | undefined, months: number): string {
   if (paise === null || paise === undefined || months < 1) return "";
-  return `about ${rupees(Math.floor(paise / months))} a month`;
+  return rupees(Math.floor(paise / months));
 }
 
 /** A date as a family reads it on a bill, or "" when there is nothing to show yet. */

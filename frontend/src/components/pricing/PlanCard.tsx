@@ -3,8 +3,8 @@
 import { BadgeIndianRupee, Check, Minus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button, LinkButton } from "@/components/ui/button";
-import { aboutPerMonth, rupees } from "@/lib/money";
-import { useT } from "@/lib/i18n";
+import { perMonthAmount, rupees } from "@/lib/money";
+import { useT, useTf, useTNumeric } from "@/lib/i18n";
 import type { FeatureRow, PricingPlan } from "@/lib/types";
 
 /**
@@ -49,6 +49,8 @@ export function PlanCard({
   onChoose: (plan: PricingPlan) => void;
 }) {
   const t = useT();
+  const tf = useTf();
+  const tn = useTNumeric();
   const paid = plan.price_paise !== null && plan.price_paise > 0;
   const buyable = plan.purchasable && paymentsEnabled;
   const months = plan.interval === "yearly" ? 12 : 1;
@@ -87,7 +89,8 @@ export function PlanCard({
           </span>
           <s className="text-muted tabular-nums">{rupees(plan.compare_at_paise)}</s>
           <span className="text-muted">
-            ({plan.savings_percent}% {t("off")}) · {t(aboutPerMonth(plan.price_paise, months))}
+            ({plan.savings_percent}% {t("off")}) ·{" "}
+            {tf("about {amount} a month", { amount: perMonthAmount(plan.price_paise, months) })}
           </span>
         </p>
       ) : null}
@@ -113,7 +116,7 @@ export function PlanCard({
               <span className={`min-w-0 ${excluded ? "text-muted" : "text-ink"}`}>
                 {t(row.label)}
                 {typeof value === "string" ? (
-                  <span className="font-semibold text-heading"> — {t(value)}</span>
+                  <span className="font-semibold text-heading"> — {tn(value)}</span>
                 ) : null}
               </span>
             </li>

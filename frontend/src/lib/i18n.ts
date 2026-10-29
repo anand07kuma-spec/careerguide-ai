@@ -132,3 +132,30 @@ export function useTf() {
     [lang],
   );
 }
+
+/**
+ * For a label the server builds by putting a configured number into a sentence.
+ *
+ * The pricing rows come from `backend/app/services/plans.py`, where the free plan's
+ * copy is `f"{chats} chats a day"` — and `chats` is `FREE_DAILY_CHATS`, which an
+ * operator is expected to change. A dictionary entry for "3 chats a day" is English
+ * the moment somebody sets it to 5, so the second try is the same sentence with the
+ * number replaced by `{n}`. A string that matches neither stays English, which is
+ * what an untranslated label has always done here.
+ */
+export function useTNumeric() {
+  const t = useT();
+  const tf = useTf();
+  return useCallback(
+    (en: string) => {
+      const literal = t(en);
+      if (literal !== en) return literal;
+      const match = /^(\d+)\s+(.+)$/.exec(en);
+      if (!match) return en;
+      const template = `{n} ${match[2]}`;
+      const filled = tf(template, { n: match[1] });
+      return filled === template ? en : filled;
+    },
+    [t, tf],
+  );
+}
