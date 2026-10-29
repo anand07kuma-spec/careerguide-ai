@@ -17,7 +17,6 @@ import {
   Lightbulb,
   MessagesSquare,
   Mic,
-  Settings2,
   ShieldCheck,
   Sparkles,
   Split,
@@ -501,10 +500,6 @@ export default function StudentHome() {
               <LinkButton href="/app/chat" variant="outline" size="sm">
                 <MessagesSquare className="h-4 w-4" aria-hidden />
                 {t("Chat")}
-              </LinkButton>
-              <LinkButton href="/app/settings" variant="ghost" size="sm">
-                <Settings2 className="h-4 w-4" aria-hidden />
-                {t("Settings")}
               </LinkButton>
             </div>
           </div>
