@@ -18,7 +18,9 @@ export const HI: Record<string, string> = {
   "Choose your stream": "अपना स्ट्रीम चुनें",
   Streams: "स्ट्रीम",
   "Exams & entrances": "एग्ज़ाम और एंट्रेंस",
-  Exams: "एग्ज़ाम",
+  // The short nav label and the exams screen heading are one key, and `exams.ts`
+  // holds it — the last file spread in `index.ts` wins, so a second entry here
+  // would silently hold up a different word on the same screen.
   "Discover My Interests": "अपनी रुचियाँ जानें",
   Resources: "संसाधन",
   "Scholarships & Aid": "स्कॉलरशिप और आर्थिक मदद",
@@ -107,7 +109,8 @@ export const HI: Record<string, string> = {
   Close: "बंद करें",
   "Close dialog": "डायलॉग बंद करें",
   Back: "पीछे",
-  Next: "आगे",
+  // "Next" and "Previous" travel together and `assessments.ts` holds that pair,
+  // used by the quiz stepper and by the admin tables' pagination.
   Done: "पूरा हुआ",
   Skip: "छोड़ें",
   Retry: "फिर कोशिश करें",
