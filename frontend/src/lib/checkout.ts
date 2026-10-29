@@ -19,7 +19,7 @@ What this file deliberately does *not* do:
 * It adds no `prefill`. A child's email or phone copied into a payment provider's
   transaction record is data this app has no reason to hand over.
 
-The CSP in `src/middleware.ts` must allow the script's origin, and the Permissions-Policy
+The CSP in `src/proxy.ts` must allow the script's origin, and the Permissions-Policy
 must allow `payment` for it, or the sheet opens blank. Both are conditional on the key
 being configured.
  */
