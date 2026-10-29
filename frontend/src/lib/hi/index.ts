@@ -17,6 +17,7 @@ import { HI as BILLING } from "./billing";
 import { HI as COMMON } from "./common";
 import { HI as DASHBOARD } from "./dashboard";
 import { HI as CATALOGUE } from "./catalogue";
+import { HI as REPORTS } from "./reports";
 import { HI as PLANS_JOURNEY } from "./plans-journey";
 import { HI as STREAM } from "./stream";
 import { HI as EXAMS } from "./exams";
@@ -47,6 +48,7 @@ export const HI: Record<string, string> = {
   ...COMMON,
   ...DASHBOARD,
   ...CATALOGUE,
+  ...REPORTS,
   ...PLANS_JOURNEY,
   ...STREAM,
   ...EXAMS,

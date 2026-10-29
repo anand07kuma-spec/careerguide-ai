@@ -16,6 +16,7 @@ const ORDER = [
   "common.ts",
   "dashboard.ts",
   "catalogue.ts",
+  "reports.ts",
   "plans-journey.ts",
   "stream.ts",
   "exams.ts",
