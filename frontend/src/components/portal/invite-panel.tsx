@@ -114,7 +114,7 @@ export function InvitePanel({
           value={text}
           spellCheck={false}
           onChange={(event) => setText(event.target.value)}
-          placeholder="riya@example.com, Class 11 A\narjun@example.com"
+          placeholder={"riya@example.com, Class 11 A\narjun@example.com"}
           hint={
             text.trim()
               ? `${rows.length} ready to send${dropped > 0 ? `, ${dropped} line${dropped === 1 ? "" : "s"} not an address` : ""}`

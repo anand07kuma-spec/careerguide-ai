@@ -5,10 +5,18 @@
 import { readdirSync, readFileSync } from "node:fs";
 
 const HI_DIR = "src/lib/hi";
+// Kept in the same order as the spreads in `hi/index.ts`, because the order is the
+// whole point: it decides which file wins a key that two of them define. A new
+// area file goes into this list beside its neighbours in `index.ts` or the check
+// goes blind to it.
 const ORDER = [
   "account.ts",
+  "settings.ts",
+  "billing.ts",
   "common.ts",
   "dashboard.ts",
+  "catalogue.ts",
+  "plans-journey.ts",
   "stream.ts",
   "exams.ts",
   "legal.ts",
@@ -17,14 +25,18 @@ const ORDER = [
   "resume.ts",
   "roadmap.ts",
   "trust.ts",
+  "pricing.ts",
   "public-pages.ts",
+  "study-abroad.ts",
   "welcome.ts",
   "onboarding.ts",
   "chat.ts",
   "interview.ts",
   "call.ts",
   "parent.ts",
+  "portal.ts",
   "admin.ts",
+  "admin-exams.ts",
   "admin-content.ts",
 ];
 

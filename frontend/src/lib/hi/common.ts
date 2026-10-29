@@ -6,6 +6,9 @@
  * instead of blanking out a label.
  */
 export const HI: Record<string, string> = {
+  // The wordmark, which is the name itself read aloud by a screen reader.
+  "CareerGuide AI logo": "CareerGuide AI लोगो",
+
   // Sidebar and mobile navigation
   "Talk with your guide": "अपने गाइड से बात करें",
   Explore: "खोजें",

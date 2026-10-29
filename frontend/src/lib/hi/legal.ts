@@ -13,6 +13,9 @@ export const HI: Record<string, string> = {
   "This is not a legal opinion.": "यह क़ानूनी सलाह नहीं है।",
   Legal: "क़ानूनी",
   "All legal pages": "सभी क़ानूनी पेज",
+  // The one-line summary the legal index prints beside each page's link.
+  "What a refund is owed for and who issues it — on a build where the checkout exists, has never taken money, and has no refund button in it.":
+    "रिफ़ंड किस चीज़ के लिए बनता है और कौन देता है — उस बिल्ड के बारे में जहाँ चेकआउट मौजूद है, एक भी पैसा कभी नहीं लिया गया, और रिफ़ंड का कोई बटन नहीं है।",
   "Privacy Policy": "गोपनीयता नीति",
   Print: "छापें",
   "On this page": "इस पेज पर",

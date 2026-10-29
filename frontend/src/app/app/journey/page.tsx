@@ -27,6 +27,7 @@ import {
   Stat,
 } from "@/components/ui/feedback";
 import { api } from "@/lib/api";
+import { useTf } from "@/lib/i18n";
 import { useResource } from "@/lib/use-resource";
 import type { JourneyEvent } from "@/lib/types";
 import { cn, relativeTime } from "@/lib/utils";
@@ -75,6 +76,7 @@ function dayLabel(iso: string) {
 }
 
 export default function JourneyPage() {
+  const tf = useTf();
   const loadJourney = useCallback(() => api.journey(), []);
   const loadEvents = useCallback(() => api.journeyEvents(60), []);
   const {
@@ -186,7 +188,10 @@ export default function JourneyPage() {
                   total={journey.activities_total}
                   label={
                     journey.activities_total
-                      ? `Plan steps you chose to do: ${journey.activities_completed} of ${journey.activities_total}`
+                      ? tf("Plan steps you chose to do: {done} of {total}", {
+                          done: journey.activities_completed,
+                          total: journey.activities_total,
+                        })
                       : "Plan steps you chose to do: none yet, they come with a study plan"
                   }
                   tone="teal"
