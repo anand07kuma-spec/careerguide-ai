@@ -51,6 +51,7 @@ from ..security import (
     format_code,
     get_current_session,
     get_current_user,
+    get_optional_user,
     get_raw_token,
     issue_token,
     renew_session,
@@ -296,10 +297,26 @@ def login(
     return session_for(db, user, start_session(request, response, db, user))
 
 
-@router.get("/me", response_model=SessionOut)
-def me(user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> SessionOut:
+@router.get(
+    "/me",
+    response_model=SessionOut,
+    responses={204: {"description": "No credential was presented: this browser holds no session."}},
+)
+def me(
+    user: User | None = Depends(get_optional_user),
+    db: Session = Depends(get_db),
+) -> SessionOut | Response:
     # An empty token on purpose: this reads the session that is already in the cookie or
     # the header, it does not hand out a second one.
+    if user is None:
+        # A browser with nothing to show is the normal first load, not a failed sign-in,
+        # so it is answered with a status that is not an error. A 401 here was correct in
+        # meaning and wrong in effect: the catch in `lib/session.tsx` handled it silently,
+        # but the browser still wrote the failed request into the console, where every
+        # family who has never visited sees a red line for something that just happened.
+        # A credential that was offered and cannot be honoured still 401s, so a real
+        # sign-out keeps its one signal.
+        return Response(status_code=204)
     return session_for(db, user, "")
 
 
