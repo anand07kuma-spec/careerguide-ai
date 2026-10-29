@@ -681,7 +681,20 @@ sane = client.get("/api/journey/events?limit=50", headers=head_a)
 check("an ordinary event count still works", sane.status_code == 200, sane.status_code)
 
 # --- the bearer header is checked on shape before anything else
-check("no header and no cookie is refused", jarless.get("/api/auth/me").status_code == 401)
+# A caller that offers nothing at all is a stranger, not a failure: `/api/auth/me`
+# answers 204 with no body, so a first visit from a fresh browser stops writing a red
+# console line for something that is simply a new visitor. Everything below stays a 401,
+# because a credential that is offered and cannot be honoured is a session ending.
+anonymous_me = jarless.get("/api/auth/me")
+check(
+    "no header and no cookie is answered 204 with an empty body, never a session",
+    anonymous_me.status_code == 204 and anonymous_me.content == b"",
+    f"{anonymous_me.status_code} {anonymous_me.text[:120]}",
+)
+check(
+    "and that same anonymous caller is still refused by a route holding a child's data",
+    jarless.get("/api/conversations").status_code == 401,
+)
 check(
     "a truncated token is refused without a database lookup",
     client.get("/api/auth/me", headers={"authorization": "Bearer short"}).status_code == 401,

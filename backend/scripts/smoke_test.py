@@ -146,7 +146,8 @@ with client:
     # client that holds one is a signed-in browser, not the caller this check is naming.
     client.cookies.clear()
     r = client.get("/api/auth/me")
-    check("me without a token is rejected", r.status_code in (401, 422), r.text[:120])
+    check("me without a token is answered 204, so a first visit is not a failed request",
+          r.status_code == 204 and r.content == b"", r.text[:120])
     r = client.get("/api/auth/me", headers=auth("bogus-token-value"))
     check("a made-up token is rejected", r.status_code == 401)
 

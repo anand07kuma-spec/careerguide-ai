@@ -287,8 +287,8 @@ with client:
         check("a browser holding that cookie and sending no header at all is signed in",
               jar.get("/api/auth/me").json().get("user", {}).get("id") == user_id,
               jar.get("/api/auth/me").text[:200])
-        check("…while a client that was never given one is refused",
-              TestClient(app).get("/api/auth/me").status_code == 401)
+        check("…while a client that was never given one is answered 204, not 401",
+              TestClient(app).get("/api/auth/me").status_code == 204)
         check("the header wins when a request presents both",
               jar.get("/api/auth/me", headers=auth(minted_token)).status_code == 200)
         check("…and a header that is present and wrong is a refusal, not a cue to try the jar",
@@ -301,8 +301,9 @@ with client:
               "browser keeps offering a dead session",
               'cg_session=""' in cleared and "HttpOnly" in cleared and "Path=/" in cleared,
               cleared)
-        check("…so the browser that signed out has nothing left to present",
-              jar.get("/api/auth/me").status_code == 401)
+        check("…so the browser that signed out has nothing left to present, and the "
+              "server reads that as a stranger rather than as a failure",
+              jar.get("/api/auth/me").status_code == 204)
         proxied = TestClient(app)
         over_proxy = proxied.post("/api/auth/guest", json={"device_id": DEVICE_A},
                                  headers={"x-forwarded-proto": "https"})
