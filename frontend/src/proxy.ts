@@ -36,9 +36,8 @@ import { allowedLogoHosts } from "@/lib/site";
  * nonce, and a nonce needs every page rendered per request — a real change to the
  * deployment, not a header edit, which is why it is written down instead of done.
  *
- * Next 16 renamed this file convention to `proxy.ts`; `middleware.ts` still runs,
- * the brief named this path, and Clerk's own setup targets it — so the name stays
- * and the deprecation is noted instead of silently ignored.
+ * Next 16 renamed this file convention from `middleware.ts` to `proxy.ts`, and this
+ * is the renamed form; behaviour, routes and matcher are exactly what they were.
  */
 
 /** The backend origin the browser talks to, plus its scheme for the audio socket. */
@@ -276,7 +275,7 @@ const clerkHandle = clerkEnabled()
     // calls, no Clerk cookies and no Clerk bundle on any route.
     null;
 
-const handle: NextMiddleware = async (request, event) => {
+const proxy: NextMiddleware = async (request, event) => {
   const isClerkRoute = CLERK_ROUTES.some((pattern) => pattern.test(request.nextUrl.pathname));
   const response =
     isClerkRoute && clerkHandle
@@ -285,7 +284,7 @@ const handle: NextMiddleware = async (request, event) => {
   return applySecurityHeaders(request, response);
 };
 
-export default handle;
+export default proxy;
 
 export const config = {
   // Every route that can return a document, and none of the ones that cannot:
