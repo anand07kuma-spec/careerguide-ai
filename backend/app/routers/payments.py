@@ -167,7 +167,7 @@ def create_order(
     plan = plans.get(payload.plan_code)
     if plan is None or not plan.purchasable or plan.price_paise is None:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="That plan cannot be bought online here.",
         )
 

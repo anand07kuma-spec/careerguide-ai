@@ -50,6 +50,7 @@ import tempfile
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+import _console  # noqa: E402,F401 -- utf-8 stdout, see _console.py
 
 MIGRATED = pathlib.Path(tempfile.gettempdir()) / "careerguide_migration_test.db"
 FROM_MODELS = pathlib.Path(tempfile.gettempdir()) / "careerguide_models_ref.db"

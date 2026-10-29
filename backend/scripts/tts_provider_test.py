@@ -29,6 +29,7 @@ import tempfile
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+import _console  # noqa: E402,F401 -- utf-8 stdout, see _console.py
 
 # Never let an import of the app touch the real database file.
 TEST_DB = pathlib.Path(tempfile.gettempdir()) / "careerguide_tts_test.db"

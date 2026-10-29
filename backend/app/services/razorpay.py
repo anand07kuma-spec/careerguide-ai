@@ -163,7 +163,7 @@ def create_order(plan_code: str, user_id: int, receipt: str) -> dict[str, Any]:
     plan = plans.get(plan_code)
     if plan is None or not plan.purchasable or plan.price_paise is None:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=(
                 "That plan cannot be bought online here. The school licence is priced "
                 "with a person — please use the contact page."

@@ -436,7 +436,7 @@ def answer(
     ).first()
     if question is None:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="That question is not part of this assessment.",
         )
 
@@ -448,7 +448,7 @@ def answer(
         valid = value.isdigit() and scoring.LIKERT_MIN <= int(value) <= scoring.LIKERT_MAX
     if not valid:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=(
                 "That option is not one of the choices for this question."
                 if question.response_type == "choice"
@@ -498,7 +498,7 @@ def submit(
     answers = _answered_codes(db, row.id)
     if not answers:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=(
                 "Nothing has been answered yet, so there is nothing to score. Answer a few "
                 "questions, or leave this and come back another day."

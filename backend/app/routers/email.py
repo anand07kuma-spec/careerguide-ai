@@ -173,7 +173,7 @@ def attach_address(
     change = consent.request_confirmation(db, user, payload.address)
     if change.status == consent.INVALID:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=messages.NOTES["invalid-address"],
         )
     if change.status == consent.TAKEN:
@@ -337,7 +337,7 @@ def invite_parent(
         # The same answer `PUT /address` gives for the same mistake: a string that is
         # not an address is a bad request, not a send that happened to fail.
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=messages.NOTES["invalid-address"],
         )
     log.info("Guardian invited by account %d (%s)", student_id, answer.reason)
