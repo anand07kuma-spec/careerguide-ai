@@ -52,11 +52,18 @@ interface NavItem {
    * screen size.
    */
   tileOnly?: boolean;
+  /**
+   * Name this page in the mobile drawer anyway, whatever `tileOnly` and the bottom
+   * bar would otherwise decide. Used for the three rows a student reaches for by
+   * name — Home, AI Call and Scholarships — so the drawer is a list of the app's
+   * destinations rather than a list of its leftovers.
+   */
+  inDrawer?: boolean;
 }
 
 const NAV: NavItem[] = [
-  { href: "/app", label: "Home", short: "Home", icon: Home, group: "guide" },
-  { href: "/app/call", label: "Start AI Call", short: "AI Call", icon: Mic, group: "guide" },
+  { href: "/app", label: "Home", short: "Home", icon: Home, group: "guide", inDrawer: true },
+  { href: "/app/call", label: "Start AI Call", short: "AI Call", icon: Mic, group: "guide", inDrawer: true },
   { href: "/app/chat", label: "Chat Instead", short: "Chat", icon: MessagesSquare, group: "guide" },
   { href: "/app/careers", label: "Career Explorer", short: "Careers", icon: Briefcase, group: "explore", tileOnly: true },
   { href: "/app/streams", label: "Choose your stream", short: "Streams", icon: Split, group: "explore", tileOnly: true },
@@ -65,7 +72,7 @@ const NAV: NavItem[] = [
   // No tile of its own on the dashboard, so this one stays in the sidebar.
   { href: "/app/assessments", label: "Assessments", short: "Assessments", icon: ListChecks, group: "explore" },
   { href: "/app/resources", label: "Resources", short: "Resources", icon: BookOpen, group: "explore", tileOnly: true },
-  { href: "/app/scholarships", label: "Scholarships & Aid", short: "Scholarships", icon: Wallet, group: "explore", tileOnly: true },
+  { href: "/app/scholarships", label: "Scholarships & Aid", short: "Scholarships", icon: Wallet, group: "explore", tileOnly: true, inDrawer: true },
   { href: "/app/institutes", label: "Institutes & Courses", short: "Institutes", icon: Building2, group: "explore", tileOnly: true },
   // Each of these three has a tile of its own in the dashboard's Explore grid, so
   // the sidebar and the drawer would only be a second place to say the same thing.
@@ -221,12 +228,14 @@ export function AppShell({ children }: { children: ReactNode }) {
     return !isParent || item.group === "family";
   }).concat(portalRows(mine.data));
 
-  // The drawer offers only what nothing else on a phone offers: the bottom bar has
-  // its five slots, the dashboard's Explore grid carries the rest as tiles, and a
-  // name in three places is a name the student has to read twice. What is left here
-  // is the conversation, the assessments, the CV, the account pages and any portal.
+  // The drawer names the app's destinations: what nothing else on a phone offers —
+  // the conversation, the assessments, the CV, the account pages, any portal — plus
+  // the three rows flagged `inDrawer`. Home and AI Call also sit in the bottom bar
+  // and Scholarships also sits in the dashboard's Explore grid, so those three read
+  // twice on a phone; they are here because a student looks for them by name and
+  // expects to find them in the menu. Everything else stays in one place.
   const drawerItems = items.filter(
-    (item) => !item.tileOnly && !BOTTOM_BAR_HREFS.has(item.href),
+    (item) => item.inDrawer || (!item.tileOnly && !BOTTOM_BAR_HREFS.has(item.href)),
   );
 
   const sidebar = (

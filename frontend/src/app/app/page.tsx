@@ -208,7 +208,7 @@ const PLACES: {
   },
   {
     href: "/app/scholarships",
-    label: "Money help",
+    label: "Scholarships",
     icon: Wallet,
     tone: "success",
     detail: {
