@@ -45,16 +45,25 @@ interface NavItem {
   group: "guide" | "explore" | "grow" | "family" | "portal";
   /**
    * The Home dashboard already offers this page as a labelled tile in its own
-   * "Explore" section, so the desktop sidebar does not repeat it — the two lists
-   * sat side by one another with the same names on one screen. The mobile drawer
-   * keeps every row, because on a phone the drawer is the only navigation there is.
+   * "Explore" section, so neither the desktop sidebar nor the mobile drawer names
+   * it a second time — the two lists sat side by one another with the same labels
+   * on one screen. A tile the phone's bottom bar already owns is hidden from the
+   * grid below the `lg` breakpoint, so each destination is offered once on every
+   * screen size.
    */
   tileOnly?: boolean;
+  /**
+   * Name this page in the mobile drawer anyway, whatever `tileOnly` and the bottom
+   * bar would otherwise decide. Used for the three rows a student reaches for by
+   * name — Home, AI Call and Scholarships — so the drawer is a list of the app's
+   * destinations rather than a list of its leftovers.
+   */
+  inDrawer?: boolean;
 }
 
 const NAV: NavItem[] = [
-  { href: "/app", label: "Home", short: "Home", icon: Home, group: "guide" },
-  { href: "/app/call", label: "Start AI Call", short: "AI Call", icon: Mic, group: "guide" },
+  { href: "/app", label: "Home", short: "Home", icon: Home, group: "guide", inDrawer: true },
+  { href: "/app/call", label: "Start AI Call", short: "AI Call", icon: Mic, group: "guide", inDrawer: true },
   { href: "/app/chat", label: "Chat Instead", short: "Chat", icon: MessagesSquare, group: "guide" },
   { href: "/app/careers", label: "Career Explorer", short: "Careers", icon: Briefcase, group: "explore", tileOnly: true },
   { href: "/app/streams", label: "Choose your stream", short: "Streams", icon: Split, group: "explore", tileOnly: true },
@@ -63,11 +72,13 @@ const NAV: NavItem[] = [
   // No tile of its own on the dashboard, so this one stays in the sidebar.
   { href: "/app/assessments", label: "Assessments", short: "Assessments", icon: ListChecks, group: "explore" },
   { href: "/app/resources", label: "Resources", short: "Resources", icon: BookOpen, group: "explore", tileOnly: true },
-  { href: "/app/scholarships", label: "Scholarships & Aid", short: "Scholarships", icon: Wallet, group: "explore", tileOnly: true },
+  { href: "/app/scholarships", label: "Scholarships & Aid", short: "Scholarships", icon: Wallet, group: "explore", tileOnly: true, inDrawer: true },
   { href: "/app/institutes", label: "Institutes & Courses", short: "Institutes", icon: Building2, group: "explore", tileOnly: true },
-  { href: "/app/journey", label: "My Journey", short: "Journey", icon: Compass, group: "grow" },
-  { href: "/app/plans", label: "Study & Skill Plans", short: "Plans", icon: GraduationCap, group: "grow" },
-  { href: "/app/reports", label: "Reports", short: "Reports", icon: FileText, group: "grow" },
+  // Each of these three has a tile of its own in the dashboard's Explore grid, so
+  // the sidebar and the drawer would only be a second place to say the same thing.
+  { href: "/app/journey", label: "My Journey", short: "Journey", icon: Compass, group: "grow", tileOnly: true },
+  { href: "/app/plans", label: "Study & Skill Plans", short: "Plans", icon: GraduationCap, group: "grow", tileOnly: true },
+  { href: "/app/reports", label: "Reports", short: "Reports", icon: FileText, group: "grow", tileOnly: true },
   // No tile of its own either: Home's explore grid is eight tiles wide and a CV is a
   // thing you come back to before an application, not a thing to be pointed at daily.
   { href: "/app/resume", label: "My Resume", short: "Resume", icon: FileUser, group: "grow" },
@@ -100,6 +111,13 @@ const MOBILE_NAV = [
   { href: "/app/plans", label: "Plans", icon: GraduationCap },
   { href: "/app/journey", label: "Journey", icon: Compass },
 ];
+
+// The bottom bar is the nearest thing to a thumb on a phone, so wherever it has a
+// slot, that is the one place the page is offered: the drawer drops these rows and
+// the dashboard hides their tiles. Derived from the bar itself, because a sixth
+// entry added there should stop being a duplicate without anyone remembering to
+// edit a second list.
+const BOTTOM_BAR_HREFS = new Set(MOBILE_NAV.map((item) => item.href));
 
 function isActive(pathname: string, href: string) {
   // A portal row carries its slug in a query (`?portal=govt-senior-school-3f`) because
@@ -210,6 +228,16 @@ export function AppShell({ children }: { children: ReactNode }) {
     return !isParent || item.group === "family";
   }).concat(portalRows(mine.data));
 
+  // The drawer names the app's destinations: what nothing else on a phone offers —
+  // the conversation, the assessments, the CV, the account pages, any portal — plus
+  // the three rows flagged `inDrawer`. Home and AI Call also sit in the bottom bar
+  // and Scholarships also sits in the dashboard's Explore grid, so those three read
+  // twice on a phone; they are here because a student looks for them by name and
+  // expects to find them in the menu. Everything else stays in one place.
+  const drawerItems = items.filter(
+    (item) => item.inDrawer || (!item.tileOnly && !BOTTOM_BAR_HREFS.has(item.href)),
+  );
+
   const sidebar = (
     <nav aria-label={t("Main")} className="flex h-full flex-col bg-navy text-white/80">
       <div className="px-5 py-5">
@@ -305,9 +333,8 @@ export function AppShell({ children }: { children: ReactNode }) {
             drawerOpen ? "translate-x-0" : "-translate-x-full",
           )}
         >
-          {/* Every page this account can open, in two compact columns: the full
-              list fits a short phone screen without the student having to find a
-              scrollbar. Long labels would wrap, so the drawer uses short names. */}
+          {/* The pages nothing else on this screen already links to, in two compact
+              columns. Long labels would wrap, so the drawer uses short names. */}
           <div className="flex items-center justify-between gap-3 px-4 pb-3 pt-4">
             <Wordmark tone="white" compact />
             <button
@@ -323,7 +350,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
           <nav className="cg-scrollbar flex-1 overflow-y-auto px-3 pb-2">
             <ul className="grid grid-cols-2 gap-1.5">
-              {items.map((item) => {
+              {drawerItems.map((item) => {
                 const active = isActive(pathname, item.href);
                 const Icon = item.icon;
                 return (

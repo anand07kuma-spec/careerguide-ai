@@ -18,6 +18,7 @@ export const HI: Record<string, string> = {
   // Shared public frame
   "Public pages": "साइट के पेज",
   "Study abroad": "विदेश में पढ़ाई",
+  "Open your dashboard": "अपना डैशबोर्ड खोलें",
   Guides: "मार्गदर्शिकाएँ",
   // "Pricing" and "Career profiles" already have entries in `trust.ts` and are
   // left to them — re-adding them here would silently change the label on the

@@ -79,7 +79,6 @@ export const HI: Record<string, string> = {
   // Buttons and small labels on this screen
   "Hi {name}": "नमस्ते {name}",
   "Ready to explore some cool jobs?": "क्या कुछ बढ़िया काम खोजने के लिए तैयार हैं?",
-  "Money help": "पैसों की मदद",
   "You are using the built-in demo guide, so replies come from a scripted sample until an AI key is configured. It still helps you explore.":
     "आप बने-बनाया डेमो गाइड इस्तेमाल कर रहे हैं, इसलिए जब तक सर्वर पर AI key नहीं लगेगी जवाब पहले से लिखे नमूनों से आएँगे। फिर भी यह खोजने में मदद करता है।",
   "Talk to your guide": "अपने गाइड से बात करें",

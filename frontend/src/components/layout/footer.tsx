@@ -38,26 +38,27 @@ const COLUMNS: { title: string; items: Item[] }[] = [
   {
     title: "Product",
     items: [
-      { label: "Chat with the guide", href: "/app/chat" },
-      { label: "Careers", href: "/app/careers" },
-      { label: "Streams after class 10", href: "/app/streams" },
-      { label: "Exams", href: "/app/exams" },
+      // Only the pages a visitor reads before signing in. The screens inside the
+      // account are not listed here: the bottom bar, the dashboard's Explore grid
+      // and the ☰ menu already offer each of them exactly once, and a sixth copy in
+      // a footer is how the same word ends up on four parts of one phone. The door
+      // into the account belongs to the header, which is on every public page, and
+      // `/about` is already the Company column's row — a second name for the same
+      // page, anchored to one heading, was the footer disagreeing with itself.
       { label: "Career profiles", href: "/careers" },
       { label: "Study abroad", href: "/study-abroad" },
-      { label: "Assessments", href: "/app/assessments" },
-      { label: "How it works", href: "/about#how-it-works" },
       { label: "Pricing", href: "/pricing" },
-      { label: "Billing & plan", href: "/app/billing" },
     ],
   },
   {
     title: "Legal",
     items: [
+      // `Contact` lives in the Company column only. Two rows with the same word in
+      // one footer is the same mistake this page keeps making.
       { label: "Privacy", href: "/privacy" },
       { label: "Terms", href: "/terms" },
       { label: "Refund policy", href: "/refund" },
       { label: "Disclaimer", href: "/disclaimer" },
-      { label: "Contact", href: "/contact" },
       { label: "All legal pages", href: "/legal" },
     ],
   },
