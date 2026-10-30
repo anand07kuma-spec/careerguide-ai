@@ -294,7 +294,7 @@ export default function VoiceCallPage() {
         setOffline(isOffline(error));
         setNotice(
           error instanceof Error
-            ? error.message
+            ? t(error.message)
             : t("The guide could not hear that. Try again, or type your answer."),
         );
         go("ready");
@@ -371,7 +371,7 @@ export default function VoiceCallPage() {
         return;
       }
       setOffline(isOffline(error));
-      setNotice(error instanceof Error ? error.message : t("The call could not start."));
+      setNotice(error instanceof Error ? t(error.message) : t("The call could not start."));
       go("ready");
     }
   }, [go, speak, spoken, t]);

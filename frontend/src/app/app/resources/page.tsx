@@ -10,6 +10,7 @@ import { EmptyState, ErrorState, SkeletonCard } from "@/components/ui/feedback";
 import { Input, Select } from "@/components/ui/field";
 import { PillGroup } from "@/components/ui/tabs";
 import { api } from "@/lib/api";
+import { useT, useTf } from "@/lib/i18n";
 import { useSession } from "@/lib/session";
 import { useResource } from "@/lib/use-resource";
 import type { Resource } from "@/lib/types";
@@ -24,16 +25,14 @@ function titleCase(value: string): string {
     .join(" ");
 }
 
-function durationText(minutes: number): string {
-  return `about ${minutes} minute${minutes === 1 ? "" : "s"}`;
-}
-
 const LANGUAGE_OPTIONS = [
   { value: "en", label: "English" },
   { value: "hi", label: "Hindi" },
 ];
 
 export default function ResourcesScreen() {
+  const t = useT();
+  const tf = useTf();
   const { status: sessionStatus, profile } = useSession();
 
   const [search, setSearch] = useState("");
@@ -113,7 +112,7 @@ export default function ResourcesScreen() {
           ? "Hand-picked free things to try — videos, activities and sites. They are starting points for exploring, not homework or a test."
           : "Publicly available resources to explore careers and skills for free. These are starting points to look into, not a ranked or complete list."
       }
-      badge={<Badge tone="teal" icon={<BookOpen className="h-3.5 w-3.5" aria-hidden />}>Sample catalogue</Badge>}
+      badge={<Badge tone="teal" icon={<BookOpen className="h-3.5 w-3.5" aria-hidden />}>{t("Sample catalogue")}</Badge>}
     >
       <div className="space-y-5">
         {/* Filters */}
@@ -126,14 +125,14 @@ export default function ResourcesScreen() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search resources, e.g. coding, pilot, Hindi"
-                aria-label="Search resources"
+                aria-label={t("Search resources")}
                 className="pl-9 pr-9"
               />
               {search ? (
                 <button
                   type="button"
                   onClick={() => setSearch("")}
-                  aria-label="Clear search"
+                  aria-label={t("Clear search")}
                   className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-1.5 text-muted hover:bg-canvas hover:text-ink"
                 >
                   <X className="h-4 w-4" aria-hidden />
@@ -145,7 +144,7 @@ export default function ResourcesScreen() {
               onChange={(e) => setCategory(e.target.value)}
               options={categories.map((c) => ({ value: c, label: c }))}
               placeholder="All categories"
-              aria-label="Filter by category"
+              aria-label={t("Filter by category")}
             />
           </div>
 
@@ -153,7 +152,7 @@ export default function ResourcesScreen() {
             <div>
               <p className="mb-1.5 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted">
                 <Layers className="h-3.5 w-3.5" aria-hidden />
-                Type
+                {t("Type")}
               </p>
               <PillGroup items={kindOptions} value={kind} onChange={setKind} />
             </div>
@@ -166,10 +165,10 @@ export default function ResourcesScreen() {
                 onChange={(e) => setLanguage(e.target.value)}
                 options={LANGUAGE_OPTIONS}
                 placeholder="Any language"
-                aria-label="Filter by language"
+                aria-label={t("Filter by language")}
                 hint={
                   totalCount > 0
-                    ? `Most resources are in English. Only ${hindiCount} of ${totalCount} are in Hindi so far.`
+                    ? tf("Most resources are in English. Only {h} of {t} are in Hindi so far.", { h: hindiCount, t: totalCount })
                     : "Most resources are in English; Hindi content is still limited."
                 }
               />
@@ -181,7 +180,7 @@ export default function ResourcesScreen() {
                 className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-brand-dark hover:bg-brand-mist"
               >
                 <X className="h-3.5 w-3.5" aria-hidden />
-                Clear filters
+                {t("Clear filters")}
               </button>
             ) : null}
           </div>
@@ -190,8 +189,7 @@ export default function ResourcesScreen() {
         {/* Honest one-line note */}
         <p className="flex items-start gap-1.5 text-xs leading-relaxed text-muted">
           <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
-          These are publicly available starting points. Links and page contents can change at any
-          time, so always check the page that actually opens.
+          {t("These are publicly available starting points. Links and page contents can change at any time, so always check the page that actually opens.")}
         </p>
 
         {/* Results */}
@@ -206,7 +204,7 @@ export default function ResourcesScreen() {
         ) : items.length === 0 ? (
           <EmptyState
             icon={Search}
-            title={hasFilters ? "No resources match these filters" : "No resources found yet"}
+            title={hasFilters ? t("No resources match these filters") : t("No resources found yet")}
             description={
               hasFilters
                 ? "Try a different search term, or clear the filters to see the full sample list."
@@ -220,7 +218,7 @@ export default function ResourcesScreen() {
                   className="inline-flex items-center gap-1.5 rounded-xl bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-dark"
                 >
                   <X className="h-4 w-4" aria-hidden />
-                  Clear filters
+                  {t("Clear filters")}
                 </button>
               ) : undefined
             }
@@ -228,9 +226,10 @@ export default function ResourcesScreen() {
         ) : (
           <>
             <p className="text-sm text-muted" aria-live="polite">
-              Showing <span className="font-semibold text-ink">{items.length}</span>{" "}
-              {items.length === 1 ? "resource" : "resources"}
-              {hasFilters ? " with your filters" : ""}.
+              {items.length === 1
+                ? tf("Showing 1 resource", { n: 1 })
+                : tf("Showing {n} resources", { n: items.length })}
+              {hasFilters ? ` ${t("with your filters")}` : ""}.
             </p>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {items.map((resource) => (
@@ -246,12 +245,14 @@ export default function ResourcesScreen() {
                   <div className="mt-3 flex flex-wrap items-center gap-1.5 text-xs text-muted">
                     <Badge tone="neutral">{titleCase(resource.level)}</Badge>
                     <Badge tone="neutral" icon={<Globe className="h-3 w-3" aria-hidden />}>
-                      {resource.language === "hi" ? "Hindi" : resource.language === "en" ? "English" : titleCase(resource.language)}
+                      {resource.language === "hi" ? t("Hindi") : resource.language === "en" ? t("English") : titleCase(resource.language)}
                     </Badge>
                     {resource.duration_minutes != null ? (
                       <span className="inline-flex items-center gap-1 rounded-full bg-canvas px-2 py-1 text-[11px] font-medium text-muted">
                         <Clock className="h-3 w-3" aria-hidden />
-                        {durationText(resource.duration_minutes)}
+                        {resource.duration_minutes === 1
+                          ? tf("about {n} minute", { n: resource.duration_minutes })
+                          : tf("about {n} minutes", { n: resource.duration_minutes })}
                       </span>
                     ) : null}
                   </div>
@@ -259,7 +260,7 @@ export default function ResourcesScreen() {
                   <div className="mt-4 flex items-center justify-between gap-2 border-t border-line pt-3">
                     <VerificationBadge verified={resource.verified} />
                     <LinkButton href={resource.url} variant="outline" size="sm">
-                      Open
+                      {t("Open")}
                       <ExternalLink className="h-3.5 w-3.5" aria-hidden />
                     </LinkButton>
                   </div>

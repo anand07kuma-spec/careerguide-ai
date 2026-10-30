@@ -590,7 +590,14 @@ and the sheet it prints, the signed-in
 gate every `/app/*` and `/parent` route passes through, the shared loading / empty / error /
 badge labels those screens are built from, and the two cards a finished result now carries — the skill
 gap and the four-week plan — plus the plan the chat pins above its first reply, which are translated
-except for the sentences a model wrote — **2 138 keys** in `src/lib/hi/*` (measured 2026-10-23, after
+except for the sentences a model wrote. Since 2026-10-30 the rest of the app joined it: billing,
+settings, plans, reports, resources, scholarships, institutes, journey, interests, assessments, the
+admin area, `/pricing`, the portal and pricing components, the study-abroad lead form and its country
+pages — and so did the fixed sentences the **server** writes *about the screen*, which arrive as a
+`note` or `framing` field on a response: they are keyed here rather than in Python, because the backend
+knows the language a student replies in, which is not the language the family switched the interface
+to. **3 335 keys** in `src/lib/hi/*` (measured 2026-10-30, after those screens and the server's own
+notes joined; 2 138 on 2026-10-23, after
 the plan's two cards joined; 2 102 on 2026-10-22, after
 the CV joined; 2 004 on 2026-10-21, when the three `Class 3` / `Class 4` / `Class 5` labels left with the
 class range), one file
@@ -606,14 +613,19 @@ badges, the empty / error / loading states, `Modal`'s title and description, `Ta
 `Checkbox` / `Toggle`, the toast messages and `relativeTime()` all translate the plain English they
 are handed. A caller passing `label="Phone (optional)"` is passing a key, not a string.
 
-Still English-only: the billing, settings, plans, reports, resources, scholarships, institutes,
-journey and interests screens, `/pricing`, the portal and pricing components, the study-abroad lead
-form and country pages, the operator's exams screen, six section headings on `/refund` and one line on
-`/terms` —
-**425** of the 1 486 strings `hi-coverage.mjs` finds across the whole app (both counted 2026-10-20) —
-and, on any screen, prose the **server** writes, like a
-recommendation's "why this one" note or a report's closing line. Dictation also still has no Hinglish
-locale (`hi-IN` / `en-IN`).
+What is still English is content this app publishes rather than chrome it draws. Career *titles* have
+Hindi names — `src/lib/hi/careers.ts` carries all 55 — but a career's own paragraphs, a scheme's name,
+provider, benefit, eligibility and steps, an institution's name and its city and state, exam names and
+anything else the API returns as text stay as seeded, because translating them would be editing the
+catalogue rather than the interface. So does whatever a model wrote for one particular student. Three
+named exceptions, all deliberate: the `brand.tsx` lockup — `CareerGuide AI`, `Your Future, Our
+Guidance`, `aria-label="CareerGuide AI logo"` — which one component serves both halves of the site, the
+landing page's Hinglish sample answers, the social card in `opengraph-image.tsx` (its own comment names
+the reason: a Devanagari card would need a font file bundled for `ImageResponse`), and `Childline 1098`. `node scripts/hi-coverage.mjs` reports
+**0 untranslated, 0 unreached, 0 unwired** across the app for the strings it can see (measured
+2026-10-30). Dictation still has no Hinglish locale: `recognitionLocale()` in `frontend/src/lib/voice.ts`
+returns `hi-IN` only for a Hindi session and `en-IN` for everything else, including one classified
+`hinglish`.
 
 ### There is no login: this prototype recognises the device
 
@@ -874,7 +886,7 @@ What a portal may and may not do is a server rule, not a screen rule:
 
 **Subdomains: configured, not verified.** The resolver, the backend env var and the frontend's `NEXT_PUBLIC_TENANT_BASE_DOMAIN` exist, the resolver is unit-tested against a fabricated `Host`, and locally `*.careerguide.localhost` resolves with no DNS work at all. What has *not* been done anywhere real: a wildcard `A`/`CNAME` record, that wildcard added to the Vercel project's domains, and every resulting origin added to `CORS_ORIGINS`. So `school.careerguide.ai` from the brief is **not live**, and each portal screen says so in one sentence on screen — "This deployment has no portal subdomains configured, so the portal is reached at `/school/dashboard?portal=…`" — instead of printing an address that does not resolve.
 
-**Two more things this feature has not had.** No invitation has ever been mailed on this deployment (`RESEND_API_KEY` is unset), so the join link was reached the way the on-screen sentence describes: read off the invite response and opened by hand. And an earlier browser pass appeared to join with the sharing box untouched and print "visible to it" — that could not be reproduced: the instrumented rerun sends `false`, the server echoes `false`, and the row is `0`. It is recorded as an unreproduced observation, not as a bug that was fixed. Portal screens are English-only so far (`src/lib/hi/*` carries no entries for them, so a Hindi-preferring student sees English buttons there); the new portal sections of `/privacy` and `/terms` are translated.
+**Two more things this feature has not had.** No invitation has ever been mailed on this deployment (`RESEND_API_KEY` is unset), so the join link was reached the way the on-screen sentence describes: read off the invite response and opened by hand. And an earlier browser pass appeared to join with the sharing box untouched and print "visible to it" — that could not be reproduced: the instrumented rerun sends `false`, the server echoes `false`, and the row is `0`. It is recorded as an unreproduced observation, not as a bug that was fixed. Portal screens went into Hindi with the rest of the interface on 2026-10-30 (`components/portal/*` renders through `useT`, and `hi-coverage.mjs` finds no portal string without an entry); the new portal sections of `/privacy` and `/terms` were already translated.
 
 ### Studying abroad: a directory that says what it has not checked
 
@@ -882,8 +894,9 @@ The brief asked for a study-abroad section. The honest version of it is a **dire
 invent** — because this is the part of the product where a made-up number costs a family the most money.
 
 **Public screens** (async server components, request-time backend reads, no sign-in needed, and — like
-`/careers` and `/blog` — still English-only, since `?lang=hi` support was written for the careers/blog
-set first and has not been extended here):
+`/careers` and `/blog` — switched by `?lang=hi` through `src/lib/public-i18n.ts`, which the study-abroad
+set joined on 2026-10-30; what stays English is the directory itself, because an institution's name and
+its unverified figures are data, not chrome):
 
 | Route | What it shows |
 | --- | --- |
@@ -950,7 +963,9 @@ English-test fields on any row has been read from anywhere — they are still NU
 The enquiry mail has never been sent for real on this deployment; there is no self-service button for a
 sender to pull their own address back out (that is an operator delete, or a request through `/contact`); the
 admin screen's routes are refusal-tested but no operator action on a lead has been walked in a browser since
-the study-abroad screen was written; and these public pages are not yet Hindi. Turning the directory into
+the study-abroad screen was written. Its chrome has been Hindi since 2026-10-30; the directory's own text
+has not, because a university's name, city and fields are data this app publishes rather than labels it
+draws. Turning the directory into
 something a family could rely on is a research job, not a code job — someone has to read 510 fee pages.
 
 ### "Verified on …": a badge nobody can light by accident
@@ -1170,6 +1185,7 @@ do the indexable half. The rules worth knowing:
 
 ```bash
 cd backend
+export PYTHONIOENCODING=utf-8   # Windows only: without it a suite that prints Hindi dies on the cp1252 console
 ./.venv/Scripts/python.exe scripts/smoke_test.py
 ./.venv/Scripts/python.exe scripts/login_test.py
 ./.venv/Scripts/python.exe scripts/guest_session_test.py
@@ -1202,6 +1218,37 @@ node scripts/hi-duplicates.mjs        # the same key written twice — the last 
 
 Last runs on this machine. The date in the right-hand column is the last time that row was actually
 executed — a suite that has not been re-run says so rather than riding on an older result.
+
+**Measured here on 2026-10-30, after the last of the interface screens went into Hindi: 23 suites,
+2 613 checks run, 0 failed.** The two suites that joined since 2026-10-23 are `interview_test.py`
+**126** and `verification_test.py` **72**; `migration_test.py` moved 218 → **225** with `0016` and the
+schema-drift check, `security_test.py` 146 → **162**, `serverless_guard_test.py` 10 → **11**. Every
+other suite printed exactly the number it printed before: smoke 104, login 62, guest_session 71,
+conversation_facts 49, assessment 117, report_pdf 69, clerk_auth 106, payments 172, email 113,
+email_flow 89, study_abroad 166, tenancy 227, admin 135, exams 91, erasure 85, resume 84, roadmap 205,
+tts 72. That last one is worth reading carefully: `tts_provider_test.py`'s two **live** calls printed
+`SKIP` on this run because the shell carried neither `GEMINI_API_KEY` nor `AZURE_SPEECH_KEY`, so the
+honest statement is "0 checks failed", not "speech works against a provider" — the 72 offline checks
+are what passed. `schema_fit_check.py`: every seeded string fits its declared column, **182 rows
+checked, 0 columns too short**.
+
+**The frontend the same day:** `npx tsc --noEmit` exits 0; `npx eslint .` is 0 errors with one warning,
+in `scripts/layout-shot.mjs`, that predates this work; `npm run build` exits 0 and the route manifest
+holds **64** entries — 59 pages, one API route handler, and the four meta routes (`favicon.ico`,
+`opengraph-image`, `robots.txt`, `sitemap.xml`). `node scripts/hi-coverage.mjs`: **3 335 keys, 0
+untranslated, 0 unreached, 0 unwired**. `node scripts/hi-duplicates.mjs`: 0 conflicting duplicates, ten
+harmless repeats. Nothing was run through Prettier — `.github/workflows/frontend.yml` does not check
+formatting, and `npx prettier --check .` already fails on **174** files across the tree, so `--write`
+would bury this change in a reformat of code it never touched.
+
+**Two things the numbers above do not show.** One dictionary entry was not merely missing but *wrong*:
+`State` carried `"हालत"` (a condition) in `src/lib/hi/admin.ts` while its only use is the province
+dropdown on `/app/admin/users`, beside `Role: "भूमिका"` — it now reads `"राज्य"`. The keys for the
+server's fixed notes went into the frontend dictionary rather than the backend's own trilingual tables,
+which §4 explains. And the probes that appeared to find whole screens still in English found the PWA
+service worker serving a pre-rebuild bundle out of the `careerguide-v2-*` caches — the trap the table row
+below this section records — not a missing translation; clearing it and waiting for hydration (every
+`/app/*` screen server-renders English before the client replaces it) is what made them read Hindi.
 
 **On 2026-10-22, students got a resume.** The §4 row above says what the screen is; this is the measurement
 behind it. `Resume` joined `backend/app/models.py` and migration `0014_resume` built it (fourteen revisions,
@@ -1698,6 +1745,8 @@ the rows the database itself marks unread | **72 passed, 0 failed** · 2026-10-2
 | `/app/reports/[id]` — a file fetch that fails | There is no longer a state that only spins: the effect is keyed on `[row, attempt]`, a failure renders `ErrorState` titled "The report file did not arrive" with the server's own error underneath and a **Fetch it again** button that increments `attempt` and re-runs the same request, and the line below it says the file was not deleted and still sits on the server. **The Delete button lost its `disabled={!file.url}`** — that was the actual defect: a preview that failed to load locked out the one action that would still have worked. Verified by reading the file after the change, with `tsc` and `eslint` clean. **Not exercised in a browser**: that screen needs a session and this dev origin is refused by CORS, so nobody has watched a real network failure become the retry card yet. Adding `http://localhost:3100` to `CORS_ORIGINS` in `backend/.env` would make the whole `/app` set walkable; it was not touched here because that file is a security allowlist, not a convenience · 2026-10-20 |
 | Hindi for the five screen groups the brief named — `/onboarding`, `/app/call`, `/app/chat`, `/parent`, `/app/admin/*` — `npx tsc --noEmit`, `npx eslint src`, `scripts/hi-coverage.mjs`, `scripts/hi-duplicates.mjs`, `scripts/hi-prose-check.mjs`, then a real browser | Dictionary at **1 978 keys** (up from 1 255); `tsc` and `eslint src` both exit **0**. `hi-coverage` leaves **1** untranslated string in those files — the `https://…/fees-and-funding` example URL in the university editor, Latin on purpose — and `hi-prose-check` reports **0** prose literals missing across the fifteen files this round touched, primitives included. Three new dictionaries (`hi/parent.ts`, `hi/admin.ts`, `hi/admin-content.ts`) merged in `hi/index.ts`; `hi-duplicates` still shows exactly the **3 pre-existing conflicts** (`Exams`, `Next`, `Browse all careers`) and no new one. The largest fix is not a dictionary entry: the primitives now translate what callers hand them — `Field` / `Input` / `Textarea` / `Select` (label, hint, error, placeholder, every option), `Checkbox` / `Toggle`, `Modal`'s title and description, the toast messages, and `relativeTime()` in `lib/utils.ts`, which is why "1 day ago" under a saved report reads "1 दिन पहले" without every caller remembering to wrap it. `route-guard.tsx` had never been translated at all, so *every* `/app/*` and `/parent` screen opened in English for a Hindi student before it showed anything else; its three gate strings are Hindi now. In the browser with `careerguide.ui-lang=hi`: **`/onboarding`** in Devanagari including the consent checkbox and the two role cards; **`/parent`** and its gate — "सर्वर जवाब नहीं दे रहा", the explanation under it, "फिर कोशिश करें"; and the storage-preferences dialog, whose whole focus ring reads डायलॉग बंद करें / रद्द करें / चुनाव सहेजें. **Verified statically only**: `/app/chat`, `/app/call` and the six `/app/admin/*` screens — the same four checks pass on them, but the browser could not exercise them, because each asks the backend for its data and this dev origin is not in `CORS_ORIGINS`. Repo-wide **380** candidate strings are still English-only, all of them in files outside the five named groups (`/app/billing`, `/app/settings`, `/app/reports`, `/app/interests`, `/app/journey`, `components/portal/*`, `components/pricing/*`, the study-abroad lead form, six section headings on `/refund` and one line on `/terms`) — the same known gap, smaller, not a new one · 2026-10-20 |
 | A Hindi screen that stayed English, and what actually caused it | A gate rendered English in a browser holding the right code, and the tell was that React's own view of the tree said `Checking your account…` while the DOM said something else — which is not a missing translation. `navigator.serviceWorker.getRegistrations()` named it: the PWA worker in `public/sw.js` had cached the pre-edit chunks under `careerguide-v2-assets` and `careerguide-v2-static` and was serving those. Unregistering it and deleting both caches made the same URL Hindi on the next load. The speculative store change that theory had already produced was then **reverted** — `lib/i18n.ts` is untouched, the `mounted`-gated store was never the bug — and `tsc`, `eslint` and `hi-duplicates` were re-run against the original file. **For anyone testing this round**: a hard refresh is not always enough. DevTools → Application → Service workers → Unregister, delete those two caches, reload; the worker re-registers itself with current code on that load |
+
+| The whole battery and all three Hindi validators, re-run when the last screens went into Hindi | 23 suites, **2 613 checks, 0 failed** — with the honest caveat that `tts_provider_test.py`'s two live calls printed `SKIP` because that shell carried neither `GEMINI_API_KEY` nor `AZURE_SPEECH_KEY`, so this row says nothing about provider audio, only about the 72 shape checks. `schema_fit_check.py` **182 rows, 0 columns too short**. `npx tsc --noEmit` and `npx eslint .` exit 0 (one pre-existing warning in `scripts/layout-shot.mjs`); `npm run build` exits 0 with **64** entries in `app-path-routes-manifest.json` — 59 pages, one API handler, four meta routes. `hi-coverage.mjs` **3 335 keys, 0 untranslated, 0 unreached, 0 unwired**; `hi-duplicates.mjs` 0 conflicting, ten harmless repeats. Nothing was run through Prettier: the workflow does not check formatting, and `--check` already fails on 174 files tree-wide. Then re-probed in a browser, service worker cleared: `/careers?lang=hi`, `/app/interests`, `/app/reports`, `/app/chat`, `/app/plans`, `/app/billing`, `/app/exams` · 2026-10-30 |
 
 Walked in a real browser starting from a clean slate — no token, no login, only a device id:
 the one question → consent gate → dashboard, a **real Groq** Hinglish reply that learned a class and

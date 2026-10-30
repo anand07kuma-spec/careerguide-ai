@@ -202,7 +202,7 @@ export default async function CareerProfilePage({
             /
           </span>
           <a href={`/careers?category=${encodeURIComponent(profile.category)}${lang === "hi" ? "&lang=hi" : ""}`} className="hover:text-brand hover:underline">
-            {profile.category}
+            {t(profile.category)}
           </a>
           <span aria-hidden className="mx-2">
             /
@@ -211,7 +211,7 @@ export default async function CareerProfilePage({
         </nav>
 
         <div className="mt-5 flex flex-wrap items-center gap-2">
-          <Badge tone="teal">{profile.category}</Badge>
+          <Badge tone="teal">{t(profile.category)}</Badge>
           <Badge tone="neutral">{tf("From class {n}", { n: profile.min_class })}</Badge>
           {profile.needs_verification ? (
             <Badge tone="warning">{t("Figures to verify")}</Badge>

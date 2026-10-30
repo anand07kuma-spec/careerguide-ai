@@ -256,7 +256,7 @@ export default function AssessmentRunnerPage() {
                 </ul>
 
                 <p className="rounded-2xl border border-line bg-canvas/60 p-4 text-sm leading-relaxed text-muted">
-                  {cataloguePanel.data?.note}
+                  {t(cataloguePanel.data?.note ?? "")}
                 </p>
 
                 {!instrument.available ? (

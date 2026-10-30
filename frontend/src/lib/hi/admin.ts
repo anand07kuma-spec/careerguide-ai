@@ -132,7 +132,7 @@ export const HI: Record<string, string> = {
   "Email addresses are not searched — see the note below the list.":
     "ईमेल पते नहीं खोजे जाते — लिस्ट के नीचे दिया नोट देखें।",
   Role: "भूमिका",
-  State: "हालत",
+  State: "राज्य",
   "Looking up accounts": "अकाउंट खोजे जा रहे हैं",
   "No account matches this": "कोई अकाउंट इससे मेल नहीं खाता",
   "Nothing is named “{name}”. Names are matched as a substring, and ids exactly.":

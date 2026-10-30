@@ -1,5 +1,8 @@
 /** Hindi for the exams screens. Filled in by the exams work; see ./index.ts. */
 export const HI: Record<string, string> = {
+  // This one word is also the short label in the mobile drawer, on the dashboard
+  // tile, and in the admin sidebar, so it lives here rather than in `common.ts`:
+  // the last file spread in `index.ts` decides what every one of those prints.
   "Exams": "परीक्षाएँ",
   "A plain map of the Indian exams a class 11 or 12 student meets — what each one is for and what it opens. This is general information, not counselling, and every detail must be confirmed on the official notification.":
     "कक्षा 11 या 12 के छात्रों की राह में आने वाली भारतीय परीक्षाओं का आसान नक्शा — हर परीक्षा है किस लिए, और उससे क्या-क्या खुलता है। यह सामान्य जानकारी है, काउंसलिंग नहीं। हर बात की पुष्टि आधिकारिक नोटिफ़िकेशन से ही करें।",

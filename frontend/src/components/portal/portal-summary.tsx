@@ -3,6 +3,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader } from "@/components/ui/card";
 import { ProgressBar, Stat } from "@/components/ui/feedback";
+import { useT, useTf } from "@/lib/i18n";
 import { KIND_WORDS, portalHost } from "@/lib/portal";
 import type { PortalSummary } from "@/lib/types";
 
@@ -15,6 +16,8 @@ import type { PortalSummary } from "@/lib/types";
 export function PortalSummaryPanel({ summary }: { summary: PortalSummary }) {
   const org = summary.organization;
   const host = portalHost(org.slug);
+  const t = useT();
+  const tf = useTf();
 
   return (
     <Card className="space-y-5">
@@ -22,16 +25,16 @@ export function PortalSummaryPanel({ summary }: { summary: PortalSummary }) {
         title={org.name}
         description={
           <>
-            {KIND_WORDS[org.kind]} · {org.slug}
+            {t(KIND_WORDS[org.kind])} · {org.slug}
             {host ? ` · ${host}` : ""}
-            {!org.is_active ? " · closed by the platform" : ""}
+            {!org.is_active ? ` · ${t("closed by the platform")}` : ""}
           </>
         }
         action={
           org.verified ? (
-            <Badge tone="success">Verified by the platform</Badge>
+            <Badge tone="success">{t("Verified by the platform")}</Badge>
           ) : (
-            <Badge tone="neutral">Not verified</Badge>
+            <Badge tone="neutral">{t("Not verified")}</Badge>
           )
         }
       />
@@ -44,7 +47,7 @@ export function PortalSummaryPanel({ summary }: { summary: PortalSummary }) {
           label="Places left"
           value={summary.seats_left}
           tone={summary.seats_left === 0 ? "warning" : "success"}
-          hint={`${summary.seats} in this tier`}
+          hint={tf("{n} in this tier", { n: summary.seats })}
         />
       </div>
 
@@ -52,13 +55,15 @@ export function PortalSummaryPanel({ summary }: { summary: PortalSummary }) {
 
       {!host ? (
         <p className="text-xs leading-relaxed text-muted">
-          This deployment has no portal subdomains configured, so the portal is reached at{" "}
+          {t(
+            "This deployment has no portal subdomains configured, so the portal is reached at",
+          )}{" "}
           {/* The kind decides the path because a counsellor reading this about their own
               practice does not want to be sent to a school's screen. */}
           <code className="rounded bg-canvas px-1 py-0.5 text-[11px]">
             /{org.kind}/dashboard?portal={org.slug}
           </code>{" "}
-          and the address above is its name rather than a hostname.
+          {t("and the address above is its name rather than a hostname.")}
         </p>
       ) : null}
     </Card>

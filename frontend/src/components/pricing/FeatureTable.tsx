@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, Minus } from "lucide-react";
-import { useT } from "@/lib/i18n";
+import { useT, useTNumeric } from "@/lib/i18n";
 import { rupees } from "@/lib/money";
 import type { FeatureRow, PricingPlan } from "@/lib/types";
 
@@ -22,6 +22,7 @@ import type { FeatureRow, PricingPlan } from "@/lib/types";
 
 function Cell({ value }: { value: boolean | string | undefined }) {
   const t = useT();
+  const tn = useTNumeric();
   if (value === true) {
     return (
       <>
@@ -38,7 +39,7 @@ function Cell({ value }: { value: boolean | string | undefined }) {
       </>
     );
   }
-  return <>{t(value)}</>;
+  return <>{tn(value)}</>;
 }
 
 export function FeatureTable({

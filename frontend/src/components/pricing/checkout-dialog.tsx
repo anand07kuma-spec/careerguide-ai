@@ -74,9 +74,9 @@ export function CheckoutDialog({
             .catch(() => {
               setStep("unconfirmed");
               setMessage(
-                "The payment page said it went through, but this server could not confirm it " +
-                  "yet. If money left your account it will appear on your billing page within a " +
-                  "minute or two. Please do not pay again until it does.",
+                t(
+                  "The payment page said it went through, but this server could not confirm it yet. If money left your account it will appear on your billing page within a minute or two. Please do not pay again until it does.",
+                ),
               );
             });
         },
@@ -86,15 +86,18 @@ export function CheckoutDialog({
         },
         onProblem: (text) => {
           setStep("problem");
-          setMessage(text);
+          // Some of these are this app's own sentences, and one is the word Razorpay's
+          // callback carried. A lookup answers with the input when the dictionary has no
+          // such key, so a provider's message is never rewritten.
+          setMessage(t(text));
         },
       });
     } catch (error: unknown) {
       setStep("problem");
       setMessage(
         error instanceof Error
-          ? error.message
-          : "That order could not be started. Nothing has been charged.",
+          ? t(error.message)
+          : t("That order could not be started. Nothing has been charged."),
       );
     }
   }

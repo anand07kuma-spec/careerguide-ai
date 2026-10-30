@@ -187,7 +187,7 @@ export default async function CareersPage({ searchParams }: { searchParams: Page
                       : "border-line bg-surface text-muted hover:text-ink"
                   }`}
                 >
-                  {item.name}
+                  {t(item.name)}
                   <span className="ml-1.5 text-heading/70">{item.count}</span>
                 </a>
               );
@@ -199,7 +199,7 @@ export default async function CareersPage({ searchParams }: { searchParams: Page
           <p className="mt-6 text-sm text-muted">
             {matchLine}
             {search ? tf(" for “{q}”", { q: search }) : ""}
-            {category ? tf(" in {c}", { c: category }) : ""}.
+            {category ? tf(" in {c}", { c: t(category) }) : ""}.
           </p>
         ) : null}
 
@@ -215,7 +215,7 @@ export default async function CareersPage({ searchParams }: { searchParams: Page
         ) : (
           groups.map(([name, items]) => (
             <section key={name} className="mt-10">
-              <h2 className="text-xl font-bold tracking-tight text-heading sm:text-2xl">{name}</h2>
+              <h2 className="text-xl font-bold tracking-tight text-heading sm:text-2xl">{t(name)}</h2>
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
                 {items.map((career) => (
                   <Card key={career.slug} className="flex flex-col p-5">

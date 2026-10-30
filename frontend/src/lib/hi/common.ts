@@ -6,6 +6,9 @@
  * instead of blanking out a label.
  */
 export const HI: Record<string, string> = {
+  // The wordmark, which is the name itself read aloud by a screen reader.
+  "CareerGuide AI logo": "CareerGuide AI लोगो",
+
   // Sidebar and mobile navigation
   "Talk with your guide": "अपने गाइड से बात करें",
   Explore: "खोजें",
@@ -18,7 +21,9 @@ export const HI: Record<string, string> = {
   "Choose your stream": "अपना स्ट्रीम चुनें",
   Streams: "स्ट्रीम",
   "Exams & entrances": "एग्ज़ाम और एंट्रेंस",
-  Exams: "एग्ज़ाम",
+  // The short nav label and the exams screen heading are one key, and `exams.ts`
+  // holds it — the last file spread in `index.ts` wins, so a second entry here
+  // would silently hold up a different word on the same screen.
   "Discover My Interests": "अपनी रुचियाँ जानें",
   Resources: "संसाधन",
   "Scholarships & Aid": "स्कॉलरशिप और आर्थिक मदद",
@@ -38,6 +43,9 @@ export const HI: Record<string, string> = {
   Institutes: "संस्थान",
   Report: "रिपोर्ट",
   Parent: "अभिभावक",
+  Resume: "रिज़्यूमे",
+  Billing: "बिलिंग",
+  "My Profile": "मेरी प्रोफ़ाइल",
   Menu: "मेन्यू",
   "Open menu": "मेन्यू खोलें",
   "Close menu": "मेन्यू बंद करें",
@@ -107,7 +115,8 @@ export const HI: Record<string, string> = {
   Close: "बंद करें",
   "Close dialog": "डायलॉग बंद करें",
   Back: "पीछे",
-  Next: "आगे",
+  // "Next" and "Previous" travel together and `assessments.ts` holds that pair,
+  // used by the quiz stepper and by the admin tables' pagination.
   Done: "पूरा हुआ",
   Skip: "छोड़ें",
   Retry: "फिर कोशिश करें",
@@ -124,6 +133,35 @@ export const HI: Record<string, string> = {
   English: "English",
   Hindi: "हिन्दी",
   Hinglish: "Hinglish",
+  // The option lists in `src/lib/types.ts` are shared by the pickers on several
+  // screens, and a `<Select>` translates its own option labels — so a key here is
+  // the only place these can have Hindi, and the only copy of it.
+  "Hinglish (Hindi + English)": "Hinglish (हिन्दी + अंग्रेज़ी)",
+  "Age 3 to 5": "उम्र 3 से 5",
+  "Very simple questions about play and colours": "खेल और रंगों से जुड़े बहुत आसान सवाल",
+  "Age 6 to 8": "उम्र 6 से 8",
+  "Short conversations about what they enjoy": "पसंदीदा कामों के बारे में छोटी बातचीत",
+  "Age 9 to 10": "उम्र 9 से 10",
+  "Careers explained through daily work": "रोज़ के काम से करियर समझाना",
+  "Age 11 to 12": "उम्र 11 से 12",
+  "Streams, subjects and skill ideas": "स्ट्रीम, विषय और स्किल के बारे में",
+  "Age 13 or above": "उम्र 13 या उससे ज़्यादा",
+  "Full guidance, including costs and entrances": "पूरा मार्गदर्शन, खर्चे और एंट्रेंस भी",
+  "Science and Healthcare": "विज्ञान और स्वास्थ्य",
+  "Engineering and Technology": "इंजीनियरिंग और टेक्नोलॉजी",
+  "AI and Data": "AI और डेटा",
+  "Sports and Fitness": "खेल और फ़िटनेस",
+  Aviation: "विमानन",
+  "Defence and Public Services": "डिफ़ेंस और सरकारी सेवाएँ",
+  "Art, Design, and Media": "कला, डिज़ाइन और मीडिया",
+  "Business and Entrepreneurship": "बिज़नेस और उद्यम",
+  "Finance and Banking": "फ़ाइनेंस और बैंकिंग",
+  "Law and Social Sciences": "कानून और सोशल साइंसेज़",
+  "Education and Research": "पढ़ाई और रिसर्च",
+  "Environment and Agriculture": "पर्यावरण और खेती",
+  "Skilled Trades and Vocational Careers": "हुनर और वोकेशनल करियर",
+  "Hospitality and Tourism": "हॉस्पिटैलिटी और टूरिज़्म",
+  "Other emerging careers": "नए तरह के करियर",
   "Read aloud": "बोलकर सुनाएँ",
   "Stop speaking": "बोलना बंद करें",
   "Dismiss notification": "सूचना हटाएँ",
@@ -227,4 +265,77 @@ export const HI: Record<string, string> = {
   "Physical activity and sports": "शारीरिक गतिविधि और खेल",
   "Nature and scientific curiosity": "प्रकृति और विज्ञान की जिज्ञासा",
   "Organization and leadership": "व्यवस्था और नेतृत्व",
+
+  // Wrong address page. Its list of places is the navigation again, so the short
+  // names it points at are the labels the sidebar already uses; only the sentences
+  // that explain the mistake, and the hints under each link, are new here.
+  "Page not found": "पेज नहीं मिला",
+  "That address isn't part of CareerGuide AI": "यह पता CareerGuide AI का हिस्सा नहीं है",
+  "Nothing is broken and no data was lost — the address in your browser bar does not match any screen here. Pick a place below, or check the spelling: most screens start with":
+    "कुछ टूटा नहीं है और कोई जानकारी नहीं मिटी — आपके ब्राउज़र में लिखा पता यहाँ की किसी स्क्रीन से मेल नहीं खाता। नीचे कोई जगह चुनें, या वर्तनी जाँच लें: ज़्यादातर स्क्रीन इससे शुरू होती हैं",
+  "and use a plural ending, like": "और अंत में बहुवचन होता है, जैसे",
+  "Go to my dashboard": "मेरे डैशबोर्ड पर जाएँ",
+  "Start a voice call": "वॉइस कॉल शुरू करें",
+  "Or jump straight to": "या सीधे जाएँ",
+  "My dashboard": "मेरा डैशबोर्ड",
+  "Pick up where you left off": "जहाँ छोड़ा था, वहीं से उठाएँ",
+  "Talk to the guide": "गाइड से बात करें",
+  "Type, or speak in Hindi or English": "टाइप करें, या हिन्दी या अंग्रेज़ी में बोलें",
+  "Career explorer": "करियर खोजें",
+  "Career profiles to look through": "देखने लायक करियर प्रोफ़ाइलें",
+  "One gentle question at a time": "एक बार में एक हल्का-फुल्का सवाल",
+  "Career report": "करियर रिपोर्ट",
+  "Exploratory, never a verdict": "जानकारी के लिए, कभी फ़ैसला नहीं",
+  "Study plans": "पढ़ाई के प्लान",
+  "Small steps you own": "छोटे कदम, आपके अपने",
+  "Routes that cost less": "कम खर्च वाले रास्ते",
+  "Summary, not surveillance": "सारांश, निगरानी नहीं",
+
+  // What this app says when one of its own steps fails. These sentences are written in
+  // `api.ts` and `checkout.ts`, not in a screen, so they reach the reader as
+  // `error.message` — which every screen now puts through the lookup. A message from the
+  // server has no key here and passes through in the words the server chose.
+  "Cannot reach the CareerGuide AI server right now. It may be starting up or temporarily offline — please try again in a moment.":
+    "इस वक़्त CareerGuide AI सर्वर से बात नहीं हो पा रही है। हो सकता है वह अभी चल रहा हो या कुछ पलों के लिए बंद हो — एक मिनट बाद फिर कोशिश करें।",
+  "The answers came back in a form this screen does not understand. Nothing was lost — please reload.":
+    "जवाब ऐसे रूप में आए जो यह स्क्रीन समझ नहीं सकी। कुछ नहीं खोया — पेज दोबारा लोड करें।",
+  "The plan could not be changed. Nothing was lost.": "प्लान बदला नहीं जा सका। कुछ नहीं खोया।",
+  "The payment page only opens in a browser.": "भुगतान का पेज सिर्फ़ ब्राउज़र में खुलता है।",
+  "The payment page could not be loaded. That is usually a blocked connection or a content blocker — nothing has been charged, so please try again.":
+    "भुगतान का पेज नहीं खुल सका। आमतौर पर इसका मतलब है कि कनेक्शन रुका है या किसी ब्लॉकर ने रोका है — कोई पैसा कटया नहीं गया है, इसलिए फिर कोशिश करें।",
+  "The payment page loaded but did not start. Nothing has been charged.":
+    "भुगतान का पेज खुला पर शुरू नहीं हुआ। कोई पैसा कटया नहीं गया है।",
+  "The payment page finished without a reference we can check. If money left your account it will appear on this page shortly — please do not pay again yet.":
+    "भुगतान का पेज ऐसी जानकारी के साथ बंद हुआ जिससे हम कुछ जाँच न सकें। अगर आपके खाते से पैसा गया है तो वह कुछ ही देर में इस पेज पर दिखेगा — अभी दोबारा भुगतान मत कीजिए।",
+  "That payment did not go through. Nothing was charged, and your plan is unchanged.":
+    "वह भुगतान नहीं हो पाया। कोई पैसा कटया नहीं गया, और आपके प्लान में कुछ नहीं बदला।",
+
+  // Sentences the server writes about the *screen* rather than about a career or a scheme —
+  // how much it has to go on, what a report is and is not. They arrive as a `note` field in a
+  // response, so they never appear in a source file for `hi-coverage` to find, and each screen
+  // puts them through the lookup the same way it puts an error message through it.
+  //
+  // Translating them here rather than in the backend is deliberate: the backend knows the
+  // language a student *replies* in, which is not the language the family switched the
+  // interface to. Going through this dictionary follows the switch immediately, with no refetch.
+  "There is not enough information yet to point anywhere specific. That is normal. Explore a few activities before drawing any conclusion.":
+    "अभी इतनी जानकारी नहीं है कि कोई खास रास्ता बताया जा सके। यह सामान्य बात है। किसी नतीजे पर पहुँचने से पहले कुछ गतिविधियाँ देखिए।",
+  "These are early observations from a short conversation. Interests usually change, and none of this is a prediction about the future.":
+    "ये छोटी बातचीत से मिली शुरुआती बातें हैं। रुचियाँ अक्सर बदलती हैं, और इसमें से कुछ भी भविष्य की भविष्यवाणी नहीं है।",
+  "These suggestions come from things you chose to share. They are starting points for discussion, not a verdict on what you should become.":
+    "ये सुझाव उन्हीं बातों से आए हैं जो आपने बताना चुना। ये बातचीत की शुरुआत हैं, यह तय करने का फ़ैसला नहीं कि आपको बनना क्या है।",
+  "This report describes what a student has said they are interested in. It is not an aptitude test, and it does not predict a career.":
+    "यह रिपोर्ट बताती है कि छात्र ने अपनी रुचियों के बारे में क्या कहा। यह किसी योग्यता का परीक्षण नहीं है, और न ही यह करियर की भविष्यवाणी करती है।",
+  "Early signal. Only one or two things to go on so far.":
+    "शुरुआती संकेत। अब तक केवल एक-दो बातें ही आधार के रूप में हैं।",
+  "Some supporting detail from your conversations.":
+    "आपकी बातचीत में इसकी कुछ पुष्टि मिलती है।",
+  "Several of your own statements point this way.":
+    "आपकी अपनी कई बातें इसी ओर इशारा करती हैं।",
+  "Posts are files next to the code that renders them. This API cannot read or write that directory, so there is no editor on the admin screens.":
+    "पोस्ट उस कोड के बगल में रखी फ़ाइलें हैं जो उन्हें दिखाता है। यह API उस फ़ोल्डर को न पढ़ सकता है न लिख सकता है, इसलिए एडमिन स्क्रीन पर कोई एडिटर नहीं है।",
+
+  // One-word labels never reach a sentence-level scanner. `Progress` is the name an
+  // unlabelled progress bar gives a screen reader, so it is the one this file has to carry.
+  "Progress": "प्रगति",
 };

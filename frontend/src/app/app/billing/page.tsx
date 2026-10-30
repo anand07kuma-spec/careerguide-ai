@@ -99,7 +99,7 @@ export default function BillingPage() {
       toast.success(t("You are on the free plan now."));
     } catch (error: unknown) {
       toast.error(
-        error instanceof Error ? error.message : "The plan could not be changed. Nothing was lost.",
+        error instanceof Error ? t(error.message) : t("The plan could not be changed. Nothing was lost."),
       );
     } finally {
       setBusy(false);

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Input, Select, Textarea } from "@/components/ui/field";
 import { api, ApiError } from "@/lib/api";
-import { useT } from "@/lib/i18n";
+import { useT, useTf } from "@/lib/i18n";
 import { BULK_MAX_ROWS, INVITABLE_ROLES, ROLE_WORDS, parseBulkList, rejectedRows } from "@/lib/portal";
 import type { InviteResult, MemberRole } from "@/lib/types";
 
@@ -114,7 +114,7 @@ export function InvitePanel({
           value={text}
           spellCheck={false}
           onChange={(event) => setText(event.target.value)}
-          placeholder="riya@example.com, Class 11 A\narjun@example.com"
+          placeholder={"riya@example.com, Class 11 A\narjun@example.com"}
           hint={
             text.trim()
               ? `${rows.length} ready to send${dropped > 0 ? `, ${dropped} line${dropped === 1 ? "" : "s"} not an address` : ""}`
@@ -170,33 +170,47 @@ export function InvitePanel({
 
 /** What the platform actually did, in the four categories the route returns. */
 function InviteOutcome({ result }: { result: InviteResult }) {
+  const t = useT();
+  const tf = useTf();
+  const held = result.invited.length;
   return (
     <div className="space-y-2 rounded-xl border border-line bg-canvas/60 p-4 text-sm">
       <p className="font-medium text-ink">
-        {result.invited.length === 0
-          ? "No new place was created."
-          : `${result.invited.length} place${result.invited.length === 1 ? "" : "s"} now held.`}
+        {held === 0
+          ? t("No new place was created.")
+          : tf(held === 1 ? "{n} place now held." : "{n} places now held.", { n: held })}
       </p>
       {result.mailed ? (
-        <p className="text-muted">Every one of them was written to an address by mail.</p>
+        <p className="text-muted">{t("Every one of them was written to an address by mail.")}</p>
       ) : (
         <p className="text-muted">
-          The letters did not all go out
-          {result.mail_detail ? `: ${result.mail_detail}` : "."} The places are still held, and the
-          link can be handed over another way.
+          {result.mail_detail
+            ? tf(
+                "The letters did not all go out: {detail}. The places are still held, and the link can be handed over another way.",
+                { detail: result.mail_detail },
+              )
+            : t(
+                "The letters did not all go out. The places are still held, and the link can be handed over another way.",
+              )}
         </p>
       )}
       {result.already_there.length > 0 ? (
         <p className="text-muted">
-          Already on the roster, and their earlier link still works: {result.already_there.join(", ")}
+          {tf("Already on the roster, and their earlier link still works: {names}", {
+            names: result.already_there.join(", "),
+          })}
         </p>
       ) : null}
       {result.refused.length > 0 ? (
         <p className="text-muted">
-          Not a readable address, and nothing was created: {result.refused.join(", ")}
+          {tf("Not a readable address, and nothing was created: {names}", {
+            names: result.refused.join(", "),
+          })}
         </p>
       ) : null}
-      <p className="text-xs text-muted">{result.seats_left} places left after this.</p>
+      <p className="text-xs text-muted">
+        {tf("{n} places left after this.", { n: result.seats_left })}
+      </p>
     </div>
   );
 }

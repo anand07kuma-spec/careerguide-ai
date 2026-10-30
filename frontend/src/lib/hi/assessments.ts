@@ -145,7 +145,8 @@ export const HI: Record<string, string> = {
     "कोई करियर नहीं दिखाया गया क्योंकि किसी क्षेत्र में इतने जवाब थे ही नहीं कि कोई दिशा बने। कुछ ही सवाल करने पर यह आम बात है।",
   "What these numbers are not": "ये संख्याएँ क्या नहीं हैं",
   "Talk to your guide about this": "इस बारे में अपने गाइड से बात करें",
-  "Browse all careers": "सारे करियर देखें",
+  // "Browse all careers" is a cross-screen button and `common.ts` holds it, beside
+  // "Browse all" — the careers page and this result card say the same thing.
   "Your answers": "आपके जवाब",
   "Scores from 0 to 100, one row per area": "0 से 100 तक के स्कोर, हर क्षेत्र की एक पंक्ति",
   Area: "क्षेत्र",

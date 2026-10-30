@@ -209,7 +209,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="flex flex-col items-center gap-3">
           <Wordmark />
           <p className="text-sm text-muted" role="status">
-            Getting your dashboard ready…
+            {t("Getting your dashboard ready…")}
           </p>
         </div>
       </div>

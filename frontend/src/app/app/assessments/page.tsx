@@ -65,10 +65,10 @@ export default function AssessmentsPage() {
     >
       <div className="space-y-5">
         <p className="rounded-2xl border border-line bg-surface/70 px-4 py-3 text-sm leading-relaxed text-muted print:hidden">
-          {panel.data?.note ??
-            t(
+          {t(
+            panel.data?.note ??
               "These questions were written for this app, in house. They are self-questionnaires in the RIASEC and Big Five traditions, not licensed clinical instruments, and they are not a diagnosis, an IQ score, or a prediction about any child.",
-            )}
+          )}
         </p>
 
         {panel.state === "loading" ? (

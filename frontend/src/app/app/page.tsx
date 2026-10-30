@@ -653,7 +653,7 @@ export default function StudentHome() {
                 ))}
               </div>
               {recs.data?.note ? (
-                <p className="text-xs leading-relaxed text-muted">{recs.data.note}</p>
+                <p className="text-xs leading-relaxed text-muted">{t(recs.data.note)}</p>
               ) : null}
             </div>
           )}
@@ -698,7 +698,7 @@ export default function StudentHome() {
                   >
                     <span className="truncate font-medium">{item.career.title}</span>
                     <span className="ml-2 hidden truncate text-xs text-muted sm:inline">
-                      {item.career.category}
+                      {t(item.career.category)}
                     </span>
                   </LinkButton>
                   <button

@@ -215,7 +215,7 @@ export function LeadForm({
 
       {/* Honeypot: bots fill every field they find, people never see this one. */}
       <div hidden aria-hidden>
-        <label htmlFor="lead-company">Company</label>
+        <label htmlFor="lead-company">{t("Company")}</label>
         <input id="lead-company" name="company" tabIndex={-1} autoComplete="off" />
       </div>
 

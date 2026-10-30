@@ -127,7 +127,7 @@ function ConnectPanel() {
             <CheckCircle2 className="h-5 w-5" aria-hidden />
           </span>
           <h1 className="text-lg font-semibold text-ink">{t("Email connected")}</h1>
-          <p className="text-sm leading-relaxed text-muted">{linked.note}</p>
+          <p className="text-sm leading-relaxed text-muted">{t(linked.note)}</p>
           <div className="flex flex-wrap gap-2">
             <LinkButton href="/app/settings" variant="outline">
               {t("Back to settings")}

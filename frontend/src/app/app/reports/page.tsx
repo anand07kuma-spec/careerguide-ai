@@ -24,6 +24,7 @@ import { EmptyState, ErrorState, LoadingPanel } from "@/components/ui/feedback";
 import { Modal } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
 import { api } from "@/lib/api";
+import { useT } from "@/lib/i18n";
 import { useSession } from "@/lib/session";
 import { messageFor, useResource } from "@/lib/use-resource";
 import type { ReportRecommendation } from "@/lib/types";
@@ -34,6 +35,9 @@ const LANGUAGE_LABELS: Record<string, string> = {
   hi: "Hindi",
   hinglish: "Hinglish",
 };
+/** The three reply-language codes the report carries, read off the server's own
+ * enum. Kept pure — the caller is the one that knows whether a `t` is in scope,
+ * and the render site wraps this result so the label follows the interface. */
 function languageLabel(value: string): string {
   return LANGUAGE_LABELS[value] ?? value;
 }
@@ -43,7 +47,13 @@ function generatedDate(iso: string): string {
   return Number.isNaN(d.getTime()) ? iso : d.toLocaleString();
 }
 
-/** A titled section card that only renders when it has content. */
+/**
+ * A titled section card that only renders when it has content.
+ *
+ * `title` and `description` are English source keys here, the way `CardHeader`
+ * takes them, so the callers stay plain and this component translates its own
+ * headings.
+ */
 function Section({
   title,
   description,
@@ -57,6 +67,7 @@ function Section({
   children: React.ReactNode;
   className?: string;
 }) {
+  const t = useT();
   return (
     <Card className={className}>
       <div className="flex items-start gap-2.5">
@@ -66,8 +77,8 @@ function Section({
           </span>
         ) : null}
         <div className="min-w-0">
-          <h2 className="text-lg font-semibold tracking-tight text-ink">{title}</h2>
-          {description ? <p className="mt-1 text-sm text-muted">{description}</p> : null}
+          <h2 className="text-lg font-semibold tracking-tight text-ink">{t(title)}</h2>
+          {description ? <p className="mt-1 text-sm text-muted">{t(description)}</p> : null}
         </div>
       </div>
       <div className="mt-3 space-y-3">{children}</div>
@@ -89,6 +100,9 @@ function Bullets({ items }: { items: string[] }) {
 }
 
 function RecommendationBlock({ item }: { item: ReportRecommendation }) {
+  // Everything on `item` is the server's own answer, so it is printed as written;
+  // only the headings above it are the app's words, and only those are translated.
+  const t = useT();
   return (
     <div className="rounded-2xl border border-line bg-canvas/50 p-4">
       <div className="flex flex-wrap items-center gap-2">
@@ -100,12 +114,12 @@ function RecommendationBlock({ item }: { item: ReportRecommendation }) {
 
       <div className="mt-2.5 flex flex-wrap items-center gap-2">
         <EvidenceBadge level={item.evidence_level} />
-        <span className="text-xs text-muted">{item.evidence_note}</span>
+        <span className="text-xs text-muted">{t(item.evidence_note)}</span>
       </div>
 
       {item.supporting_statements.length > 0 ? (
         <div className="mt-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-ink">What you said that points here</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-ink">{t("What you said that points here")}</p>
           <ul className="mt-1.5 space-y-1.5">
             {item.supporting_statements.map((statement, index) => (
               <li key={index} className="flex items-start gap-2 text-sm italic leading-relaxed text-muted">
@@ -119,35 +133,35 @@ function RecommendationBlock({ item }: { item: ReportRecommendation }) {
 
       {item.open_questions.length > 0 ? (
         <div className="mt-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-ink">Still worth finding out</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-ink">{t("Still worth finding out")}</p>
           <Bullets items={item.open_questions} />
         </div>
       ) : null}
 
       {item.skills_to_try.length > 0 ? (
         <div className="mt-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-ink">Skills to try</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-ink">{t("Skills to try")}</p>
           <Bullets items={item.skills_to_try} />
         </div>
       ) : null}
 
       {item.qualifications_to_check.length > 0 ? (
         <div className="mt-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-ink">Qualifications to check</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-ink">{t("Qualifications to check")}</p>
           <Bullets items={item.qualifications_to_check} />
         </div>
       ) : null}
 
       {item.alternatives.length > 0 ? (
         <div className="mt-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-ink">Related options to keep open</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-ink">{t("Related options to keep open")}</p>
           <Bullets items={item.alternatives} />
         </div>
       ) : null}
 
       {item.next_activity ? (
         <p className="mt-3 rounded-xl bg-brand-mist/60 px-3 py-2 text-sm leading-relaxed text-brand-dark">
-          <span className="font-semibold">A small next step:</span> {item.next_activity}
+          <span className="font-semibold">{t("A small next step:")}</span> {item.next_activity}
         </p>
       ) : null}
     </div>
@@ -155,6 +169,7 @@ function RecommendationBlock({ item }: { item: ReportRecommendation }) {
 }
 
 export default function ReportsScreen() {
+  const t = useT();
   const { status: sessionStatus } = useSession();
   const { toast } = useToast();
 
@@ -171,7 +186,7 @@ export default function ReportsScreen() {
     try {
       await api.generateReport();
       setConfirmGenerate(false);
-      toast("Your report has been refreshed.", "success");
+      toast(t("Your report has been refreshed."), "success");
     } catch (err) {
       toast(messageFor(err), "error");
     } finally {
@@ -180,7 +195,7 @@ export default function ReportsScreen() {
     // The report is the server's answer, so the screen reads it back rather than
     // holding a copy of what it hoped the answer would be.
     reload();
-  }, [reload, toast]);
+  }, [reload, t, toast]);
 
   const runDelete = useCallback(async () => {
     if (!report) return;
@@ -188,14 +203,14 @@ export default function ReportsScreen() {
     try {
       await api.deleteReport(report.id);
       setConfirmDelete(false);
-      toast("This report has been deleted.", "success");
+      toast(t("This report has been deleted."), "success");
     } catch (err) {
       toast(messageFor(err), "error");
     } finally {
       setDeleting(false);
     }
     reload();
-  }, [reload, report, toast]);
+  }, [reload, report, t, toast]);
 
   const content = report?.content;
 
@@ -203,21 +218,21 @@ export default function ReportsScreen() {
     <Screen
       title="My Career Report"
       description="An exploratory summary of what you have shared so far. It is not a prediction, an assessment or a verdict about you."
-      badge={<Badge tone="teal" icon={<FileText className="h-3.5 w-3.5" aria-hidden />}>Exploratory document</Badge>}
+      badge={<Badge tone="teal" icon={<FileText className="h-3.5 w-3.5" aria-hidden />}>{t("Exploratory document")}</Badge>}
       action={
         report ? (
           <div className="flex flex-wrap items-center gap-2 print:hidden">
             <Button variant="outline" size="sm" onClick={() => window.print()}>
               <Printer className="h-4 w-4" aria-hidden />
-              Print / Save PDF
+              {t("Print / Save PDF")}
             </Button>
             <Button variant="outline" size="sm" onClick={() => setConfirmGenerate(true)}>
               <RefreshCw className="h-4 w-4" aria-hidden />
-              Fresh report
+              {t("Fresh report")}
             </Button>
             <Button variant="ghost" size="sm" onClick={() => setConfirmDelete(true)} className="text-danger hover:bg-danger-mist">
               <Trash2 className="h-4 w-4" aria-hidden />
-              Delete
+              {t("Delete")}
             </Button>
           </div>
         ) : null
@@ -237,15 +252,15 @@ export default function ReportsScreen() {
               <div className="flex flex-wrap items-center justify-center gap-2">
                 <LinkButton href="/app/call" variant="primary" size="sm">
                   <MessageCircle className="h-4 w-4" aria-hidden />
-                  Start a conversation
+                  {t("Start a conversation")}
                 </LinkButton>
                 <LinkButton href="/app/interests" variant="outline" size="sm">
                   <Lightbulb className="h-4 w-4" aria-hidden />
-                  Explore interests
+                  {t("Explore interests")}
                 </LinkButton>
                 <Button size="sm" loading={generating} onClick={() => void runGenerate()}>
                   <Sparkles className="h-4 w-4" aria-hidden />
-                  Generate my report
+                  {t("Generate my report")}
                 </Button>
               </div>
             }
@@ -255,26 +270,30 @@ export default function ReportsScreen() {
             {/* Framing — large, at the very top */}
             {content.framing ? (
               <Card className="border-brand-light/50 bg-brand-mist/40">
-                <p className="text-lg font-semibold leading-snug text-ink sm:text-xl">{content.framing}</p>
+                <p className="text-lg font-semibold leading-snug text-ink sm:text-xl">{t(content.framing)}</p>
               </Card>
             ) : null}
 
             {/* Student line + generated timestamp */}
             <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-muted">
               <p>
-                Prepared for <span className="font-semibold text-ink">{content.student.name || "this student"}</span>
+                {t("Prepared for")}{" "}
+                <span className="font-semibold text-ink">{content.student.name || t("this student")}</span>
                 {content.student.class_level ? ` · ${classLabel(content.student.class_level)}` : ""}
-                {content.student.language ? ` · ${languageLabel(content.student.language)}` : ""}
+                {/* The code is stored on the report, the label is the app's own word,
+                    so it is translated where it is printed. */}
+                {content.student.language ? ` · ${t(languageLabel(content.student.language))}` : ""}
               </p>
-              <p className="text-xs">Generated {generatedDate(report.generated_at)}</p>
+              <p className="text-xs">{t("Generated")} {generatedDate(report.generated_at)}</p>
             </div>
 
-            {/* Note — prominent, verbatim */}
+            {/* Note — prominent, in the server's own words. `t` only renames a sentence this
+                app wrote about the screen; anything it has no key for prints as it arrived. */}
             {content.note ? (
               <Card className="border-warning/40 bg-warning-mist/50">
                 <p className="flex items-start gap-2 text-sm leading-relaxed text-amber-900">
                   <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-                  {content.note}
+                  {t(content.note)}
                 </p>
               </Card>
             ) : null}
@@ -372,15 +391,18 @@ export default function ReportsScreen() {
                 <Bullets items={content.unanswered_questions} />
               ) : (
                 <p className="text-sm leading-relaxed text-muted">
-                  There are no specific gaps flagged right now — but plans can always change as you
-                  learn more, and that is expected.
+                  {t(
+                    "There are no specific gaps flagged right now — but plans can always change as you learn more, and that is expected.",
+                  )}
                 </p>
               )}
             </Section>
 
             {/* Sessions reviewed */}
             <p className="text-xs text-muted">
-              Based on {content.sessions_reviewed} {content.sessions_reviewed === 1 ? "conversation" : "conversations"} reviewed so far.
+              {t("Based on")} {content.sessions_reviewed}{" "}
+              {content.sessions_reviewed === 1 ? t("conversation") : t("conversations")}{" "}
+              {t("reviewed so far.")}
             </p>
 
             {/* Closing panel — what this report cannot do */}
@@ -389,15 +411,17 @@ export default function ReportsScreen() {
               <ul className="mt-3 space-y-2 text-sm leading-relaxed text-muted">
                 <li className="flex items-start gap-2">
                   <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-muted" aria-hidden />
-                  <span>It does not predict your results, marks or future.</span>
+                  <span>{t("It does not predict your results, marks or future.")}</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-muted" aria-hidden />
-                  <span>It does not certify, rank or assess you in any official way.</span>
+                  <span>{t("It does not certify, rank or assess you in any official way.")}</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-muted" aria-hidden />
-                  <span>No school, admission office or employer should treat it as an assessment. It is only a mirror of conversations you chose to have here.</span>
+                  <span>{t(
+                    "No school, admission office or employer should treat it as an assessment. It is only a mirror of conversations you chose to have here.",
+                  )}</span>
                 </li>
               </ul>
             </Card>
@@ -414,17 +438,18 @@ export default function ReportsScreen() {
         footer={
           <>
             <Button variant="outline" onClick={() => setConfirmGenerate(false)} disabled={generating}>
-              Keep current
+              {t("Keep current")}
             </Button>
             <Button loading={generating} onClick={() => void runGenerate()}>
-              Generate fresh report
+              {t("Generate fresh report")}
             </Button>
           </>
         }
       >
         <p className="text-sm leading-relaxed text-muted">
-          Your current report stays until the new one is ready. If the new one is empty, you can simply
-          explore more and generate again later.
+          {t(
+            "Your current report stays until the new one is ready. If the new one is empty, you can simply explore more and generate again later.",
+          )}
         </p>
       </Modal>
 
@@ -437,16 +462,18 @@ export default function ReportsScreen() {
         footer={
           <>
             <Button variant="outline" onClick={() => setConfirmDelete(false)} disabled={deleting}>
-              Cancel
+              {t("Cancel")}
             </Button>
             <Button variant="danger" loading={deleting} onClick={() => void runDelete()}>
-              Delete report
+              {t("Delete report")}
             </Button>
           </>
         }
       >
         <p className="text-sm leading-relaxed text-muted">
-          You can always generate a new report later. Nothing else you have saved is affected.
+          {t(
+            "You can always generate a new report later. Nothing else you have saved is affected.",
+          )}
         </p>
       </Modal>
     </Screen>

@@ -83,4 +83,20 @@ export const HI: Record<string, string> = {
     "आप बने-बनाया डेमो गाइड इस्तेमाल कर रहे हैं, इसलिए जब तक सर्वर पर AI key नहीं लगेगी जवाब पहले से लिखे नमूनों से आएँगे। फिर भी यह खोजने में मदद करता है।",
   "Talk to your guide": "अपने गाइड से बात करें",
   "Answer interest questions": "रुचि वाले सवाल के जवाब दें",
+  "No directions yet": "अभी कोई रास्ता नहीं",
+  "Loading your saved careers…": "आपके सेव किए करियर खुल रहे हैं…",
+  // The sentences a tile or a number says when it is opened, and the one line an
+  // area shows when its own load failed.
+  "Something went wrong loading this part of your dashboard.":
+    "आपके डैशबोर्ड का यह हिस्सा खोलते समय कुछ गड़बड़ हुई।",
+  "Talking again is how this number grows. Short chats are fine.":
+    "फिर से बात करना ही इस संख्या को बढ़ाता है। छोटी बातचीत भी काफ़ी है।",
+  "A short chat every few days gives the guide enough to work with.":
+    "हर कुछ दिनों में एक छोटी बातचीत गाइड को काम करने लायक जानकारी दे देती है।",
+  "No activities yet, because no study plan has been made for you. The guide suggests them inside a plan, so this count starts once you have one.":
+    "अभी कोई गतिविधि नहीं, क्योंकि आपके लिए कोई पढ़ाई का प्लान बना नहीं है। गाइड इन्हें प्लान के अंदर सुझाता है, इसलिए प्लान बनने के बाद ही यह गिनती शुरू होगी।",
+  "Chat with your guide or share what you like, and ideas will show up here.":
+    "अपने गाइड से चैट करें या अपनी पसंद बताएँ — यहाँ रास्ते दिखने लगेंगे।",
+  "A short conversation or the interest questions give the guide enough to suggest directions.":
+    "एक छोटी बातचीत या रुचि के सवाल गाइड को रास्ते सुझाने के लिए काफ़ी हैं।",
 };
