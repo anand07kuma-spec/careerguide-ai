@@ -225,7 +225,11 @@ export function Toggle({
       >
         <span
           className={cn(
-            "absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform",
+            // `left-0` is what the two translations below are measured from. Without
+            // it the knob takes its static position instead, lands outside the 44px
+            // track, and — wherever the switch sits at the right edge of a phone —
+            // pushes the whole document a few pixels wider than the screen.
+            "absolute left-0 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform",
             checked ? "translate-x-[22px]" : "translate-x-[2px]",
           )}
         />

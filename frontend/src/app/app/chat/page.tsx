@@ -560,8 +560,49 @@ function ChatThread() {
 
         {stageLine ? <p className="text-xs text-muted">{stageLine}</p> : null}
 
-        <Card className="flex h-[52vh] min-h-[320px] flex-col p-0">
-          <div ref={setListRef} className="cg-scrollbar flex-1 space-y-4 overflow-y-auto p-4 sm:p-5">
+        {/* Voice and deletion sit above the thread, not inside the composer. In the
+            composer they wrapped to five lines on a phone and, with the composer
+            pinned, that left the messages a 32px strip to read through. Here they
+            are still one tap away and the thread keeps the height.
+
+            Stacked below `sm`: side by side, the switch and the Delete button eat
+            the row and the explanation is left a column one word wide. */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
+          <div className="min-w-0 sm:max-w-xs sm:flex-1">
+            <Toggle
+              checked={speakOn}
+              onChange={(next) => {
+                setSpeakOn(next);
+                if (!next) {
+                  player.stop();
+                  cancelBrowserTts();
+                }
+              }}
+              label="Read replies aloud"
+              description="The server's speech service reads replies aloud over the internet, with your browser's own voice as a fallback. Settings names the exact service."
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            {player.status === "playing" || player.status === "paused" ? (
+              <Button variant="ghost" size="sm" onClick={() => player.stop()}>
+                <Square className="h-3.5 w-3.5" aria-hidden />
+                {t("Stop voice")}
+              </Button>
+            ) : null}
+            {messages.length > 0 ? (
+              <Button variant="ghost" size="sm" onClick={() => void clearMessages()}>
+                <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                {t("Delete these messages")}
+              </Button>
+            ) : null}
+          </div>
+        </div>
+
+        <Card className="cg-thread flex flex-col p-0">
+          <div
+            ref={setListRef}
+            className="cg-scrollbar min-h-0 flex-1 space-y-4 overflow-y-auto p-4 sm:p-5"
+          >
             {messages.length === 0 ? (
               <EmptyState
                 icon={MessagesSquare}
@@ -574,10 +615,10 @@ function ChatThread() {
                   key={`${message.id}-${index}`}
                   className={cn("flex", message.role === "user" ? "justify-end" : "justify-start")}
                 >
-                  <div className="max-w-[88%] sm:max-w-[76%]">
+                  <div className="min-w-0 max-w-[88%] sm:max-w-[76%]">
                     <div
                       className={cn(
-                        "rounded-card px-4 py-3 text-sm leading-relaxed shadow-card",
+                        "rounded-card px-4 py-3 text-sm leading-relaxed break-words shadow-card",
                         message.role === "user"
                           ? "bg-brand text-white"
                           : "border border-line bg-surface text-ink",
@@ -638,7 +679,9 @@ function ChatThread() {
             ) : null}
           </div>
 
-          <div className="border-t border-line p-3 sm:p-4">
+          {/* Never shrinks: the composer is the one part of this card that must stay
+              whole, so the message list above it gives up height instead. */}
+          <div className="shrink-0 border-t border-line p-3 sm:p-4">
             {sendError ? (
               <p className="mb-2 rounded-card bg-danger-mist px-3 py-2 text-xs text-danger">
                 {sendError}
@@ -699,37 +742,6 @@ function ChatThread() {
               >
                 {sending ? <Square className="h-4 w-4" aria-hidden /> : <Send className="h-4 w-4" aria-hidden />}
               </Button>
-            </div>
-
-            <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-              <div className="max-w-xs flex-1">
-                <Toggle
-                  checked={speakOn}
-                  onChange={(next) => {
-                    setSpeakOn(next);
-                    if (!next) {
-                      player.stop();
-                      cancelBrowserTts();
-                    }
-                  }}
-                  label="Read replies aloud"
-                  description="The server's speech service reads replies aloud over the internet, with your browser's own voice as a fallback. Settings names the exact service."
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                {player.status === "playing" || player.status === "paused" ? (
-                  <Button variant="ghost" size="sm" onClick={() => player.stop()}>
-                    <Square className="h-3.5 w-3.5" aria-hidden />
-                    {t("Stop voice")}
-                  </Button>
-                ) : null}
-                {messages.length > 0 ? (
-                  <Button variant="ghost" size="sm" onClick={() => void clearMessages()}>
-                    <Trash2 className="h-3.5 w-3.5" aria-hidden />
-                    {t("Delete these messages")}
-                  </Button>
-                ) : null}
-              </div>
             </div>
 
             {dictation.listening ? (

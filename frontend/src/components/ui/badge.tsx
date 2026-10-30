@@ -31,7 +31,11 @@ export function Badge({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium leading-none",
+        // `leading-none` used to clip Devanagari: a matra sits above and below the
+        // letter, and a line box exactly as tall as the font cuts both off. The
+        // wrap is for the long labels — a category or a "Saved: …" fact can be
+        // wider than the card holding it.
+        "inline-flex max-w-full items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium leading-normal break-words",
         TONES[tone],
         className,
       )}

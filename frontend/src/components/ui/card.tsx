@@ -70,7 +70,7 @@ export function SectionHeading({
           {typeof title === "string" ? t(title) : title}
         </h2>
         {description ? (
-          <p className="mt-1 text-sm text-muted">
+          <p className="mt-1 text-sm leading-relaxed text-muted">
             {typeof description === "string" ? t(description) : description}
           </p>
         ) : null}
