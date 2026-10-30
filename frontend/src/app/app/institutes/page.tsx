@@ -21,6 +21,7 @@ import { EmptyState, ErrorState, SkeletonCard } from "@/components/ui/feedback";
 import { Input, Select } from "@/components/ui/field";
 import { PillGroup } from "@/components/ui/tabs";
 import { api } from "@/lib/api";
+import { useT, useTf } from "@/lib/i18n";
 import type { Institution } from "@/lib/types";
 import { useSession } from "@/lib/session";
 import { useResource } from "@/lib/use-resource";
@@ -58,6 +59,8 @@ function eduLabel(value: string): string {
 }
 
 export default function InstitutesScreen() {
+  const t = useT();
+  const tf = useTf();
   const { status: sessionStatus } = useSession();
 
   const [search, setSearch] = useState("");
@@ -105,7 +108,7 @@ export default function InstitutesScreen() {
 
   const typeOptions = useMemo(() => {
     const seen = Array.from(new Set(facets.map((i) => i.institution_type))).sort();
-    return [{ value: "", label: "All types" }, ...seen.map((t) => ({ value: t, label: typeLabel(t) }))];
+    return [{ value: "", label: "All types" }, ...seen.map((value) => ({ value, label: typeLabel(value) }))];
   }, [facets]);
 
   const modeOptions = useMemo(() => {
@@ -137,7 +140,7 @@ export default function InstitutesScreen() {
     <Screen
       title="Institutes & Courses"
       description="A sample directory of places to look into. Listings are not verified or ranked, and some are sponsored partnerships — compare every institute yourself."
-      badge={<Badge tone="teal" icon={<Building2 className="h-3.5 w-3.5" aria-hidden />}>Sample directory</Badge>}
+      badge={<Badge tone="teal" icon={<Building2 className="h-3.5 w-3.5" aria-hidden />}>{t("Sample directory")}</Badge>}
     >
       <div className="space-y-5">
         {/* Permanent sponsorship disclosure */}
@@ -149,11 +152,11 @@ export default function InstitutesScreen() {
           <ul className="mt-3 space-y-1.5 text-sm leading-relaxed text-amber-900">
             <li className="flex items-start gap-2">
               <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-              <span>Sponsorship never changes a career recommendation anywhere in this app.</span>
+              <span>{t("Sponsorship never changes a career recommendation anywhere in this app.")}</span>
             </li>
             <li className="flex items-start gap-2">
               <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-              <span>Free, government and aided institutes get no promotional treatment either — you should compare all of them on your own terms.</span>
+              <span>{t("Free, government and aided institutes get no promotional treatment either — you should compare all of them on your own terms.")}</span>
             </li>
           </ul>
         </Card>
@@ -168,14 +171,14 @@ export default function InstitutesScreen() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search institutes"
-                aria-label="Search institutes"
+                aria-label={t("Search institutes")}
                 className="pl-9 pr-9"
               />
               {search ? (
                 <button
                   type="button"
                   onClick={() => setSearch("")}
-                  aria-label="Clear search"
+                  aria-label={t("Clear search")}
                   className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-1.5 text-muted hover:bg-canvas hover:text-ink"
                 >
                   <X className="h-4 w-4" aria-hidden />
@@ -186,13 +189,13 @@ export default function InstitutesScreen() {
               value={state}
               onChange={(e) => setState(e.target.value)}
               options={stateOptions}
-              aria-label="Filter by state"
+              aria-label={t("Filter by state")}
             />
             <Select
               value={careerArea}
               onChange={(e) => setCareerArea(e.target.value)}
               options={careerOptions}
-              aria-label="Filter by career area"
+              aria-label={t("Filter by career area")}
             />
           </div>
 
@@ -200,7 +203,7 @@ export default function InstitutesScreen() {
             <div>
               <p className="mb-1.5 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted">
                 <Building2 className="h-3.5 w-3.5" aria-hidden />
-                Type
+                {t("Type")}
               </p>
               <PillGroup items={typeOptions} value={type} onChange={setType} />
             </div>
@@ -210,7 +213,7 @@ export default function InstitutesScreen() {
             <div>
               <p className="mb-1.5 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted">
                 <Layers className="h-3.5 w-3.5" aria-hidden />
-                Mode
+                {t("Mode")}
               </p>
               <PillGroup items={modeOptions} value={mode} onChange={setMode} />
             </div>
@@ -224,7 +227,7 @@ export default function InstitutesScreen() {
                 className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-brand-dark hover:bg-brand-mist"
               >
                 <X className="h-3.5 w-3.5" aria-hidden />
-                Clear filters
+                {t("Clear filters")}
               </button>
             </div>
           ) : null}
@@ -242,7 +245,7 @@ export default function InstitutesScreen() {
         ) : items.length === 0 ? (
           <EmptyState
             icon={Search}
-            title={hasFilters ? "No institutes match these filters" : "No institutes found yet"}
+            title={hasFilters ? t("No institutes match these filters") : t("No institutes found yet")}
             description={
               hasFilters
                 ? "Try a different state, career area or type, or clear the filters to see the sample list."
@@ -256,7 +259,7 @@ export default function InstitutesScreen() {
                   className="inline-flex items-center gap-1.5 rounded-xl bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-dark"
                 >
                   <X className="h-4 w-4" aria-hidden />
-                  Clear filters
+                  {t("Clear filters")}
                 </button>
               ) : undefined
             }
@@ -264,16 +267,17 @@ export default function InstitutesScreen() {
         ) : (
           <>
             <p className="text-sm text-muted" aria-live="polite">
-              Showing <span className="font-semibold text-ink">{items.length}</span>{" "}
-              {items.length === 1 ? "institute" : "institutes"}
-              {hasFilters ? " with your filters" : ""}. Order here is not a ranking.
+              {items.length === 1
+                ? tf("Showing 1 institute", { n: 1 })
+                : tf("Showing {n} institutes", { n: items.length })}
+              {hasFilters ? ` ${t("with your filters")}` : ""}. {t("Order here is not a ranking.")}
             </p>
             <div className="grid gap-4 lg:grid-cols-2">
               {items.map((institution) => (
                 <Card key={institution.id} className="flex flex-col">
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <h3 className="min-w-0 text-base font-semibold leading-tight text-ink">{institution.name}</h3>
-                    {institution.sponsored ? <Badge tone="warning">Sponsored partner</Badge> : null}
+                    {institution.sponsored ? <Badge tone="warning">{t("Sponsored partner")}</Badge> : null}
                   </div>
 
                   {institution.sponsored && institution.sponsorship_disclosure ? (
@@ -287,9 +291,9 @@ export default function InstitutesScreen() {
                       <MapPin className="h-3.5 w-3.5" aria-hidden />
                       {institution.city}, {institution.state}
                     </span>
-                    <span>{typeLabel(institution.institution_type)}</span>
-                    <span>{modeLabel(institution.mode)}</span>
-                    <span>{eduLabel(institution.education_level)}</span>
+                    <span>{t(typeLabel(institution.institution_type))}</span>
+                    <span>{t(modeLabel(institution.mode))}</span>
+                    <span>{t(eduLabel(institution.education_level))}</span>
                   </div>
 
                   {institution.career_areas.length > 0 ? (
@@ -304,7 +308,7 @@ export default function InstitutesScreen() {
                     <div className="mt-3">
                       <p className="flex items-center gap-1.5 text-sm font-medium text-ink">
                         <GraduationCap className="h-4 w-4 text-brand-dark" aria-hidden />
-                        Courses listed
+                        {t("Courses listed")}
                       </p>
                       <ul className="mt-1.5 space-y-1">
                         {institution.courses.map((course, index) => (
@@ -320,19 +324,19 @@ export default function InstitutesScreen() {
                   <dl className="mt-3 space-y-2 text-sm leading-relaxed">
                     {institution.fee_range ? (
                       <div>
-                        <dt className="font-medium text-ink">Fees</dt>
+                        <dt className="font-medium text-ink">{t("Fees")}</dt>
                         <dd className="text-muted">{institution.fee_range}</dd>
                       </div>
                     ) : null}
                     {institution.admission_info ? (
                       <div>
-                        <dt className="font-medium text-ink">Admission</dt>
+                        <dt className="font-medium text-ink">{t("Admission")}</dt>
                         <dd className="text-muted">{institution.admission_info}</dd>
                       </div>
                     ) : null}
                     {institution.scholarships_note ? (
                       <div>
-                        <dt className="font-medium text-ink">Scholarships</dt>
+                        <dt className="font-medium text-ink">{t("Scholarships")}</dt>
                         <dd className="text-muted">{institution.scholarships_note}</dd>
                       </div>
                     ) : null}
@@ -341,7 +345,7 @@ export default function InstitutesScreen() {
                   <div className="mt-4 flex items-center justify-between gap-2 border-t border-line pt-3">
                     <VerificationBadge verified={institution.verified} />
                     <LinkButton href={institution.website} variant="outline" size="sm">
-                      Website
+                      {t("Website")}
                       <ExternalLink className="h-3.5 w-3.5" aria-hidden />
                     </LinkButton>
                   </div>
@@ -367,7 +371,7 @@ export default function InstitutesScreen() {
             ].map((question, index) => (
               <li key={index} className="flex items-start gap-2">
                 <HelpCircle className="mt-0.5 h-4 w-4 shrink-0 text-brand-dark" aria-hidden />
-                <span>{question}</span>
+                <span>{t(question)}</span>
               </li>
             ))}
           </ul>

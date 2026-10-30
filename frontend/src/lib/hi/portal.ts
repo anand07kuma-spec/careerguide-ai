@@ -202,6 +202,17 @@ export const HI: Record<string, string> = {
   "Adults on staff": "स्टाफ़ में शामिल बड़े",
   "Places left": "बची हुई जगहें",
   "Seats used": "इस्तेमाल की गई सीटें",
+  "Accounts that opened a link": "वे अकाउंट जिनोंने लिंक खोला",
+  "Invites not yet accepted": "वे आमंत्रण जो अभी स्वीकार नहीं हुए",
+  "Counsellors and administrators": "काउंसलर और प्रशासक",
+  "{n} in this tier": "इस टियर में {n} जगहें",
+  "School portal": "स्कूल का पोर्टल",
+  "Counsellor practice": "काउंसलर की प्रैक्टिस",
+  "closed by the platform": "प्लेटफ़ॉर्म ने इसे बंद कर दिया है",
+  "This deployment has no portal subdomains configured, so the portal is reached at":
+    "इस डिप्लॉयमेंट में पोर्टल सबडोमेन सेट नहीं हैं, इसलिए पोर्टल इस पते पर खुलता है",
+  "and the address above is its name rather than a hostname.":
+    "और ऊपर दिया पता उसका होस्टनेम नहीं, बल्कि उसका नाम है।",
 
   // The roster, including the seat an unsent invitation still holds.
   "Nobody yet": "अभी कोई नहीं",
@@ -234,4 +245,27 @@ export const HI: Record<string, string> = {
   "no price is set on this platform": "इस प्लेटफ़ॉर्म पर कोई कीमत तय नहीं",
   "There is no buy button on this screen. A bigger tier is arranged with the platform by a person, and no card moves a seat.":
     "इस स्क्रीन पर खरीदने का कोई बटन नहीं। बड़ा टियर प्लेटफ़ॉर्म से किसी इंसान के ज़रिए तय होता है, और कार्ड चलाकर सीट नहीं मिलती।",
+
+  // The outcome panel under the invite form, and the member's own view of a portal.
+  // These reached the screen as plain text or as a template literal, where a key built
+  // with `${…}` can never match the dictionary, so both are now built with `tf()`.
+  "No new place was created.": "कोई नई जगह नहीं बनी।",
+  "{n} place now held.": "{n} जगह अब रिज़र्व है।",
+  "{n} places now held.": "{n} जगहें अब रिज़र्व हैं।",
+  "Every one of them was written to an address by mail.": "उनमें हर एक ईमेल से उसके पते पर भेज दी गई।",
+  "The letters did not all go out. The places are still held, and the link can be handed over another way.":
+    "चिट्ठियाँ पूरी नहीं भेज जा सकीं। जगहें फिर भी रिज़र्व हैं, और लिंक किसी और तरीके से दिया जा सकता है।",
+  "The letters did not all go out: {detail}. The places are still held, and the link can be handed over another way.":
+    "चिट्ठियाँ पूरी नहीं भेज जा सकीं: {detail}. जगहें फिर भी रिज़र्व हैं, और लिंक किसी और तरीके से दिया जा सकता है।",
+  "Already on the roster, and their earlier link still works: {names}":
+    "पहले से सूची में हैं, और उनका पिछला लिंक भी काम करता है: {names}",
+  "Not a readable address, and nothing was created: {names}":
+    "पठनीय पता नहीं मिला, और कुछ भी नहीं बनाया गया: {names}",
+  "{n} places left after this.": "इसके बाद {n} जगहें बची हैं।",
+  "Stay": "रहें",
+  "Leave": "निकलें",
+  "You can come back only if the portal writes to your address again.":
+    "आप वापस तभी आ पाएँगे जब यह पोर्टल दोबारा आपके पते पर लिखे।",
+  "You will stop appearing on {name}'s roster, and its staff will no longer see your place. Nothing you wrote is deleted.":
+    "आप {name} की सूची में नहीं दिखेंगे, और वहाँ के स्टाफ़ को आपकी जगह नहीं दिखेगी। आपने जो कुछ लिखा है, वह नहीं मिटेगा।",
 };

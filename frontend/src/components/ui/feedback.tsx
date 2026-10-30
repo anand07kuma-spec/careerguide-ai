@@ -272,7 +272,11 @@ export function Stat({
     <>
       <p className="text-xs font-medium uppercase tracking-wide text-muted">{t(label)}</p>
       <p className={cn("mt-1.5 text-2xl font-semibold leading-none", accent)}>{value}</p>
-      {hint ? <p className="mt-2 text-xs text-muted">{hint}</p> : null}
+      {hint ? (
+        <p className="mt-2 text-xs text-muted">
+          {typeof hint === "string" ? t(hint) : hint}
+        </p>
+      ) : null}
       {footer}
     </>
   );

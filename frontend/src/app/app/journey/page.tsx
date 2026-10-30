@@ -27,7 +27,7 @@ import {
   Stat,
 } from "@/components/ui/feedback";
 import { api } from "@/lib/api";
-import { useTf } from "@/lib/i18n";
+import { translate, useT, useTf } from "@/lib/i18n";
 import { useResource } from "@/lib/use-resource";
 import type { JourneyEvent } from "@/lib/types";
 import { cn, relativeTime } from "@/lib/utils";
@@ -49,9 +49,9 @@ const KIND_META: Record<string, { label: string; icon: LucideIcon; tint: string 
 
 function kindLabel(kind: string) {
   const known = KIND_META[kind];
-  if (known) return known.label;
+  if (known) return translate(known.label);
   const words = kind.replace(/_/g, " ").trim();
-  return words.length > 0 ? words.charAt(0).toUpperCase() + words.slice(1) : "Activity";
+  return words.length > 0 ? words.charAt(0).toUpperCase() + words.slice(1) : translate("Activity");
 }
 
 function dayKey(iso: string) {
@@ -61,12 +61,12 @@ function dayKey(iso: string) {
 
 function dayLabel(iso: string) {
   const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return "Sometime";
+  if (Number.isNaN(date.getTime())) return translate("Sometime");
   const today = new Date();
   const yesterday = new Date(today);
   yesterday.setDate(today.getDate() - 1);
-  if (date.toDateString() === today.toDateString()) return "Today";
-  if (date.toDateString() === yesterday.toDateString()) return "Yesterday";
+  if (date.toDateString() === today.toDateString()) return translate("Today");
+  if (date.toDateString() === yesterday.toDateString()) return translate("Yesterday");
   return date.toLocaleDateString(undefined, {
     weekday: "short",
     day: "numeric",
@@ -76,6 +76,7 @@ function dayLabel(iso: string) {
 }
 
 export default function JourneyPage() {
+  const t = useT();
   const tf = useTf();
   const loadJourney = useCallback(() => api.journey(), []);
   const loadEvents = useCallback(() => api.journeyEvents(60), []);
@@ -132,7 +133,7 @@ export default function JourneyPage() {
       description="A record of everything you've explored so far — chats, questions, careers you saved, plans you started. It is a story, not a score."
       badge={
         <Badge tone="teal" icon={<Compass className="h-3.5 w-3.5" aria-hidden />}>
-          Exploration, not ranking
+          {t("Exploration, not ranking")}
         </Badge>
       }
     >
@@ -197,8 +198,9 @@ export default function JourneyPage() {
                   tone="teal"
                 />
                 <p className="text-xs leading-relaxed text-muted">
-                  Every number here just counts things you explored. Nobody is ranked by it, and
-                  taking a break never erases anything.
+                  {t(
+                    "Every number here just counts things you explored. Nobody is ranked by it, and taking a break never erases anything.",
+                  )}
                 </p>
               </div>
             ) : null}
@@ -218,7 +220,7 @@ export default function JourneyPage() {
                   onClick={reloadEvents}
                   className="rounded-full border border-line bg-surface px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:border-brand-light hover:text-ink"
                 >
-                  Refresh
+                  {t("Refresh")}
                 </button>
               ) : undefined
             }
@@ -241,10 +243,10 @@ export default function JourneyPage() {
                 action={
                   <div className="flex flex-wrap items-center justify-center gap-2">
                     <LinkButton href="/app/call" size="sm">
-                      Start a conversation
+                      {t("Start a conversation")}
                     </LinkButton>
                     <LinkButton href="/app/careers" size="sm" variant="outline">
-                      Browse careers
+                      {t("Browse careers")}
                     </LinkButton>
                   </div>
                 }
@@ -275,7 +277,7 @@ export default function JourneyPage() {
                           onClick={() => setKindFilter("all")}
                           className="rounded-full border border-line bg-surface px-3 py-1.5 text-xs font-medium text-muted hover:border-brand-light hover:text-ink"
                         >
-                          Show everything
+                          {t("Show everything")}
                         </button>
                       }
                     />
@@ -332,8 +334,9 @@ export default function JourneyPage() {
                       </section>
                     ))}
                     <p className="text-xs leading-relaxed text-muted">
-                      This timeline is only a record of what you explored. It is private to you, it
-                      never grades anything, and skipping days changes nothing.
+                      {t(
+                        "This timeline is only a record of what you explored. It is private to you, it never grades anything, and skipping days changes nothing.",
+                      )}
                     </p>
                   </div>
                 )}

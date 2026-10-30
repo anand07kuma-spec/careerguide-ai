@@ -31,6 +31,14 @@ export const HI: Record<string, string> = {
   "Gentle questions about what you enjoy. Answers become small, early signals — never a fixed profile or a verdict.":
     "आपको क्या पसंद है, इस पर आसान सवाल। इनके जवाब छोटे-छोटे शुरुआती संकेत बनते हैं — कोई पक्की प्रोफ़ाइल या फ़ैसला कभी नहीं।",
   "Answer a question": "एक सवाल का जवाब दें",
+  // The buttons and the badge on this screen were bare JSX children, so the entries above
+  // were never asked for them and a Hindi reader saw English under a Hindi heading.
+  "Early signals, not labels": "शुरुआती संकेत, लेबल नहीं",
+  "Next question": "अगला सवाल",
+  "Back to the start": "शुरुआत में वापस",
+  "Change my answer": "अपना जवाब बदलें",
+  "Save my answer": "मेरा जवाब सेव करें",
+  "Skip this one": "इसे छोड़ दें",
   "Getting questions ready…": "सवाल तैयार हो रहे हैं…",
   "Reload questions": "सवाल फिर से लोड करें",
   "No questions available right now": "अभी कोई सवाल उपलब्ध नहीं है",
@@ -40,6 +48,8 @@ export const HI: Record<string, string> = {
   "Answer in English, Hindi or Hinglish — whatever feels natural. There is no right or wrong answer.":
     "जवाब अंग्रेज़ी, हिन्दी या हिंग्लिश में दें — जैसे आपको सहज लगे। कोई जवाब सही या ग़लत नहीं होता।",
   "Also save to my last conversation": "मेरी आख़िरी बातचीत में भी सेव करें",
+  "Adds this answer to conversation #{id} so your guide can use it.":
+    "यह जवाब बातचीत #{id} में भी जोड़ देगा ताकि आपके गाइड इसे इस्तेमाल कर सकें।",
   "What we've noticed so far": "अब तक हमने जो देखा",
   // The class 6-8 screen and the older one describe the same panel in two strengths; both
   // say "not a fixed profile", so neither Hindi version says anything more.
@@ -52,6 +62,21 @@ export const HI: Record<string, string> = {
   "No signals yet": "अभी कोई संकेत नहीं",
   "Answer one of the questions above, or have a chat with your guide, and small observations will start appearing here.":
     "ऊपर दिए किसी एक सवाल का जवाब दें, या अपने गाइड से बात करें — यहाँ छोटी-छोटी देखी गई बातें आने लगेंगी।",
+  // Each observation says where the signal came from. The two source words live in a
+  // module-level table written in lowercase, and a table cannot call a hook, so they are
+  // looked up where they render.
+  "Noticed through {source}": "{source} के ज़रिए देखा गया",
+  "a chat with your guide": "अपने गाइड से एक बातचीत",
+  "an interest question you answered": "रुचि का एक सवाल जिसका आपने जवाब दिया",
+  // Two sentences the interest screen prints as the summary's `note`, so they arrive from the
+  // server and no source file holds them for `hi-coverage`. `CardHeader` puts a string
+  // `description` through the lookup, which is what makes these keys reachable.
+  "Nothing has been explored yet, which is a perfectly fine place to start. Answer a few prompts or have one conversation and themes will appear here.":
+    "अभी कुछ भी देखा नहीं गया, जो कि बिल्कुल ठीक है। कुछ सवालों के जवाब दें या एक बातचीत करें — यहाँ रुचियों के समूह दिखने लगेंगे।",
+  "These are exploratory observations from things you chose to share. They are not a psychological assessment or an aptitude result, and they can change over time.":
+    "ये उन्हीं बातों से ली गईं देखी गई बातें हैं जो आपने बताना चुना। यह मानसिक मूल्यांकन नहीं है, न ही योग्यता का नतीजा, और वक़्त के साथ ये बदल सकती हैं।",
+  "Saving…": "सेव हो रहा है…",
+  "{n} selected": "{n} चुने गए",
   "Interest summary": "रुचि का सारांश",
   "We couldn't load your summary": "आपका सारांश नहीं खुल सका",
   "Nothing to summarise yet": "अभी सारांश के लिए कुछ नहीं है",

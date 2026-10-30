@@ -191,7 +191,7 @@ export default function ContactPage() {
 
           {/* Honeypot: bots fill every field they find, people never see this one. */}
           <div hidden aria-hidden>
-            <label htmlFor="contact-company">Company</label>
+            <label htmlFor="contact-company">{t("Company")}</label>
             <input id="contact-company" name="company" tabIndex={-1} autoComplete="off" />
           </div>
 

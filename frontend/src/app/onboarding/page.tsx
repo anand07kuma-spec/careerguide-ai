@@ -104,7 +104,7 @@ export default function OnboardingPage() {
     } catch (error) {
       setSubmitError(
         error instanceof Error
-          ? error.message
+          ? t(error.message)
           : t("Something went wrong while saving. Please try again."),
       );
     } finally {

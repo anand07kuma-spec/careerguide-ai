@@ -193,7 +193,7 @@ export function RosterPanel({
         footer={
           <>
             <Button variant="ghost" onClick={() => setConfirming(null)}>
-              Keep it
+              {t("Keep it")}
             </Button>
             <Button
               variant="danger"

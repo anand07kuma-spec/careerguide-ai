@@ -18,6 +18,8 @@ import { Card } from "@/components/ui/card";
 import type { Metadata } from "next";
 
 import { DEFAULT_DESCRIPTION, pageMeta } from "@/lib/site";
+import { publicLang } from "@/lib/request-lang";
+import { makeT } from "@/lib/public-i18n";
 
 /**
  * The landing page is the one URL a stranger arrives at without context, so it
@@ -99,7 +101,20 @@ const HONEST_LIMITS = [
   "Spoken replies need internet. If voice fails, the same answer is still readable as text.",
 ];
 
-export default function LandingPage() {
+// The landing page resolves its reader's language from the request, so it cannot be
+// prerendered into one language for everybody — the same opt-out `/careers` declares.
+// Without it the build fails on a route that is deliberately runtime data.
+export const instant = false;
+
+export default async function LandingPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ lang?: string }>;
+}) {
+  // Rendered in the reader's language before the HTML exists, like every other public
+  // page: this is the one URL a stranger arrives at, and a crawler or a parent on a slow
+  // phone should not have to run a script to read it in Hindi.
+  const t = makeT(await publicLang(await searchParams));
   return (
     <div className="bg-canvas">
       <header className="sticky top-0 z-30 border-b border-line bg-surface/85 backdrop-blur">
@@ -107,23 +122,23 @@ export default function LandingPage() {
           <Wordmark />
           <nav className="hidden items-center gap-7 text-sm font-medium text-muted md:flex">
             <a className="hover:text-ink" href="#how">
-              How it works
+              {t("How it works")}
             </a>
             <a className="hover:text-ink" href="#parents">
-              For parents
+              {t("For parents")}
             </a>
             <a className="hover:text-ink" href="#safety">
-              Safety and privacy
+              {t("Safety and privacy")}
             </a>
             <Link className="hover:text-ink" href="/pricing">
-              Pricing
+              {t("Pricing")}
             </Link>
           </nav>
           <div className="flex items-center gap-2">
             {/* There is no sign-in to offer: this device is the account, so the only
                 action a visitor needs is the one question on the first screen. */}
             <LinkButton size="sm" href="/onboarding">
-              Get started
+              {t("Get started")}
               <ArrowRight className="h-4 w-4" aria-hidden />
             </LinkButton>
           </div>
@@ -140,37 +155,37 @@ export default function LandingPage() {
           <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-14 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:py-20">
             <div>
               <Badge tone="teal" className="mb-5">
-                For students in class 6 to 12, and the parents who support them
+                {t("For students in class 6 to 12, and the parents who support them")}
               </Badge>
               <h1 className="text-balance text-4xl font-bold leading-[1.1] tracking-tight text-heading sm:text-5xl">
-                Career guidance that feels like a conversation, not an examination.
+                {t("Career guidance that feels like a conversation, not an examination.")}
               </h1>
               <p className="mt-5 max-w-xl text-lg leading-relaxed text-muted">
-                Talk about what you enjoy, what you are curious about and what worries you.
-                CareerGuide AI helps you explore real careers, understand the routes and costs,
-                and take one small next step — in Hindi, English or Hinglish.
+                {t(
+                  "Talk about what you enjoy, what you are curious about and what worries you. CareerGuide AI helps you explore real careers, understand the routes and costs, and take one small next step — in Hindi, English or Hinglish.",
+                )}
               </p>
               <div className="mt-8 flex flex-wrap items-center gap-3">
                 <LinkButton size="lg" href="/onboarding">
-                  Start exploring
+                  {t("Start exploring")}
                   <ArrowRight className="h-4 w-4" aria-hidden />
                 </LinkButton>
                 <LinkButton size="lg" variant="outline" href="/onboarding?role=parent">
-                  I am a parent
+                  {t("I am a parent")}
                 </LinkButton>
               </div>
               <ul className="mt-7 flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted">
                 <li className="flex items-center gap-2">
                   <ShieldCheck className="h-4 w-4 text-success" aria-hidden />
-                  No career is called impossible
+                  {t("No career is called impossible")}
                 </li>
                 <li className="flex items-center gap-2">
                   <EarOff className="h-4 w-4 text-success" aria-hidden />
-                  Never listens in the background
+                  {t("Never listens in the background")}
                 </li>
                 <li className="flex items-center gap-2">
                   <Languages className="h-4 w-4 text-success" aria-hidden />
-                  Hindi · English · Hinglish
+                  {t("Hindi · English · Hinglish")}
                 </li>
               </ul>
             </div>
@@ -179,29 +194,34 @@ export default function LandingPage() {
             <Card className="overflow-hidden p-0 shadow-lift">
               <div className="flex items-center gap-3 border-b border-line bg-navy px-5 py-4">
                 <Wordmark tone="white" compact />
-                <span className="ml-auto text-xs font-medium text-white/60">A typical first chat</span>
+                <span className="ml-auto text-xs font-medium text-white/60">{t("A typical first chat")}</span>
               </div>
               <div className="space-y-4 px-5 py-6 text-sm leading-relaxed">
                 <p className="ml-auto max-w-[85%] rounded-2xl rounded-br-md bg-brand px-4 py-3 text-white">
+                  {/* Sample chat, deliberately left in Hinglish: its whole point is that a
+                      student can type in any script and be understood. */}
+                  {/* hi-coverage:ignore */}
                   Mujhe drawing pasand hai, but papa-engineer banna chahte hain. Kya dono possible hai?
                 </p>
                 <p className="max-w-[88%] rounded-2xl rounded-bl-md bg-canvas px-4 py-3 text-ink">
-                  Both can stay open — many products, games and buildings need designers, and some
-                  engineering jobs include drawing too. May I ask one small thing? When you draw, is
-                  it characters, or how things are built, or colours and layouts?
+                  {t(
+                    "Both can stay open — many products, games and buildings need designers, and some engineering jobs include drawing too. May I ask one small thing? When you draw, is it characters, or how things are built, or colours and layouts?",
+                  )}
                 </p>
                 <p className="ml-auto max-w-[70%] rounded-2xl rounded-br-md bg-brand px-4 py-3 text-white">
+                  {/* hi-coverage:ignore */}
                   How things are built, jaise rooms aur machines
                 </p>
                 <p className="max-w-[88%] rounded-2xl rounded-bl-md border border-brand-mist bg-brand-mist/40 px-4 py-3 text-ink">
-                  That is a real interest theme worth exploring. Three paths to look at together:
-                  architecture, industrial design and mechanical drafting. None of them needs an
-                  expensive course to test first.
+                  {t(
+                    "That is a real interest theme worth exploring. Three paths to look at together: architecture, industrial design and mechanical drafting. None of them needs an expensive course to test first.",
+                  )}
                 </p>
               </div>
               <div className="border-t border-line bg-canvas px-5 py-3 text-xs text-muted">
-                Exploratory suggestion based on what was said. Not a prediction, and no paid course is
-                being recommended.
+                {t(
+                  "Exploratory suggestion based on what was said. Not a prediction, and no paid course is being recommended.",
+                )}
               </div>
             </Card>
           </div>
@@ -210,7 +230,7 @@ export default function LandingPage() {
         {/* Features */}
         <section className="mx-auto max-w-6xl px-4 pb-4 sm:px-6">
           <h2 className="text-2xl font-bold tracking-tight text-heading sm:text-3xl">
-            Everything a first conversation should do
+            {t("Everything a first conversation should do")}
           </h2>
           <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {FEATURES.map((item) => (
@@ -218,8 +238,8 @@ export default function LandingPage() {
                 <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-brand-mist text-brand">
                   <item.icon className="h-5 w-5" aria-hidden />
                 </span>
-                <h3 className="mt-4 text-base font-semibold text-heading">{item.title}</h3>
-                <p className="mt-1.5 text-sm leading-relaxed text-muted">{item.body}</p>
+                <h3 className="mt-4 text-base font-semibold text-heading">{t(item.title)}</h3>
+                <p className="mt-1.5 text-sm leading-relaxed text-muted">{t(item.body)}</p>
               </Card>
             ))}
           </div>
@@ -234,8 +254,8 @@ export default function LandingPage() {
                   <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-navy text-sm font-semibold text-white">
                     {index + 1}
                   </span>
-                  <h3 className="mt-4 text-base font-semibold text-heading">{step.title}</h3>
-                  <p className="mt-1.5 text-sm leading-relaxed text-muted">{step.body}</p>
+                  <h3 className="mt-4 text-base font-semibold text-heading">{t(step.title)}</h3>
+                  <p className="mt-1.5 text-sm leading-relaxed text-muted">{t(step.body)}</p>
                 </div>
               ))}
             </div>
@@ -247,46 +267,50 @@ export default function LandingPage() {
           <div className="grid items-center gap-8 lg:grid-cols-[0.95fr_1.05fr]">
             <div>
               <Badge tone="brand" className="mb-4">
-                For parents and guardians
+                {t("For parents and guardians")}
               </Badge>
               <h2 className="text-2xl font-bold tracking-tight text-heading sm:text-3xl">
-                Help without pressure
+                {t("Help without pressure")}
               </h2>
               <p className="mt-4 leading-relaxed text-muted">
-                Most arguments about careers start because neither side knows what the other is
-                afraid of. The parent dashboard shows what interests your child is exploring and
-                what evidence sits behind a suggestion — never a secret score, never a diagnosis,
-                never a message your child did not choose to share.
+                {t(
+                  "Most arguments about careers start because neither side knows what the other is afraid of. The parent dashboard shows what interests your child is exploring and what evidence sits behind a suggestion — never a secret score, never a diagnosis, never a message your child did not choose to share.",
+                )}
               </p>
               <ul className="mt-5 space-y-2.5 text-sm">
                 <li className="flex gap-2.5">
                   <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-brand" aria-hidden />
-                  Sharing settings belong to the student. Conversations stay private unless they opt in.
+                  {t(
+                    "Sharing settings belong to the student. Conversations stay private unless they opt in.",
+                  )}
                 </li>
                 <li className="flex gap-2.5">
                   <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-brand" aria-hidden />
-                  Wording that helps you discuss a choice calmly, instead of insisting on one.
+                  {t(
+                    "Wording that helps you discuss a choice calmly, instead of insisting on one.",
+                  )}
                 </li>
                 <li className="flex gap-2.5">
                   <BadgeIndianRupee className="mt-0.5 h-4 w-4 shrink-0 text-brand" aria-hidden />
-                  Realistic cost pictures, including lower-cost routes and what to verify yourself.
+                  {t(
+                    "Realistic cost pictures, including lower-cost routes and what to verify yourself.",
+                  )}
                 </li>
               </ul>
             </div>
             <Card className="p-6">
               <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-                An example of what the parent view says
+                {t("An example of what the parent view says")}
               </p>
               <p className="mt-3 border-l-2 border-brand pl-4 text-sm leading-relaxed text-ink">
-                “Your child keeps coming back to how things are put together. That is an
-                observation from two conversations, not a conclusion. Before deciding anything,
-                try one low-risk step together: a free design video, then a walk through a workshop
-                or office where such work happens. Architecture, industrial design and mechanical
-                drafting all begin from this interest, and their costs differ a lot — worth checking
-                government college fees before ruling anything out.”
+                {t(
+                  "“Your child keeps coming back to how things are put together. That is an observation from two conversations, not a conclusion. Before deciding anything, try one low-risk step together: a free design video, then a walk through a workshop or office where such work happens. Architecture, industrial design and mechanical drafting all begin from this interest, and their costs differ a lot — worth checking government college fees before ruling anything out.”",
+                )}
               </p>
               <p className="mt-4 text-xs text-muted">
-                No institution is named, no fee is claimed, and no career is presented as settled.
+                {t(
+                  "No institution is named, no fee is claimed, and no career is presented as settled.",
+                )}
               </p>
             </Card>
           </div>
@@ -296,11 +320,12 @@ export default function LandingPage() {
         <section id="safety" className="scroll-mt-20 bg-navy py-14 text-white lg:py-20">
           <div className="mx-auto max-w-6xl px-4 sm:px-6">
             <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
-              What CareerGuide AI will not do
+              {t("What CareerGuide AI will not do")}
             </h2>
             <p className="mt-3 max-w-2xl leading-relaxed text-white/70">
-              A guidance tool for children is only useful if it can be trusted. These limits are
-              built into the app, not written as policy you have to read.
+              {t(
+                "A guidance tool for children is only useful if it can be trusted. These limits are built into the app, not written as policy you have to read.",
+              )}
             </p>
             <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {[
@@ -337,17 +362,19 @@ export default function LandingPage() {
               ].map((item) => (
                 <div key={item.title} className="rounded-card border border-white/10 bg-white/5 p-5">
                   <item.icon className="h-5 w-5 text-brand-light" aria-hidden />
-                  <h3 className="mt-3 text-sm font-semibold">{item.title}</h3>
-                  <p className="mt-1.5 text-sm leading-relaxed text-white/65">{item.body}</p>
+                  <h3 className="mt-3 text-sm font-semibold">{t(item.title)}</h3>
+                  <p className="mt-1.5 text-sm leading-relaxed text-white/65">{t(item.body)}</p>
                 </div>
               ))}
             </div>
 
             <div className="mt-10 rounded-card border border-warning/30 bg-warning/10 p-5">
-              <h3 className="text-sm font-semibold text-warning-mist">Please read this honestly</h3>
+              <h3 className="text-sm font-semibold text-warning-mist">
+                {t("Please read this honestly")}
+              </h3>
               <ul className="mt-2 space-y-1.5 text-sm leading-relaxed text-white/80">
                 {HONEST_LIMITS.map((line) => (
-                  <li key={line}>· {line}</li>
+                  <li key={line}>· {t(line)}</li>
                 ))}
               </ul>
             </div>
@@ -359,16 +386,17 @@ export default function LandingPage() {
           <Card className="flex flex-col items-start gap-6 p-8 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="text-xl font-bold tracking-tight text-heading sm:text-2xl">
-                Begin with one conversation
+                {t("Begin with one conversation")}
               </h2>
               <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted">
-                No test to prepare for, no form full of personal details. Just a few honest answers
-                about what you like and what you are curious about.
+                {t(
+                  "No test to prepare for, no form full of personal details. Just a few honest answers about what you like and what you are curious about.",
+                )}
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
               <LinkButton size="lg" className="shrink-0" href="/onboarding">
-                Get started
+                {t("Get started")}
                 <ArrowRight className="h-4 w-4" aria-hidden />
               </LinkButton>
             </div>

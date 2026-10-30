@@ -9,7 +9,7 @@ import { LoadingPanel } from "@/components/ui/feedback";
 import { Modal } from "@/components/ui/modal";
 import { Toggle } from "@/components/ui/field";
 import { api, ApiError } from "@/lib/api";
-import { useT } from "@/lib/i18n";
+import { useT, useTf } from "@/lib/i18n";
 import { useToast } from "@/components/ui/toast";
 import { useResource } from "@/lib/use-resource";
 import type { MyMembership } from "@/lib/types";
@@ -31,6 +31,7 @@ export function MemberView({
   onLeft: () => void;
 }) {
   const t = useT();
+  const tf = useTf();
   const toast = useToast();
   const [busy, setBusy] = useState(false);
   const [leaving, setLeaving] = useState(false);
@@ -52,7 +53,7 @@ export function MemberView({
       const row = await api.setSharing(slug, next);
       setShared(row.share_results);
       notes.reload();
-      toast.success(next ? "Your portal can now see your finished reports." : "Your results are private again.");
+      toast.success(next ? t("Your portal can now see your finished reports.") : t("Your results are private again."));
     } catch (caught) {
       setFailure(caught instanceof ApiError ? caught.message : t("Something went wrong."));
     } finally {
@@ -150,21 +151,19 @@ export function MemberView({
         open={showLeave}
         onClose={() => setShowLeave(false)}
         title="Leave this portal?"
-        description={`You will stop appearing on ${membership.name}'s roster, and its staff will no longer see your place. Nothing you wrote is deleted.`}
+        description={tf("You will stop appearing on {name}'s roster, and its staff will no longer see your place. Nothing you wrote is deleted.", { name: membership.name })}
         footer={
           <>
             <Button variant="ghost" onClick={() => setShowLeave(false)}>
-              Stay
+              {t("Stay")}
             </Button>
             <Button variant="danger" loading={leaving} onClick={() => void leave()}>
-              Leave
+              {t("Leave")}
             </Button>
           </>
         }
       >
-        <p className="text-sm text-muted">
-          You can come back only if the portal writes to your address again.
-        </p>
+        <p className="text-sm text-muted">{t("You can come back only if the portal writes to your address again.")}</p>
       </Modal>
     </div>
   );

@@ -17,6 +17,8 @@ import { HI as BILLING } from "./billing";
 import { HI as COMMON } from "./common";
 import { HI as DASHBOARD } from "./dashboard";
 import { HI as CATALOGUE } from "./catalogue";
+import { HI as SCHOLARSHIPS } from "./scholarships";
+import { HI as STUDENT_TOOLS } from "./student-tools";
 import { HI as REPORTS } from "./reports";
 import { HI as PLANS_JOURNEY } from "./plans-journey";
 import { HI as STREAM } from "./stream";
@@ -28,6 +30,7 @@ import { HI as RESUME } from "./resume";
 import { HI as ROADMAP } from "./roadmap";
 import { HI as TRUST } from "./trust";
 import { HI as PRICING } from "./pricing";
+import { HI as LANDING } from "./landing";
 import { HI as PUBLIC_PAGES } from "./public-pages";
 import { HI as STUDY_ABROAD } from "./study-abroad";
 import { HI as WELCOME } from "./welcome";
@@ -48,6 +51,8 @@ export const HI: Record<string, string> = {
   ...COMMON,
   ...DASHBOARD,
   ...CATALOGUE,
+  ...SCHOLARSHIPS,
+  ...STUDENT_TOOLS,
   ...REPORTS,
   ...PLANS_JOURNEY,
   ...STREAM,
@@ -59,6 +64,7 @@ export const HI: Record<string, string> = {
   ...ROADMAP,
   ...TRUST,
   ...PRICING,
+  ...LANDING,
   ...PUBLIC_PAGES,
   ...STUDY_ABROAD,
   ...WELCOME,

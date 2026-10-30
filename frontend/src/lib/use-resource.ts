@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError } from "./api";
+import { translate } from "./i18n";
 
 export interface Resource<T> {
   state: "loading" | "ready" | "error";
@@ -11,9 +12,13 @@ export interface Resource<T> {
 }
 
 export function messageFor(error: unknown): string {
-  if (error instanceof ApiError) return error.message;
-  if (error instanceof Error) return error.message;
-  return "Something went wrong.";
+  // A sentence the app wrote itself — the server is unreachable, a reply this screen cannot
+  // parse — is interface copy and belongs in the reader's language. A message from the API
+  // is content, and `translate` answers with the input when the dictionary has no such key,
+  // so the two travel through the same lookup.
+  if (error instanceof ApiError) return translate(error.message);
+  if (error instanceof Error) return translate(error.message);
+  return translate("Something went wrong.");
 }
 
 /**

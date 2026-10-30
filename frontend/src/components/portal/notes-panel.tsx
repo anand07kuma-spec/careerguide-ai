@@ -191,7 +191,7 @@ export function NotesPanel({ slug, clients }: { slug: string; clients: MemberRow
         footer={
           <>
             <Button variant="ghost" onClick={() => setConfirming(null)}>
-              Keep it
+              {t("Keep it")}
             </Button>
             <Button variant="danger" onClick={() => confirming && void destroy(confirming)}>
               Delete

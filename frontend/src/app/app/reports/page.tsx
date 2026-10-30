@@ -114,7 +114,7 @@ function RecommendationBlock({ item }: { item: ReportRecommendation }) {
 
       <div className="mt-2.5 flex flex-wrap items-center gap-2">
         <EvidenceBadge level={item.evidence_level} />
-        <span className="text-xs text-muted">{item.evidence_note}</span>
+        <span className="text-xs text-muted">{t(item.evidence_note)}</span>
       </div>
 
       {item.supporting_statements.length > 0 ? (
@@ -270,7 +270,7 @@ export default function ReportsScreen() {
             {/* Framing — large, at the very top */}
             {content.framing ? (
               <Card className="border-brand-light/50 bg-brand-mist/40">
-                <p className="text-lg font-semibold leading-snug text-ink sm:text-xl">{content.framing}</p>
+                <p className="text-lg font-semibold leading-snug text-ink sm:text-xl">{t(content.framing)}</p>
               </Card>
             ) : null}
 
@@ -287,12 +287,13 @@ export default function ReportsScreen() {
               <p className="text-xs">{t("Generated")} {generatedDate(report.generated_at)}</p>
             </div>
 
-            {/* Note — prominent, verbatim */}
+            {/* Note — prominent, in the server's own words. `t` only renames a sentence this
+                app wrote about the screen; anything it has no key for prints as it arrived. */}
             {content.note ? (
               <Card className="border-warning/40 bg-warning-mist/50">
                 <p className="flex items-start gap-2 text-sm leading-relaxed text-amber-900">
                   <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-                  {content.note}
+                  {t(content.note)}
                 </p>
               </Card>
             ) : null}

@@ -1193,7 +1193,7 @@ export default function SettingsScreen() {
           ) : null}
 
           <div className="space-y-2">
-            <SubHeading>What this account does not have</SubHeading>
+            <SubHeading>{t("What this account does not have")}</SubHeading>
             <ul className="space-y-2 text-xs leading-relaxed text-muted">
               <li className="flex gap-2">
                 <BellOff className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-500" aria-hidden />
@@ -1241,11 +1241,13 @@ export default function SettingsScreen() {
       >
         <div className="space-y-5">
           <div className="space-y-4">
-            <SubHeading>Storage and appearance</SubHeading>
+            <SubHeading>{t("Storage and appearance")}</SubHeading>
             <div className="space-y-3 rounded-2xl bg-canvas p-4">
               <Toggle
                 checked={settings?.save_history ?? false}
                 onChange={(next) => void patchSettings({ save_history: next })}
+                // `Toggle` takes `t()` over the `label` and `description` it is given, so these
+                // two lines reach the dictionary already — the `=>` in `onChange` above hides
                 label="Save my conversation history"
                 description="If this is off, closing a conversation deletes its messages."
               />
@@ -1341,7 +1343,7 @@ export default function SettingsScreen() {
           )}
 
           <div className="space-y-3">
-            <SubHeading>Consent records</SubHeading>
+            <SubHeading>{t("Consent records")}</SubHeading>
             <p className="text-xs text-muted">
               {t(
                 "Exactly what you have agreed to, with the date. You can withdraw any of these here at any time — that is what this screen is for.",
@@ -1361,7 +1363,12 @@ export default function SettingsScreen() {
                       checked={granted}
                       disabled={busyToggle === `consent:${entry.scope}`}
                       onChange={(next) => void setConsentScope(entry.scope, next)}
-                      label={entry.label}
+                      // The table above stays English source text — a module-level list of rows
+                      // cannot call a hook — so each row is translated where it renders.
+                      // `Toggle` looks up its own `label` too; asking twice costs one dictionary
+                      // read that returns the first answer, and gives up the only way this file's
+                      // row table can be checked against the dictionary.
+                      label={t(entry.label)}
                       description={entry.grant}
                     />
                     <p className="mt-2 text-[11px] text-muted">
@@ -1402,7 +1409,7 @@ export default function SettingsScreen() {
       >
         <div className="space-y-5">
           <div>
-            <SubHeading>Sharing code</SubHeading>
+            <SubHeading>{t("Sharing code")}</SubHeading>
             <div className="mt-2">
               {shareCode.state === "loading" ? (
                 <Skeleton className="h-24" />
@@ -1471,7 +1478,7 @@ export default function SettingsScreen() {
           </div>
 
           <div>
-            <SubHeading>Adults who can see your summary</SubHeading>
+            <SubHeading>{t("Adults who can see your summary")}</SubHeading>
             <div className="mt-2">
               {guardians.state === "loading" ? (
                 <LoadingPanel label="Checking linked adults…" />
@@ -1594,6 +1601,8 @@ export default function SettingsScreen() {
       <Modal
         open={resetModal}
         onClose={() => !resetting && setResetModal(false)}
+        // `Modal` translates the `title` and `description` strings it is handed
+        // (ui/modal.tsx), so this screen does not wrap them a second time.
         title="Start over on this device?"
         description="This browser will be treated as somebody who has never been here."
         footer={
@@ -1619,6 +1628,7 @@ export default function SettingsScreen() {
       <Modal
         open={eraseModal}
         onClose={() => !erasing && setEraseModal(false)}
+        // `Modal` runs `t()` over this `title` and `description` itself.
         title="Delete this account for good?"
         description="There is no undo, and there is no email to confirm with: this browser's session is the only proof of whose account this is. That is why this dialog is the last step."
         size="lg"
@@ -1704,6 +1714,7 @@ export default function SettingsScreen() {
       <Modal
         open={historyModal}
         onClose={() => !clearingHistory && setHistoryModal(false)}
+        // Translated by `Modal`, not by this screen — see the note on the start-over dialog.
         title="Delete your conversation history?"
         description={tf(
           sessionCount === 1
@@ -1738,6 +1749,7 @@ export default function SettingsScreen() {
       <Modal
         open={removeTarget !== null}
         onClose={() => !removing && setRemoveTarget(null)}
+        // `Modal` translates this `title`; its `description` is already built with `tf()`.
         title="Remove this adult's access?"
         description={
           removeTarget

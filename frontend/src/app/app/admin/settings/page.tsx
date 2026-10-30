@@ -78,9 +78,9 @@ function DeploymentPanel({ config }: { config: AdminDeployment }) {
           />
         </dl>
         <Caption>
-          Neither speech provider is a guaranteed offline path, and the browser falls back to its
-          own voice when the server has no key. Which one spoke is stated on the screen that uses
-          it, not here.
+          {t(
+            "Neither speech provider is a guaranteed offline path, and the browser falls back to its own voice when the server has no key. Which one spoke is stated on the screen that uses it, not here.",
+          )}
         </Caption>
       </Card>
 
@@ -142,9 +142,9 @@ function DeploymentPanel({ config }: { config: AdminDeployment }) {
           <KeyValue label="Clerk webhook secret present" value={<Yes on={config.has_clerk_webhook_secret} />} />
         </dl>
         <Caption>
-          Clerk is optional. Without it a device is the account, and the come-back code is the way
-          back onto it — which is why the code is stretched through 210,000 PBKDF2 rounds rather
-          than relying on the throttle below.
+          {t(
+            "Clerk is optional. Without it a device is the account, and the come-back code is the way back onto it — which is why the code is stretched through 210,000 PBKDF2 rounds rather than relying on the throttle below.",
+          )}
         </Caption>
       </Card>
 
@@ -232,9 +232,9 @@ function DeploymentPanel({ config }: { config: AdminDeployment }) {
           />
         </dl>
         <Caption>
-          The counters live in this process’s memory. One instance means honest limits; a hosted
-          deployment that runs several has a ceiling of the rule times however many are warm, which
-          is a brake rather than a wall.
+          {t(
+            "The counters live in this process’s memory. One instance means honest limits; a hosted deployment that runs several has a ceiling of the rule times however many are warm, which is a brake rather than a wall.",
+          )}
         </Caption>
       </Card>
 
@@ -386,10 +386,9 @@ function AuditPanel() {
       ) : null}
 
       <Caption>
-        What is not in a row: the value a field moved to beyond a resulting true or false, the text
-        of a career entry, the content of a conversation, an IP address, a user agent, or a device
-        string. Reading the log is not logged — an operator looking at the record of the last six
-        months is not an action anybody needs to explain later.
+        {t(
+          "What is not in a row: the value a field moved to beyond a resulting true or false, the text of a career entry, the content of a conversation, an IP address, a user agent, or a device string. Reading the log is not logged — an operator looking at the record of the last six months is not an action anybody needs to explain later.",
+        )}
       </Caption>
     </div>
   );

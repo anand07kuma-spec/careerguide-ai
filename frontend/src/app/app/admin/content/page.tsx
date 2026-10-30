@@ -286,7 +286,7 @@ function CareerRow({ career, onChanged }: { career: AdminCareerRow; onChanged: (
             <Badge tone="neutral">{tf("Class {n}+", { n: career.min_class })}</Badge>
           </p>
           <p className="mt-0.5 text-xs text-muted">
-            {career.category} · <span className="font-mono">{career.slug}</span>
+            {t(career.category)} · <span className="font-mono">{career.slug}</span>
           </p>
           <p className="mt-2 text-sm leading-relaxed text-ink">{career.summary}</p>
         </div>
@@ -705,10 +705,9 @@ function QuestionsPanel() {
       ) : null}
 
       <Caption>
-        Adding, removing and re-scoring items is not done from this screen — a bank is authored in
-        the seed file so that a sitting can be marked the same way twice, and a versioned file is
-        what makes that true. What is offered here is the one safe edit: the wording of an item
-        nobody has answered.
+        {t(
+          "Adding, removing and re-scoring items is not done from this screen — a bank is authored in the seed file so that a sitting can be marked the same way twice, and a versioned file is what makes that true. What is offered here is the one safe edit: the wording of an item nobody has answered.",
+        )}
       </Caption>
     </div>
   );
@@ -733,7 +732,7 @@ function BlogPanel() {
           <Badge tone="neutral">{t("Not editable here")}</Badge>
           <p className="text-sm font-semibold text-ink">{t("Posts are files, not rows")}</p>
         </div>
-        <p className="mt-3 text-sm leading-relaxed text-ink">{status.data.note}</p>
+        <p className="mt-3 text-sm leading-relaxed text-ink">{t(status.data.note)}</p>
         <dl className="mt-3 space-y-1 text-xs text-muted">
           <div>
             <dt className="inline font-medium text-ink">{t("Where:")}</dt>{" "}

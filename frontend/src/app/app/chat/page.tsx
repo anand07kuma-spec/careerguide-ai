@@ -217,7 +217,7 @@ function ChatThread() {
         .catch((error: unknown) => {
           if (isOffline(error)) setBootOffline(true);
           setBootError(
-            error instanceof Error ? error.message : t("Could not open the conversation."),
+            error instanceof Error ? t(error.message) : t("Could not open the conversation."),
           );
         })
         .finally(() => setBooting(false)),
@@ -326,7 +326,7 @@ function ChatThread() {
         }
       } catch (error) {
         setSendError(
-          error instanceof Error ? error.message : t("The guide could not answer just now."),
+          error instanceof Error ? t(error.message) : t("The guide could not answer just now."),
         );
       } finally {
         setSending(false);
@@ -354,7 +354,7 @@ function ChatThread() {
       const fresh = await api.startConversation("chat", spoken);
       await openSession(fresh, []);
     } catch (error) {
-      setBootError(error instanceof Error ? error.message : t("Could not start a new chat."));
+      setBootError(error instanceof Error ? t(error.message) : t("Could not start a new chat."));
     } finally {
       setBooting(false);
     }
@@ -371,7 +371,7 @@ function ChatThread() {
       setMessages([]);
       setBooting(false);
     } catch (error) {
-      toast(error instanceof Error ? error.message : t("Could not close the conversation."), "error");
+      toast(error instanceof Error ? t(error.message) : t("Could not close the conversation."), "error");
     }
   }, [player, session, t, toast]);
 
@@ -383,7 +383,7 @@ function ChatThread() {
       setNotice(t("Earlier messages were deleted from the server."));
       toast(t("Messages deleted."), "success");
     } catch (error) {
-      toast(error instanceof Error ? error.message : t("Could not delete the messages."), "error");
+      toast(error instanceof Error ? t(error.message) : t("Could not delete the messages."), "error");
     }
   }, [session, t, toast]);
 
@@ -588,7 +588,7 @@ function ChatThread() {
                     {message.role === "assistant" ? (
                       <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                         {message.demo_generated ? (
-                          <Badge tone="warning">Demo guide answer</Badge>
+                          <Badge tone="warning">{t("Demo guide answer")}</Badge>
                         ) : null}
                         {message.themes?.length
                           ? message.themes.map((theme) => (

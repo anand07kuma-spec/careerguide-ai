@@ -18,6 +18,7 @@ import { EmptyState, ErrorState, LoadingPanel, SkeletonCard } from "@/components
 import { useToast } from "@/components/ui/toast";
 import { useSession } from "@/lib/session";
 import { api } from "@/lib/api";
+import { translate, useT, useTf } from "@/lib/i18n";
 import { useResource } from "@/lib/use-resource";
 import {
   INTEREST_OPTIONS,
@@ -41,12 +42,19 @@ const SOURCE_LABELS: Record<string, string> = {
 };
 
 function errorMessage(error: unknown) {
-  return error instanceof Error ? error.message : "Something went wrong. Please try again.";
+  // A message from the API is content and stays as written; the fallback is the app's own
+  // sentence, so it goes through the dictionary. `translate` reads the language the mounted
+  // store settled on, which a module-scope helper cannot get from `useT`.
+  return error instanceof Error
+    ? translate(error.message)
+    : translate("Something went wrong. Please try again.");
 }
 
 export default function InterestsPage() {
   const { profile, settings, saveProfile } = useSession();
   const { toast } = useToast();
+  const t = useT();
+  const tf = useTf();
 
   // Classes 6-8 (and the young age bands) get shorter, more concrete sentences.
   const simple = useMemo(() => {
@@ -163,7 +171,7 @@ export default function InterestsPage() {
       }
       badge={
         <Badge tone="teal" icon={<Lightbulb className="h-3.5 w-3.5" aria-hidden />}>
-          Early signals, not labels
+          {t("Early signals, not labels")}
         </Badge>
       }
     >
@@ -194,7 +202,7 @@ export default function InterestsPage() {
                 description="Check the backend is running, then reload this page."
                 action={
                   <Button size="sm" variant="outline" onClick={promptsPanel.reload}>
-                    Reload questions
+                    {t("Reload questions")}
                   </Button>
                 }
               />
@@ -252,16 +260,16 @@ export default function InterestsPage() {
                   <div className="mt-3 flex flex-wrap gap-2">
                     {index + 1 < prompts.length ? (
                       <Button size="sm" onClick={() => goTo(index + 1)}>
-                        Next question
+                        {t("Next question")}
                         <ArrowRight className="h-4 w-4" aria-hidden />
                       </Button>
                     ) : (
                       <Button size="sm" variant="outline" onClick={() => goTo(0)}>
-                        Back to the start
+                        {t("Back to the start")}
                       </Button>
                     )}
                     <Button size="sm" variant="ghost" onClick={() => setResult(null)}>
-                      Change my answer
+                      {t("Change my answer")}
                     </Button>
                   </div>
                 </div>
@@ -269,7 +277,7 @@ export default function InterestsPage() {
                 <div className="space-y-3">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-                      Question {index + 1} of {prompts.length}
+                      {tf("Question {n} of {total}", { n: index + 1, total: prompts.length })}
                     </p>
                     <p className="mt-1.5 text-base font-semibold leading-snug text-ink">
                       {prompt?.question}
@@ -290,7 +298,10 @@ export default function InterestsPage() {
                   {latestSession ? (
                     <Checkbox
                       label="Also save to my last conversation"
-                      description={`Adds this answer to conversation #${latestSession.id} so your guide can use it.`}
+                      description={tf(
+                        "Adds this answer to conversation #{id} so your guide can use it.",
+                        { id: latestSession.id },
+                      )}
                       checked={attachToChat}
                       onChange={(event) => setAttachToChat(event.target.checked)}
                     />
@@ -302,15 +313,15 @@ export default function InterestsPage() {
                   ) : null}
                   <div className="flex flex-wrap items-center gap-2">
                     <Button onClick={() => void submit()} loading={submitting} disabled={!answer.trim()}>
-                      Save my answer
+                      {t("Save my answer")}
                     </Button>
                     <Button variant="outline" onClick={skip} disabled={prompts.length <= 1}>
                       <SkipForward className="h-4 w-4" aria-hidden />
-                      Skip this one
+                      {t("Skip this one")}
                     </Button>
                     {index > 0 ? (
                       <Button variant="ghost" onClick={() => goTo(index - 1)}>
-                        Previous
+                        {t("Previous")}
                       </Button>
                     ) : null}
                   </div>
@@ -347,7 +358,7 @@ export default function InterestsPage() {
                 description="Answer one of the questions above, or have a chat with your guide, and small observations will start appearing here."
                 action={
                   <LinkButton href="/app/call" size="sm">
-                    Talk to your guide
+                    {t("Talk to your guide")}
                   </LinkButton>
                 }
               />
@@ -360,7 +371,7 @@ export default function InterestsPage() {
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <Badge tone="teal">
-                        {THEME_LABELS[observation.theme] ?? observation.theme}
+                        {t(THEME_LABELS[observation.theme] ?? observation.theme)}
                       </Badge>
                       <span className="text-xs text-muted">
                         {relativeTime(observation.created_at)}
@@ -370,7 +381,9 @@ export default function InterestsPage() {
                       &ldquo;{observation.evidence}&rdquo;
                     </p>
                     <p className="mt-1.5 text-xs text-muted">
-                      Noticed through {SOURCE_LABELS[observation.source] ?? observation.source}
+                      {tf("Noticed through {source}", {
+                        source: t(SOURCE_LABELS[observation.source] ?? observation.source),
+                      })}
                     </p>
                   </li>
                 ))}
@@ -388,7 +401,7 @@ export default function InterestsPage() {
             action={
               summaryPanel.state === "ready" ? (
                 <Button size="sm" variant="ghost" onClick={summaryPanel.reload}>
-                  Refresh
+                  {t("Refresh")}
                 </Button>
               ) : undefined
             }
@@ -465,9 +478,9 @@ export default function InterestsPage() {
             }
             action={
               interestsSaving ? (
-                <span className="text-xs text-muted">Saving…</span>
+                <span className="text-xs text-muted">{t("Saving…")}</span>
               ) : (
-                <span className="text-xs text-muted">{interests.length} selected</span>
+                <span className="text-xs text-muted">{tf("{n} selected", { n: interests.length })}</span>
               )
             }
           />
@@ -488,7 +501,9 @@ export default function InterestsPage() {
                   )}
                 >
                   {selected ? <Check className="h-3.5 w-3.5" aria-hidden /> : null}
-                  {option}
+                  {/* The stored value is the label, so the lookup happens here. `option`
+                      itself stays English: it is what goes into `interest_areas`. */}
+                  {t(option)}
                 </button>
               );
             })}

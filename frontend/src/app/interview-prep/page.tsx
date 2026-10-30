@@ -138,7 +138,7 @@ export default function InterviewPrepPage() {
       } catch (caught) {
         // Nothing was placed in the transcript, so the student's own words are still in
         // the box and one press of Send retries the turn.
-        setError(caught instanceof Error ? caught.message : t("The interviewer could not answer."));
+        setError(caught instanceof Error ? t(caught.message) : t("The interviewer could not answer."));
       } finally {
         setBusy(false);
       }

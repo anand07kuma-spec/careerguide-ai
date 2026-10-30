@@ -477,7 +477,7 @@ export default function ParentDashboard() {
                           >
                             <div className="min-w-0">
                               <p className="truncate text-sm font-medium text-ink">{item.career.title}</p>
-                              <p className="truncate text-xs text-muted">{item.career.category}</p>
+                              <p className="truncate text-xs text-muted">{t(item.career.category)}</p>
                             </div>
                             <span className="shrink-0 text-xs text-muted">
                               {tf("saved {time}", { time: relativeTime(item.saved_at) })}
@@ -546,7 +546,9 @@ export default function ParentDashboard() {
                 {reportOpen ? (
                   <div className="mt-4 space-y-3 rounded-2xl bg-canvas p-4">
                     {sum.latest_report.content.note ? (
-                      <p className="text-sm leading-relaxed text-ink">{sum.latest_report.content.note}</p>
+                      <p className="text-sm leading-relaxed text-ink">
+                        {t(sum.latest_report.content.note)}
+                      </p>
                     ) : null}
                     {sum.latest_report.content.recommendations.length > 0 ? (
                       <div>

@@ -21,6 +21,12 @@ export const HI: Record<string, string> = {
   "We couldn't load your journey stats": "आपकी यात्रा के आँकड़े नहीं खुल सके",
   "Chats finished": "पूरी हुई चैट",
   "Plans going": "चलते प्लान",
+  // `Stat` now looks up its own `hint`, the one line under each number — the label
+  // above was translated from the start, and these four were not.
+  "Conversations you completed": "जो बातचीत आपने पूरी कीं",
+  "Profiles you bookmarked": "जिन प्रोफ़ाइलों को आपने सहेजा",
+  "Interest areas noticed": "जो दिलचस्पी के विषय दिखे",
+  "Study plans you set yourself": "पढ़ाई के वे प्लान जो आपने ख़ुद बनाए",
   // The timeline and the journal are the same list on this screen, and `common.ts`
   // already calls that list डायरी, so the heading keeps that one word.
   "Your timeline": "आपकी डायरी",
@@ -32,6 +38,27 @@ export const HI: Record<string, string> = {
     "यहाँ अभी कुछ नहीं — इसका मतलब बस इतना है कि आपने अब तक ज़्यादा कुछ नहीं देखा, और यह बिल्कुल ठीक है। AI गाइड से बात करें या कुछ करियर देखें, वे यहाँ आ जाएँगे।",
   "Nothing of this type yet": "इस प्रकार का अभी कुछ नहीं",
   "Try another filter, or go explore something new.": "दूसरा फ़िल्टर चुनें, या जाकर कुछ नया देखें।",
+  // The six lines below reached the screen as plain JSX text or as values built by
+  // module-level helpers, where no hook can run, so nothing asked the dictionary for
+  // them. The event-kind chips and the day headings are the same words on every row.
+  "Exploration, not ranking": "खोज है, रैंक नहीं",
+  "Every number here just counts things you explored. Nobody is ranked by it, and taking a break never erases anything.":
+    "यहाँ हर अंक सिर्फ़ इतना बताता है कि आपने क्या-क्या देखा। इससे किसी की रैंक नहीं बनती, और बीच में रुकने से कुछ भी नहीं मिटता।",
+  "This timeline is only a record of what you explored. It is private to you, it never grades anything, and skipping days changes nothing.":
+    "यह डायरी सिर्फ़ यह दर्ज करती है कि आपने क्या देखा। यह केवल आपकी निजी है, किसी को नंबर नहीं देती, और कुछ दिन छूट जाने से कुछ नहीं बदलता।",
+  "Show everything": "सब दिखाएँ",
+  // `kindLabel` and `dayLabel` build these outside a component, through `translate()`.
+  "Conversation": "बातचीत",
+  "Interest noted": "दिलचस्पी दर्ज हुई",
+  "Interest question": "दिलचस्पी का सवाल",
+  "Saved career": "सहेजा हुआ करियर",
+  "Plan step done": "प्लान का कदम पूरा",
+  "Safety note": "सुरक्षा सूचना",
+  "Activity": "गतिविधि",
+  "Today": "आज",
+  "Yesterday": "कल",
+  "Sometime": "किसी दिन",
+  "Refresh": "ताज़ा करें",
   // `ProgressBar` runs its `label` through `t()`, so both forms of this caption are
   // dictionary strings rather than page text.
   "Plan steps you chose to do: none yet, they come with a study plan":
@@ -72,6 +99,47 @@ export const HI: Record<string, string> = {
     "जैसे: 'मुझे जानना है कि गेम डिज़ाइन करना असल में कैसा होता है।'",
   "Leave it blank and we'll pick a friendly default.":
     "ख़ाली छोड़ दीजिए, हम ख़ुद एक आसान सा नाम रख देंगे।",
+  // The rest of the plans screen. These sat in the component as bare JSX children, so
+  // the entries above were never asked for them and a Hindi reader met English in the
+  // middle of the page.
+  "Student-owned and adjustable": "आपका अपना, बदलने लायक",
+  "New plan": "नया प्लान",
+  "Falling behind on a plan is normal, not failure. If a step feels too big, make it smaller. If a plan no longer interests you, change it or start a new one.":
+    "प्लान में पीछे रह जाना आम बात है, असफलता नहीं। अगर कोई कदम बहुत बड़ा लगे, उसे छोटा कर दें। अगर कोई प्लान अब दिलचस्प न लगे, उसे बदलें या नया शुरू करें।",
+  "Create your first plan": "अपना पहला प्लान बनाएँ",
+  "Look at careers for ideas": "सोचने के लिए करियर देखें",
+  "Your plan, your pace": "आपका प्लान, आपकी रफ़्तार",
+  "Made {when} · {n} step you chose": "{when} बनाया · आपने {n} कदम चुने",
+  "Made {when} · {n} steps you chose": "{when} बनाया · आपने {n} कदम चुने",
+  "Expand {title}": "{title} खोलें",
+  "Collapse {title}": "{title} समेटें",
+  "Delete plan {title}": "प्लान हटाएँ: {title}",
+  "Delete step {title}": "कदम हटाएँ: {title}",
+  "Status for {title}": "{title} की स्थिति",
+  "Steps you've finished: {done} of {total}": "आपने पूरे किए: {total} में से {done}",
+  "This bar only shows what you chose to do. Unfinished steps are not a grade.":
+    "यह पट्टी सिर्फ़ वह दिखाती है कि आपने करना चुना। अधूरे कदम नंबर नहीं हैं।",
+  "No steps yet. Add one below — keep it small and doable.":
+    "अभी कोई कदम नहीं। नीचे एक जोड़ें — छोटा और होने लायक रखें।",
+  "Mark done": "पूरा हुआ दर्ज करें",
+  "Skipped — that's okay": "छोड़ दिया — कोई बात नहीं",
+  "Open resource": "रिसोर्स खोलें",
+  "Add a step": "एक कदम जोड़ें",
+  "Keep it small. You can edit or remove it any time.": "छोटा रखें। इसे कभी भी बदल या हटा सकते हैं।",
+  "Add step": "कदम जोड़ें",
+  "Yes, delete": "हाँ, हटाएँ",
+  "Deleting a plan doesn't erase anything else you've explored. You can always make a new one.":
+    "प्लान हटाने से आपने जो कुछ देखा है वह नहीं मिटता। आप कभी भी नया प्लान बना सकते हैं।",
+  "“{title}” and all of its steps will go away. This cannot be undone.":
+    "“{title}” और उसके सारे कदम हट जाएँगे। इसे वापस नहीं लाया जा सकता।",
+  "“{title}” will be removed from the plan. This cannot be undone.":
+    "“{title}” प्लान से हटा दिया जाएगा। इसे वापस नहीं लाया जा सकता।",
+  "Create plan": "प्लान बनाएँ",
+  "We'll suggest a few starter steps. They are suggestions only — delete, rewrite or reorder anything once the plan is made.":
+    "हम कुछ शुरूआती कदम सुझाएँगे। ये सिर्फ़ सुझाव हैं — प्लान बनने के बाद कोई भी चीज़ हटाएँ, दोबारा लिखें या क्रम बदलें।",
+  "Nice — step marked done.": "अच्छा — कदम पूरा दर्ज कर दिया।",
+  "Status updated.": "स्थिति अपडेट हो गई।",
+  "Plan deleted.": "प्लान हटा दिया गया।",
 
   // ------------------------------------------------------------- career report
   "My Career Report": "मेरी करियर रिपोर्ट",
