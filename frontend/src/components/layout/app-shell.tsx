@@ -54,9 +54,11 @@ interface NavItem {
   tileOnly?: boolean;
   /**
    * Name this page in the mobile drawer anyway, whatever `tileOnly` and the bottom
-   * bar would otherwise decide. Used for the three rows a student reaches for by
-   * name — Home, AI Call and Scholarships — so the drawer is a list of the app's
-   * destinations rather than a list of its leftovers.
+   * bar would otherwise decide. Used for the four rows a student reaches for by
+   * name — Home, AI Call, Scholarships and Journey — so the drawer is a list of the
+   * app's destinations rather than a list of its leftovers. Journey is here because
+   * it left the bottom bar, and a student who has been told "your answers are on
+   * your Journey page" looks for that word in the menu, not for a tile in a grid.
    */
   inDrawer?: boolean;
 }
@@ -76,7 +78,10 @@ const NAV: NavItem[] = [
   { href: "/app/institutes", label: "Institutes & Courses", short: "Institutes", icon: Building2, group: "explore", tileOnly: true },
   // Each of these three has a tile of its own in the dashboard's Explore grid, so
   // the sidebar and the drawer would only be a second place to say the same thing.
-  { href: "/app/journey", label: "My Journey", short: "Journey", icon: Compass, group: "grow", tileOnly: true },
+  // Journey is the exception: it left the bottom bar, and this app keeps telling a
+  // student their answers are "on your Journey page" — that is a name to look for in
+  // the menu, not a tile to be spotted in a grid.
+  { href: "/app/journey", label: "My Journey", short: "Journey", icon: Compass, group: "grow", tileOnly: true, inDrawer: true },
   { href: "/app/plans", label: "Study & Skill Plans", short: "Plans", icon: GraduationCap, group: "grow", tileOnly: true },
   { href: "/app/reports", label: "Reports", short: "Reports", icon: FileText, group: "grow", tileOnly: true },
   // No tile of its own either: Home's explore grid is eight tiles wide and a CV is a
@@ -103,19 +108,24 @@ const GROUP_TITLES: Record<NavItem["group"], string> = {
 };
 
 // The header avatar already goes to Settings, so the bar would waste a slot on a
-// second route to the same page.
+// second route to the same page. The last slot is Profile rather than Journey: the
+// class, board and interests a student is asked to keep correct live on that page,
+// while the journey is a record one goes back through on purpose — and it is named in
+// the drawer for that reason. A parent who taps it lands on the parent dashboard,
+// because `/app/profile` redirects the account that holds no child's class.
 const MOBILE_NAV = [
   { href: "/app", label: "Home", icon: Home },
   { href: "/app/careers", label: "Careers", icon: Briefcase },
   { href: "/app/call", label: "AI Call", icon: Mic },
   { href: "/app/plans", label: "Plans", icon: GraduationCap },
-  { href: "/app/journey", label: "Journey", icon: Compass },
+  { href: "/app/profile", label: "Profile", icon: UserRound },
 ];
 
 // The bottom bar is the nearest thing to a thumb on a phone, so wherever it has a
-// slot, that is the one place the page is offered: the drawer drops these rows and
-// the dashboard hides their tiles. Derived from the bar itself, because a sixth
-// entry added there should stop being a duplicate without anyone remembering to
+// slot, that is the one place the menu offers the page: `drawerItems` drops these rows.
+// The dashboard keeps its own tiles for them, which is why the `inDrawer` rows read
+// twice on a phone and everything else does not. Derived from the bar itself, because a
+// sixth entry added there should stop being a duplicate without anyone remembering to
 // edit a second list.
 const BOTTOM_BAR_HREFS = new Set(MOBILE_NAV.map((item) => item.href));
 
@@ -230,10 +240,12 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   // The drawer names the app's destinations: what nothing else on a phone offers —
   // the conversation, the assessments, the CV, the account pages, any portal — plus
-  // the three rows flagged `inDrawer`. Home and AI Call also sit in the bottom bar
-  // and Scholarships also sits in the dashboard's Explore grid, so those three read
-  // twice on a phone; they are here because a student looks for them by name and
-  // expects to find them in the menu. Everything else stays in one place.
+  // the four rows flagged `inDrawer`. Home and AI Call also sit in the bottom bar, and
+  // Scholarships and Journey also have a tile in the dashboard's Explore grid, so those
+  // read twice on a phone; they are here because a student looks for them by name and
+  // expects to find them in the menu. Profile does the opposite: it took Journey's bar
+  // slot, so the bar is its one place and `BOTTOM_BAR_HREFS` drops the row from here
+  // without a second list to edit.
   const drawerItems = items.filter(
     (item) => item.inDrawer || (!item.tileOnly && !BOTTOM_BAR_HREFS.has(item.href)),
   );
