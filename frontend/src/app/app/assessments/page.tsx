@@ -138,8 +138,8 @@ function InstrumentCard({ instrument }: { instrument: AssessmentInstrument }) {
           <Icon className="h-5 w-5" aria-hidden />
         </span>
         <div className="min-w-0">
-          <h2 className="text-base font-semibold leading-tight text-ink">{instrument.name}</h2>
-          <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
+          <h2 className="text-base font-semibold leading-tight text-ink break-words">{instrument.name}</h2>
+          <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs leading-relaxed text-muted">
             <span>{tf("About {minutes} minutes", { minutes: instrument.minutes })}</span>
             <span aria-hidden>·</span>
             <span>{tf("{count} questions", { count: instrument.item_count })}</span>
@@ -151,7 +151,7 @@ function InstrumentCard({ instrument }: { instrument: AssessmentInstrument }) {
 
       <div className="mt-4 space-y-3">
         {latest ? (
-          <p className="text-xs text-muted">
+          <p className="text-xs leading-relaxed text-muted">
             {finished
               ? tf("Finished {when}", {
                   when: relativeTime(latest.completed_at ?? latest.started_at),
@@ -177,7 +177,7 @@ function InstrumentCard({ instrument }: { instrument: AssessmentInstrument }) {
           </div>
         ) : finished ? (
           <div className="flex flex-wrap items-center gap-2">
-            <LinkButton href={`/app/assessments/result/${latest?.result_id}`} size="sm" className="flex-1">
+            <LinkButton href={`/app/assessments/result/${latest?.result_id}`} size="sm" className="min-w-0 flex-1">
               {t("See your result")}
               <ArrowRight className="h-4 w-4" aria-hidden />
             </LinkButton>

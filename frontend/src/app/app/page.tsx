@@ -296,7 +296,7 @@ function Tile({
       >
         <Icon className="h-5 w-5" aria-hidden />
       </span>
-      <span className="text-xs font-medium leading-tight text-ink">{t(label)}</span>
+      <span className="text-xs font-medium leading-relaxed text-ink break-words">{t(label)}</span>
     </button>
   );
 }
@@ -603,10 +603,10 @@ export default function StudentHome() {
                 {recItems.slice(0, 3).map((rec) => (
                   <Card key={rec.career.id} className="flex flex-col justify-between gap-3 p-4">
                     <div className="flex items-start justify-between gap-2">
-                      <h3 className="text-base font-semibold leading-tight text-ink">
+                      <h3 className="min-w-0 text-base font-semibold leading-tight text-ink break-words">
                         {t(rec.career.title)}
                       </h3>
-                      <EvidenceBadge level={rec.evidence_level} />
+                      <EvidenceBadge level={rec.evidence_level} className="shrink-0" />
                     </div>
                     <Button
                       variant="outline"
@@ -705,17 +705,17 @@ export default function StudentHome() {
               href="/app/settings"
               variant="outline"
               size="md"
-              className="w-full justify-between p-4 text-left"
+              className="w-full justify-between gap-3 p-4 text-left"
             >
-              <span className="flex items-center gap-3">
-                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-success-mist text-success">
+              <span className="flex min-w-0 items-center gap-3">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-success-mist text-success">
                   <ShieldCheck className="h-4 w-4" aria-hidden />
                 </span>
-                <span>
+                <span className="min-w-0">
                   <span className="block text-sm font-semibold text-ink">
                     {t("Privacy, consent and a parent link")}
                   </span>
-                  <span className="mt-0.5 block text-xs text-muted">
+                  <span className="mt-0.5 block text-xs leading-relaxed text-muted">
                     {t("What is stored, who may see it, and what this device remembers.")}
                   </span>
                 </span>

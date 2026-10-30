@@ -272,7 +272,7 @@ export default function CareerExplorer() {
                 return (
                   <Card key={career.id} className="flex flex-col">
                     <div className="flex items-start justify-between gap-2">
-                      <Badge className={categoryTint(career.category)}>{career.category}</Badge>
+                      <Badge className={cn("min-w-0", categoryTint(career.category))}>{career.category}</Badge>
                       <button
                         type="button"
                         onClick={() => void toggleSave(career)}
@@ -290,16 +290,16 @@ export default function CareerExplorer() {
                       </button>
                     </div>
 
-                    <h3 className="mt-2.5 text-base font-semibold leading-tight text-ink">
+                    <h3 className="mt-2.5 text-base font-semibold leading-tight text-ink break-words">
                       {t(career.title)}
                     </h3>
                     <p className="mt-1.5 flex-1 text-sm leading-relaxed text-muted">{career.summary}</p>
 
                     <div className="mt-3 flex items-center justify-between gap-2">
-                      <span className="text-xs font-medium text-teal">
+                      <span className="min-w-0 text-xs leading-relaxed font-medium text-teal">
                         {tf("Explorable from class {n}", { n: career.min_class })}
                       </span>
-                      <LinkButton href={`/app/careers/${career.slug}`} variant="ghost" size="sm" className="px-0 text-brand-dark hover:bg-transparent">
+                      <LinkButton href={`/app/careers/${career.slug}`} variant="ghost" size="sm" className="shrink-0 px-0 text-brand-dark hover:bg-transparent">
                         {t("View details")}
                       </LinkButton>
                     </div>
