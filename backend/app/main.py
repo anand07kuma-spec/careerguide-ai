@@ -16,6 +16,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+from sqlalchemy.exc import SQLAlchemyError
 
 from .config import get_settings
 from .database import Base, SessionLocal, engine
@@ -24,7 +25,7 @@ from .middleware.rate_limit import register_rate_limiting
 from .routers import admin, assessments, auth, catalogue, careers, clerk, clerk_webhooks, conversations
 from .routers import email, exams, interests, interview, journey, organizations, payments, recommendations
 from .routers import report_pdfs, reports, resume, study_abroad, study_plans, users, voice
-from .schema_sync import add_missing_columns
+from .schema_sync import add_missing_columns, missing_columns
 from .schemas import HealthOut
 from .seed import seed_if_empty
 from .services import tts
@@ -52,9 +53,15 @@ STORAGE_UNAVAILABLE_DETAIL = (
     "Whoever runs this site needs to point DATABASE_URL at a Postgres database."
 )
 
+# Columns the models declare and the connected database does not have, filled in once
+# by the lifespan below. A schema cannot change while a process is alive, so the answer
+# is computed at boot rather than on every `/api/health` poll.
+schema_drift: list[str] = []
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    global schema_drift
     if storage_unusable:
         log.error(
             "DATABASE_URL points at SQLite on serverless hosting. Every data "
@@ -70,7 +77,27 @@ async def lifespan(app: FastAPI):
         if counts:
             log.info("Seeded catalogue: %s", counts)
     else:
-        log.info("DB_AUTO_SETUP is off: expecting an already prepared schema.")
+        # Nothing above ran, so this process is trusting a schema somebody prepared out
+        # of band. Checking that costs one catalog read per table at cold start and is
+        # the only warning a deployment gets: without it, a column added to a model
+        # after the last migration turns into 500s on the screens that read the table,
+        # under a health check that keeps reporting `ready`.
+        try:
+            schema_drift = missing_columns(engine)
+        except SQLAlchemyError:
+            # An unreadable database is a connection problem, not a schema one, and
+            # every request reports it on its own. A function that refuses to boot
+            # leaves nothing answering `/api/health` at all.
+            log.exception("Could not read the database schema at startup.")
+        if schema_drift:
+            log.error(
+                "DB_AUTO_SETUP is off and this database is behind the code: %s. "
+                "Every query touching those tables will fail until the schema is "
+                "prepared — run `alembic upgrade head`, or `python scripts/db_init.py`.",
+                ", ".join(schema_drift),
+            )
+        else:
+            log.info("DB_AUTO_SETUP is off: expecting an already prepared schema.")
     if not settings.ai_configured:
         log.warning(
             "AI provider is running in DEMO MODE with a scripted guide. "
@@ -145,7 +172,16 @@ app.include_router(interview.ai_router)
 def health() -> HealthOut:
     return HealthOut(
         status="ok",
-        storage="unconfigured" if storage_unusable else "ready",
+        # `ready` used to mean only "a database is configured", which is how a
+        # deployment whose schema fell behind its own code kept passing the check
+        # people were told to run. See `schema_drift` above for who fills it in.
+        storage=(
+            "unconfigured"
+            if storage_unusable
+            else "schema_outdated"
+            if schema_drift
+            else "ready"
+        ),
         ai_provider="configured" if settings.ai_configured else "demo",
         ai_configured=settings.ai_configured,
         # Which service will be called, and whether it can be reached with the
