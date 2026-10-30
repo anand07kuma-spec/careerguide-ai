@@ -332,7 +332,7 @@ def apply_captured_payment(
     plan = plans.get(plan_code)
     if plan is None or plan.period_days is None:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="That plan has no paid period to apply.",
         )
 

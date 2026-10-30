@@ -146,7 +146,7 @@ NOT_STUDENT_ACCOUNT = HTTPException(
     ),
 )
 SEATS_FULL = HTTPException(
-    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
     detail=(
         "This portal has used every place its tier allows, so nothing was invited. A "
         "school that needs more places asks us in writing; nobody with a student account "
@@ -1038,7 +1038,7 @@ def assign_counsellor(
         raise UNKNOWN_MEMBER
     if client.org_role not in ("student", "parent"):
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=(
                 "A counsellor is assigned to a student or a guardian, not to a member of "
                 "staff. The adults on this roster are already in the portal."
@@ -1054,7 +1054,7 @@ def assign_counsellor(
             or counsellor.status != "active"
         ):
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail=(
                     "That counsellor is not an accepted member of this portal. Invite "
                     "them first, and assign the students once their own account has "
@@ -1063,7 +1063,7 @@ def assign_counsellor(
             )
         if counsellor.id == client.id:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail="A member cannot be assigned as their own counsellor.",
             )
         client.assigned_counsellor_id = counsellor.id
@@ -1098,7 +1098,7 @@ def remove_member(
         raise UNKNOWN_MEMBER
     if row.user_id == user.id:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=(
                 "You cannot remove your own place from inside the portal you are using to "
                 "do it. Leaving is a different button, and it is on your own account."
@@ -1481,7 +1481,7 @@ def create_organization_as_admin(
     tier = reseller.get(body.tier_code or "") or reseller.default_for(body.kind)
     if body.tier_code and tier.code != body.tier_code:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=(
                 f"“{body.tier_code}” is not a tier of this catalogue. The tiers for a "
                 f"{body.kind} are: {', '.join(t.code for t in reseller.for_kind(body.kind))}."
@@ -1553,7 +1553,7 @@ def update_organization_as_admin(
         tier = reseller.get(values["tier_code"])
         if tier is None or tier.kind not in ("any", org.kind):
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail=(
                     f"“{values['tier_code']}” is not a tier a {org.kind} can be given. "
                     f"Choose from: {', '.join(t.code for t in reseller.for_kind(org.kind))}."

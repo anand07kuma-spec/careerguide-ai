@@ -44,6 +44,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+import _console  # noqa: E402,F401 -- utf-8 stdout, see _console.py
 
 DB_PATH = pathlib.Path(tempfile.gettempdir()) / "careerguide_roadmap_test.db"
 if DB_PATH.exists():

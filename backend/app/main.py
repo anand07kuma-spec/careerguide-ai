@@ -15,9 +15,9 @@ import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 
-from .config import get_settings
+from .config import DEV_FRONTEND_ORIGINS, get_settings
 from .database import Base, SessionLocal, engine
 from .middleware.cors import configure_cors
 from .middleware.rate_limit import register_rate_limiting
@@ -33,6 +33,11 @@ logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(messag
 log = logging.getLogger("careerguide")
 
 settings = get_settings()
+
+# Where a browser that lands on this host should end up: the first origin in
+# `FRONTEND_URL`, which is the site this API already answers to. Unset means a
+# laptop, where the frontend README's own dev pair is the answer.
+SITE_ORIGIN = (settings.frontend_url.split(",")[0].strip() or DEV_FRONTEND_ORIGINS[0]).rstrip("/")
 
 # Serverless hosting wipes the disk between requests, so a file-based database up
 # there would silently lose accounts and conversations. Rather than crash the
@@ -139,6 +144,19 @@ app.include_router(resume.ai_router)
 # `interview` has only the AI route: a practice interview writes no row, so there is no
 # document router to put beside it.
 app.include_router(interview.ai_router)
+
+
+@app.get("/", tags=["meta"])
+def root() -> RedirectResponse:
+    """Send a browser that typed the API's own address to the site it came for.
+
+    This service has no page of its own, so the root used to answer the same bare
+    `{"detail": "Not Found"}` as a misspelled path — which reads like a broken
+    deployment to whoever is checking whether the server is up. The target is the
+    origin this API already trusts for browser requests, never something the
+    caller supplies.
+    """
+    return RedirectResponse(url=SITE_ORIGIN, status_code=302)
 
 
 @app.get("/api/health", response_model=HealthOut, tags=["meta"])

@@ -138,7 +138,7 @@ NOT_FOUND = HTTPException(
 )
 
 LAST_OPERATOR = HTTPException(
-    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
     detail=(
         "That is the last account with the flag on. Taking it would leave nobody able to "
         "open this screen, and the only way back in would be the database. Give it to "
@@ -147,7 +147,7 @@ LAST_OPERATOR = HTTPException(
 )
 
 SELF_DEMOTE = HTTPException(
-    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
     detail=(
         "You cannot take the flag off your own account while you are signed in to it. The "
         "person who should be able to undo that is the account you would just have "
@@ -156,7 +156,7 @@ SELF_DEMOTE = HTTPException(
 )
 
 SELF_CLOSE = HTTPException(
-    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
     detail=(
         "This is not how an account closes itself. All this route does is stop somebody "
         "signing in, and using it on yourself would leave a shut account holding the "
@@ -165,7 +165,7 @@ SELF_CLOSE = HTTPException(
 )
 
 OPERATOR_ON_CLOSED = HTTPException(
-    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
     detail=(
         "That account is closed, so the flag would be a key left in a locked door: it "
         "grants nothing while the account is shut, and it still reads as an operator to "
@@ -184,7 +184,7 @@ QUESTION_ANSWERED = HTTPException(
 )
 
 VERIFICATION_NOT_MINE = HTTPException(
-    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
     detail=(
         "The verified flag is not editable here. It is the catalogue's statement that a "
         "person read a source for this entry, and a form that could switch it off would be "
@@ -194,7 +194,7 @@ VERIFICATION_NOT_MINE = HTTPException(
 )
 
 NOTHING_TO_CHANGE = HTTPException(
-    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
     detail=(
         "The request carried no field to change. Nothing was written, and nothing was "
         "logged."

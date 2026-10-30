@@ -41,6 +41,7 @@ from datetime import datetime, timedelta, timezone
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+import _console  # noqa: E402,F401 -- utf-8 stdout, see _console.py
 
 TEST_DB = pathlib.Path(tempfile.gettempdir()) / "careerguide_clerk_test.db"
 if TEST_DB.exists():
