@@ -53,3 +53,28 @@ def add_missing_columns(engine: Engine) -> list[str]:
                     index.create(conn, checkfirst=True)
         conn.commit()
     return added
+
+
+def missing_columns(engine: Engine) -> list[str]:
+    """Every column the models declare that this database does not have.
+
+    The read half of `add_missing_columns`, for the case where nothing is allowed to
+    write: a deployment that boots with `DB_AUTO_SETUP=false` trusts the schema to have
+    been prepared out of band, and when it was not, each query touching the widened
+    table answers 500 while `/api/health` still reports `ready` — a connection is not a
+    schema. Entries are `table.column`, or `table` alone when the table is missing.
+    """
+    inspector = inspect(engine)
+    tables = set(inspector.get_table_names())
+    missing: list[str] = []
+    for table in Base.metadata.sorted_tables:
+        if table.name not in tables:
+            missing.append(table.name)
+            continue
+        present = {column["name"] for column in inspector.get_columns(table.name)}
+        missing.extend(
+            f"{table.name}.{column.name}"
+            for column in table.columns
+            if column.name not in present
+        )
+    return missing

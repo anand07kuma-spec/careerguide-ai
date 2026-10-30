@@ -160,6 +160,24 @@ cd backend
 `DATABASE_URL` is read from the same `.env` the app uses, so there is no connection string in
 `alembic.ini` to keep in step or to leak.
 
+**A deployment that skips this step used to fail quietly.** `DB_AUTO_SETUP=false` means nothing
+at boot compares the models with the database, so a column added to a model after the last
+migration applied becomes a `SELECT careers.source_url …` against a table that has no such
+column: every route touching that table answers 500, and `/api/health` still says `ready`,
+because all it had ever checked is whether a database is configured. That is not hypothetical —
+read from the live API on 2026-10-30, `/api/careers` and `/api/scholarships` answer 500 while
+`/api/careers/categories`, `/api/institutions` and `/api/resources` answer 200: the two tables
+`0016_career_source` widens, against the ones it does not touch. The signature is a revision
+that is in the deployed code and not in the deployed database, and the fix is
+`alembic upgrade head` against the live `DATABASE_URL`.
+
+Both halves are now in place: the startup check reads the schema once and logs the columns it
+misses, naming the command that adds them, `/api/health` answers `storage: "schema_outdated"`
+while any of them are missing, and `scripts/schema_drift_test.py` proves all of it by dropping
+0016's three columns from a throwaway database. A database the app is allowed to prepare
+(`DB_AUTO_SETUP=true`, which is a laptop and the first boot anywhere) still repairs itself
+instead, as it always did.
+
 **Do not run `downgrade base` against a database holding real accounts.** `0000_baseline_schema`
 creates `users` along with the other eighteen tables that predate the revision chain, so a full
 undo drops the account table with everything else — it exists for tests that build a schema from
@@ -260,6 +278,29 @@ npx vercel deploy --prod --yes
 `env add` without `--type config` stores a **Secret** — hidden in the dashboard, unreadable back,
 which is what a database URL wants.
 
+#### The database the integration hands over
+
+`prisma/prisma-postgres` does not write one variable, it writes four: `DATABASE_URL`,
+`POSTGRES_URL`, `PRISMA_DATABASE_URL` and `DATABASE_URL_POOLED`. This app reads one name and
+one only — `DATABASE_URL`, through `app/config.py` — and the integration sets that to the
+**direct** connection string (`db.prisma.io`), while the pooled endpoint
+(`pooled.db.prisma.io`) arrives as `DATABASE_URL_POOLED`. For a Prisma client that split is
+right. For SQLAlchemy it is not: each Render worker, and each Vercel instance spun up for a
+concurrent student, opens its own pool straight at a connection ceiling meant for a CLI.
+Point `DATABASE_URL` at the pooled string and leave the other three to the integration.
+
+Never point it at `PRISMA_DATABASE_URL`: a `prisma+postgres://` address is an Accelerate
+proxy URL rather than a Postgres one, and there is no driver for that scheme here.
+
+Vercel marks an integration-owned variable **Needs Attention** when what the project holds
+has drifted from what the integration manages — a rotated connection string, or a scope
+edited by hand, which is what happens to `DATABASE_URL` here on purpose (Production-only,
+above). The badge is bookkeeping between Vercel and the integration, not a proof that the
+value is dead, and it is not the same question as *is the schema current* — see
+[Changing the schema](#changing-the-schema-alembic). To clear it: open the row's `…` menu,
+or reconnect the integration from the team's **Storage** tab, then redeploy, because a
+variable change never reaches a deployment that already exists.
+
 **Live now:** https://careerguide-api-omega.vercel.app (`/api/health` → `"storage": "ready"`) and
 https://careerguide-web.vercel.app, both auto-deployed from
 `github.com/anand07kuma-spec/careerguide-ai`.
@@ -271,7 +312,8 @@ Serverless changed three things in the code:
   reply costs ~30–70 KB of JSON. Pointing the browser at a path would put the reply's text into a
   logged URL.
 * **Schema is prepared out of band** (`DB_AUTO_SETUP=false`); run `scripts/db_init.py` when the
-  catalogue changes.
+  catalogue changes and `alembic upgrade head` when the shape does. The app now checks that the
+  database really is up to date before it serves a request — see the drift note in §1.
 * **One function, 60 s ceiling** (`backend/vercel.json`, `maxDuration: 60`), region `bom1` (Mumbai),
   small pools (2 + 3 overflow) because every warm instance opens its own.
 
