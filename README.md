@@ -15,7 +15,7 @@ and nothing is inferred from a child's voice, accent or typing speed.
 | Backend | FastAPI, Pydantic 2, SQLAlchemy 2.0, Alembic |
 | Database | PostgreSQL (Supabase-ready); SQLite works out of the box locally |
 | AI | Groq for replies, Gemini / Azure / Edge TTS for voice, browser Web Speech for listening |
-| Tests | 23 backend suites (last full battery: 2 471 checks, 1 known failure on a live TTS call), `tsc` + ESLint + production build, three Hindi validators |
+| Tests | 23 backend suites (last full battery: 2 613 checks, 0 failed; its two live TTS calls skip for want of a key on this machine), `tsc` + ESLint + production build, three Hindi validators |
 
 ## Quick local setup
 
