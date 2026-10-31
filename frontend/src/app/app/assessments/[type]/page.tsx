@@ -236,7 +236,7 @@ export default function AssessmentRunnerPage() {
                     "One question at a time, in your own order. Stop whenever you like and the answers you gave will still be here.",
                   )}
                 />
-                <ul className="grid gap-2 text-sm text-muted sm:grid-cols-2">
+                <ul className="grid grid-cols-1 gap-2 text-sm text-muted sm:grid-cols-2">
                   <li className="flex items-center gap-2">
                     <Clock className="h-4 w-4 shrink-0 text-brand" aria-hidden />
                     {tf("About {minutes} minutes, no timer", { minutes: instrument.minutes })}

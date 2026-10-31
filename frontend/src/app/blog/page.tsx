@@ -129,7 +129,7 @@ export default async function BlogIndexPage({ searchParams }: { searchParams: Pa
             </p>
           </Card>
         ) : (
-          <div className="mt-8 grid gap-4 sm:grid-cols-2">
+          <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
             {posts.map((post) => (
               <Card key={post.slug} className="flex flex-col p-5">
                 <p className="text-xs text-muted">

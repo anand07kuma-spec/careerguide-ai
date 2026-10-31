@@ -349,7 +349,7 @@ function UniversityEditor({ row, onSaved }: { row: UniversityAdmin; onSaved: () 
 
   return (
     <div className="mt-4 space-y-3 border-t border-line pt-4">
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Input label="City" value={city} maxLength={80} onChange={(e) => setCity(e.target.value)} />
         <Input
           label="Official URL"
@@ -375,7 +375,7 @@ function UniversityEditor({ row, onSaved }: { row: UniversityAdmin; onSaved: () 
           "Leave empty until you have read the figure. The public page then prints 'not verified yet'.",
         )}
       />
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Input
           label="Intakes (comma separated)"
           value={intakes}
@@ -638,7 +638,7 @@ function StoryEditor({
         onChange={(e) => setBody(e.target.value)}
         hint="Write what they said, not what it proves. No outcome is promised by quoting one family."
       />
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Input
           label="Named as"
           value={attribution}

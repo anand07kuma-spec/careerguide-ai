@@ -99,7 +99,7 @@ export function DashboardSkeleton() {
 
         <div className="space-y-3">
           <Skeleton className="h-5 w-56 rounded-lg bg-slate-200/60" />
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             {Array.from({ length: 3 }, (_, i) => (
               <Skeleton key={i} className="h-[104px]" />
             ))}
@@ -271,7 +271,9 @@ export function Stat({
   const body = (
     <>
       <p className="text-xs font-medium uppercase tracking-wide text-muted">{t(label)}</p>
-      <p className={cn("mt-1.5 text-2xl font-semibold leading-none", accent)}>{value}</p>
+      {/* The number keeps text-2xl's own 32px line box: `leading-none` made it 24px and
+          clipped 7px off the digit, which is how a progress figure loses its top. */}
+      <p className={cn("mt-1.5 text-2xl font-semibold", accent)}>{value}</p>
       {hint ? (
         <p className="mt-2 text-xs text-muted">
           {typeof hint === "string" ? t(hint) : hint}

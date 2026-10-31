@@ -179,7 +179,7 @@ export default async function StudyAbroadServicePage({
           </section>
         ) : null}
 
-        <div className="mt-10 grid gap-4 sm:grid-cols-2">
+        <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2">
           {service.includes.length > 0 ? (
             <Card className="p-5">
               <h2 className="text-sm font-bold tracking-tight text-heading">{t("What you get")}</h2>

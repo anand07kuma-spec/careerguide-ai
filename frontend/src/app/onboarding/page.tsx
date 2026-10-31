@@ -145,7 +145,7 @@ export default function OnboardingPage() {
         <div className="space-y-6 px-5 py-6 sm:px-7 sm:py-7">
           <div>
             <div
-              className="grid gap-3 sm:grid-cols-2"
+              className="grid grid-cols-1 gap-3 sm:grid-cols-2"
               role="radiogroup"
               aria-label={t("Who is using CareerGuide AI?")}
             >

@@ -154,7 +154,7 @@ function ExamEditor({ exam, onSaved }: { exam: ExamAdminRow; onSaved: () => void
 
   return (
     <div className="mt-4 space-y-3 border-t border-line pt-4">
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Input
           label="Name"
           value={draft.name}
@@ -178,7 +178,7 @@ function ExamEditor({ exam, onSaved }: { exam: ExamAdminRow; onSaved: () => void
         value={draft.description}
         onChange={(event) => set("description", event.target.value)}
       />
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Textarea
           label="Careers it opens"
           rows={3}
@@ -209,7 +209,7 @@ function ExamEditor({ exam, onSaved }: { exam: ExamAdminRow; onSaved: () => void
             "The two boxes below are the only ones on this form that a child may read as a fact. They need the page they came from, and the server refuses them without it.",
           )}
         </p>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Input
             label="Date, as the notification states it"
             value={draft.exam_date}
@@ -560,7 +560,7 @@ function AddExamForm({ groups, onAdded }: { groups: ExamGroupAdminRow[]; onAdded
 
   return (
     <Card className="space-y-3 p-4">
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Select
           label="Under which door"
           value={groupId}
@@ -591,7 +591,7 @@ function AddExamForm({ groups, onAdded }: { groups: ExamGroupAdminRow[]; onAdded
         value={description}
         onChange={(event) => setDescription(event.target.value)}
       />
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Textarea
           label="Careers it opens"
           rows={2}

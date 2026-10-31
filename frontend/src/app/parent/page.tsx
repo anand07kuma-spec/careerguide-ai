@@ -206,7 +206,7 @@ export default function ParentDashboard() {
         description="Loading your family dashboard…"
         badge={<Badge tone="brand" icon={<ShieldCheck className="h-3.5 w-3.5" aria-hidden />}>{t("Parent dashboard")}</Badge>}
       >
-        <div className="grid gap-3 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
           <SkeletonCard />
           <SkeletonCard />
         </div>
@@ -342,7 +342,7 @@ export default function ParentDashboard() {
 
         {/* Summary block */}
         {summary.state === "loading" ? (
-          <div className="grid gap-3 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
             <SkeletonCard />
             <SkeletonCard />
           </div>
@@ -412,7 +412,7 @@ export default function ParentDashboard() {
                   }
                 />
               ) : (
-                <div className="grid gap-3 lg:grid-cols-2">
+                <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
                   {themes.length > 0 ? (
                     <Card>
                       <CardHeader

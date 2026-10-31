@@ -101,7 +101,7 @@ export default function NotFound() {
       <p className="mt-8 text-xs font-semibold uppercase tracking-wide text-muted">
         {t("Or jump straight to")}
       </p>
-      <ul className="mt-3 grid gap-3 sm:grid-cols-2">
+      <ul className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
         {PLACES.map((place) => (
           <li key={place.href}>
             <LinkButton

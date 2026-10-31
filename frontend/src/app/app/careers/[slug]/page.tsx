@@ -232,7 +232,7 @@ export default function CareerDetail() {
         </div>
       }
     >
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
         {/* Main column */}
         <div className="space-y-5">
           {career.needs_verification ? (
@@ -315,7 +315,7 @@ export default function CareerDetail() {
             </p>
           </Section>
 
-          <div className="grid gap-5 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
             <Section title="What people enjoy" icon={<CheckCircle2 className="h-5 w-5 text-success" aria-hidden />} show={hasList(career.benefits)}>
               <Bullets items={career.benefits} />
             </Section>

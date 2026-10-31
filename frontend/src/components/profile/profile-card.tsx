@@ -66,7 +66,7 @@ export function ProfileCard({
         </LinkButton>
       </div>
 
-      <dl className="grid gap-3 sm:grid-cols-2">
+      <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="rounded-2xl bg-canvas p-4">
           <dt className="text-xs font-semibold uppercase tracking-wide text-muted">
             {t("Class")}

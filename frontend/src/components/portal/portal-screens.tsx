@@ -106,7 +106,7 @@ function PortalScreen({ slug, surface }: { slug: string | null; surface: OrgKind
             }
           />
         ) : (
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {portals.map((row) => (
               <Link key={row.slug} href={`/${surface}/dashboard?portal=${row.slug}`} className="cg-card block p-4">
                 <div className="flex items-start justify-between gap-3">
@@ -296,7 +296,7 @@ function ClientList({ clients }: { clients: MemberRow[] }) {
     );
   }
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
       {clients.map((client) => (
         <Card key={client.id} className="space-y-2 p-4">
           <p className="text-sm font-semibold text-ink">{client.display_label || t("A member with no label")}</p>

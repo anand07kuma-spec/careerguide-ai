@@ -317,7 +317,11 @@ function Tile({
       >
         <Icon className="h-5 w-5" aria-hidden />
       </span>
-      <span className="text-xs font-medium leading-tight text-ink">{t(label)}</span>
+      {/* `leading-snug` rather than `leading-tight`: in a three-across grid on a phone this
+          label is the whole tile, and a 12px Devanagari line in a 15px box has no room left
+          above the headline for the matras. `break-words` is for the one tile whose Hindi
+          label is a single long word. */}
+      <span className="break-words text-xs font-medium leading-snug text-ink">{t(label)}</span>
     </button>
   );
 }
@@ -582,7 +586,7 @@ export default function StudentHome() {
             className="mb-3"
           />
           {recs.state === "loading" ? (
-            <div className="grid gap-3 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <Skeleton className="h-[104px]" />
               <Skeleton className="h-[104px]" />
               <Skeleton className="h-[104px]" />
@@ -617,7 +621,7 @@ export default function StudentHome() {
             />
           ) : (
             <div className="space-y-3">
-              <div className="grid gap-3 sm:grid-cols-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 {recItems.slice(0, 3).map((rec) => (
                   <Card key={rec.career.id} className="flex flex-col justify-between gap-3 p-4">
                     <div className="flex items-start justify-between gap-2">
@@ -719,26 +723,30 @@ export default function StudentHome() {
         {isYounger ? null : (
           <section aria-labelledby="family-heading">
             <SectionHeading id="family-heading" title="Family" className="mb-3" />
+            {/* Card-shaped links are the reason the button recipe no longer forces
+                `whitespace-nowrap`: this label is a sentence, and in Hindi it measured 415px
+                against a 341px box, which is a page 432px wide on a 375px phone. A label is
+                allowed to wrap now, and `min-w-0` on the two columns is what lets it. */}
             <LinkButton
               href="/app/settings"
               variant="outline"
               size="md"
-              className="w-full justify-between p-4 text-left"
+              className="h-auto w-full justify-between p-4 text-left min-h-11"
             >
-              <span className="flex items-center gap-3">
-                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-success-mist text-success">
+              <span className="flex min-w-0 items-center gap-3">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-success-mist text-success">
                   <ShieldCheck className="h-4 w-4" aria-hidden />
                 </span>
-                <span>
-                  <span className="block text-sm font-semibold text-ink">
+                <span className="min-w-0">
+                  <span className="block break-words text-sm font-semibold text-ink">
                     {t("Privacy, consent and a parent link")}
                   </span>
-                  <span className="mt-0.5 block text-xs text-muted">
+                  <span className="mt-0.5 block break-words text-xs leading-relaxed text-muted">
                     {t("What is stored, who may see it, and what this device remembers.")}
                   </span>
                 </span>
               </span>
-              <ArrowRight className="h-4 w-4 shrink-0 text-muted" aria-hidden />
+              <ArrowRight className="ml-3 h-4 w-4 shrink-0 text-muted" aria-hidden />
             </LinkButton>
           </section>
         )}
@@ -771,7 +779,10 @@ export default function StudentHome() {
               {detail.icon}
             </span>
           ) : null}
-          <div className="space-y-3 text-sm leading-relaxed text-ink">
+          {/* `min-w-0` on the text side of an icon-and-prose row: the 40px icon is fixed, and
+              without this the paragraph's own minimum width is its longest word, which in
+              Hindi is wider than a `max-w-sm` dialog. */}
+          <div className="min-w-0 flex-1 space-y-3 text-sm leading-relaxed text-ink">
             {detail?.lines.map((line) => (
               <p key={line}>{t(line)}</p>
             ))}

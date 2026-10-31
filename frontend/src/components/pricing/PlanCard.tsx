@@ -71,7 +71,11 @@ export function PlanCard({
       <p className="mt-1.5 text-sm leading-relaxed text-muted">{t(plan.tagline)}</p>
 
       <div className="mt-4 flex flex-wrap items-baseline gap-x-2 gap-y-1">
-        <span className="text-3xl font-bold tracking-tight text-ink tabular-nums">
+        {/* No `tracking-tight`: this span holds either numerals or, on the plan with no
+            published price, the words "Talk to us" — and negative letter-spacing at 30px
+            pulls a Devanagari matra off the consonant it belongs to. On ₹2,499 the tightening
+            was worth less than a pixel. */}
+        <span className="text-3xl font-bold text-ink tabular-nums">
           {plan.price_paise === null ? t("Talk to us") : rupees(plan.price_paise)}
         </span>
         {plan.price_paise !== null && plan.price_paise > 0 ? (

@@ -354,7 +354,7 @@ function ResumeEditor({
               </LinkButton>
             }
           />
-          <dl className="mt-4 grid gap-3 sm:grid-cols-2">
+          <dl className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="rounded-2xl border border-line bg-canvas/50 px-4 py-3">
               <dt className="text-xs font-medium uppercase tracking-wide text-muted">{t("Name")}</dt>
               <dd className="mt-1 text-sm font-medium text-ink">{name || t("Not given yet")}</dd>
@@ -423,7 +423,7 @@ function ResumeEditor({
             ) : (
               draft.education.map((entry, index) => (
                 <div key={index} className="rounded-2xl border border-line bg-canvas/50 p-4">
-                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
                     <Select
                       aria-label={`Class on line ${index + 1}`}
                       value={entry.class_level}

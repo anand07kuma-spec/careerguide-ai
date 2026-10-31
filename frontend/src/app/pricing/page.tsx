@@ -166,11 +166,17 @@ export default function PricingPage() {
   return (
     <div className="min-h-dvh bg-canvas">
       <header className="border-b border-line bg-surface/80 px-4 py-4 sm:px-6">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-3">
+        {/* `flex-wrap`, because the two actions need 283px and the row has 343 with the
+            wordmark in it: measured on this page at 375px the pair reached x=467, so the
+            dashboard button — the only way into the product from here — had its right half
+            cut off by the body's overflow guard rather than shown as a scrollbar. Wrapping
+            drops both actions onto a line of their own; `ml-auto` keeps them under the right
+            edge of the wordmark's line instead of drifting to the left with `justify-between`. */}
+        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3">
           <Link href="/" aria-label={t("CareerGuide AI home")}>
             <Wordmark />
           </Link>
-          <div className="flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-2">
             <LinkButton size="sm" variant="ghost" href="/about">
               {t("How it works")}
             </LinkButton>
@@ -259,7 +265,7 @@ export default function PricingPage() {
               </p>
             </div>
 
-            <section aria-label={t("Plans")} className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <section aria-label={t("Plans")} className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {orderedPlans.map((plan) => (
                 <PlanCard
                   key={plan.code}
@@ -305,7 +311,7 @@ export default function PricingPage() {
           <h2 className="text-xl font-bold tracking-tight text-heading sm:text-2xl">
             {t("Four things that do not change with a plan")}
           </h2>
-          <div className="mt-5 grid gap-4 sm:grid-cols-2">
+          <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
             {PRINCIPLES.map((item) => {
               const Icon = item.icon;
               return (

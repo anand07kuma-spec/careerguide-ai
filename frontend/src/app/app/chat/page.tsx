@@ -97,6 +97,7 @@ function ChatThread() {
   const [speakOn, setSpeakOn] = useState(settings.speak_responses);
   const [lastAudio, setLastAudio] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [voiceHelp, setVoiceHelp] = useState(false);
   const [safety, setSafety] = useState(false);
   const [listRef, setListRef] = useState<HTMLDivElement | null>(null);
 
@@ -436,11 +437,21 @@ function ChatThread() {
     );
   }
 
+  // No badge above this heading: "Talk with your guide" sat directly over "Chat with your
+  // guide" and said the same thing twice. The sentence under the title is kept for a tablet
+  // and dropped on a phone for the same reason the badge went: `fill` gives this screen
+  // exactly the height between the top bar and the bottom bar, and the heading block
+  // measured 167px against a thread of 284px at 375x780 — two lines of encouragement are
+  // the least necessary pixels on a screen whose whole job is the conversation.
   return (
     <Screen
+      fill
       title="Chat with your guide"
-      description="Type, speak, or do both. There is no wrong answer, and you can stop any time."
-      badge={<Badge tone="brand">{t("Talk with your guide")}</Badge>}
+      description={
+        <span className="hidden sm:inline">
+          {t("Type, speak, or do both. There is no wrong answer, and you can stop any time.")}
+        </span>
+      }
       action={
         <>
           <Button variant="secondary" size="sm" onClick={() => void startNewConversation()}>
@@ -456,7 +467,7 @@ function ChatThread() {
         </>
       }
     >
-      <div className="space-y-4">
+      <div className="flex min-h-0 flex-1 flex-col gap-4">
         {safety ? (
           <Card className="border-warning/40 bg-warning-mist">
             <div className="flex items-start gap-3">
@@ -560,7 +571,11 @@ function ChatThread() {
 
         {stageLine ? <p className="text-xs text-muted">{stageLine}</p> : null}
 
-        <Card className="flex h-[52vh] min-h-[320px] flex-col p-0">
+        {/* Takes whatever height the screen has left: the thread scrolls inside it and the
+            composer stays at the bottom of it, which is what a conversation looks like on
+            a phone. `min-h-[240px]` is the floor for a very short window, where the page
+            starts scrolling instead. */}
+        <Card className="flex min-h-[240px] flex-1 flex-col overflow-hidden p-0">
           <div ref={setListRef} className="cg-scrollbar flex-1 space-y-4 overflow-y-auto p-4 sm:p-5">
             {messages.length === 0 ? (
               <EmptyState
@@ -574,10 +589,15 @@ function ChatThread() {
                   key={`${message.id}-${index}`}
                   className={cn("flex", message.role === "user" ? "justify-end" : "justify-start")}
                 >
-                  <div className="max-w-[88%] sm:max-w-[76%]">
+                  {/* `min-w-0` is the whole fix for a bubble that runs off the screen: a
+                      flex item will not shrink below its content's own width, so a long
+                      URL or a long Hindi word set the bubble's minimum and pushed it past
+                      the card's edge. `break-words` then lets that content wrap instead of
+                      overflowing the rounded box. */}
+                  <div className="max-w-[88%] min-w-0 sm:max-w-[76%]">
                     <div
                       className={cn(
-                        "rounded-card px-4 py-3 text-sm leading-relaxed shadow-card",
+                        "rounded-card px-4 py-3 text-sm leading-relaxed shadow-card break-words",
                         message.role === "user"
                           ? "bg-brand text-white"
                           : "border border-line bg-surface text-ink",
@@ -651,7 +671,14 @@ function ChatThread() {
               </p>
             ) : null}
 
-            <div className="flex items-end gap-2">
+            {/* One height for all three controls. The box asked for 46px and the two icon
+                buttons were 40px, so `items-end` lined their bottoms up while their tops
+                did not, and the row read as slightly crooked next to the input. `min-w-0`
+                lets the box give way to the buttons rather than shoving them off a phone.
+                `field-sizing-content` is what the fixed height was missing: the box now
+                grows with the answer to `max-h-32` and scrolls only past that, instead of
+                hiding the second line of a two-line reply behind a bar in a 44px slot. */}
+            <div className="flex items-center gap-2">
               <textarea
                 value={draft}
                 onChange={(event) => setDraft(event.target.value)}
@@ -662,9 +689,9 @@ function ChatThread() {
                   }
                 }}
                 rows={1}
-                placeholder={t("Type your answer… (Enter sends, Shift+Enter makes a new line)")}
+                placeholder={t("Type your answer…")}
                 aria-label={t("Message to your guide")}
-                className="cg-scrollbar max-h-32 min-h-[46px] flex-1 resize-none rounded-card border border-line bg-surface px-3.5 py-2.5 text-sm text-ink outline-none placeholder:text-muted/70 focus:border-brand focus:ring-2 focus:ring-brand-mist"
+                className="cg-scrollbar max-h-32 min-h-11 min-w-0 flex-1 resize-none rounded-card border border-line bg-surface px-3.5 py-2 text-sm leading-relaxed text-ink outline-none field-sizing-content placeholder:text-muted/70 focus:border-brand focus:ring-2 focus:ring-brand-mist"
               />
               <Button
                 variant="secondary"
@@ -682,7 +709,7 @@ function ChatThread() {
                   if (dictation.listening) dictation.stop();
                   else dictation.start();
                 }}
-                className={cn(dictation.listening && "bg-teal text-white")}
+                className={cn("h-11 w-11 shrink-0", dictation.listening && "bg-teal text-white")}
               >
                 {dictation.listening ? (
                   <MicOff className="h-4 w-4" aria-hidden />
@@ -696,27 +723,51 @@ function ChatThread() {
                 title={t("Send (Enter)")}
                 disabled={!canSend}
                 onClick={() => void replyTo(draft)}
+                className="h-11 w-11 shrink-0"
               >
                 {sending ? <Square className="h-4 w-4" aria-hidden /> : <Send className="h-4 w-4" aria-hidden />}
               </Button>
             </div>
 
-            <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-              <div className="max-w-xs flex-1">
-                <Toggle
-                  checked={speakOn}
-                  onChange={(next) => {
-                    setSpeakOn(next);
-                    if (!next) {
-                      player.stop();
-                      cancelBrowserTts();
-                    }
-                  }}
-                  label="Read replies aloud"
-                  description="The server's speech service reads replies aloud over the internet, with your browser's own voice as a fallback. Settings names the exact service."
-                />
-              </div>
-              <div className="flex items-center gap-2">
+            {/* What the Enter key does, said once below the box instead of inside it: the
+                placeholder carried this whole sentence before, and in Hindi it is three
+                lines tall, so it was clipped by the 44px box it was written in. Hidden on
+                a phone, where every line under the input comes off the thread and a thumb
+                has to hunt for Shift before it can make a newline anyway. */}
+            <p className="mt-1.5 hidden text-[11px] leading-relaxed text-muted sm:block">
+              {t("Enter sends your message. Shift+Enter starts a new line.")}
+            </p>
+
+            {/* One line for the switch, and the sentence about where a reply goes when it is
+                read aloud sits behind it rather than under it. Measured at 375x780 with the
+                description always drawn, the block under the input was 218px tall against a
+                message list of 215px — the area that is not the conversation was as tall as
+                the conversation. The sentence is a disclosure, not decoration, so it is not
+                deleted: it is hidden until asked for, which is also the shape of a student
+                who does not want to read it. `flex-wrap` rather than a stacked column,
+                because the toggle column with a 200px button beside it was measured 107px
+                wide inside a 340px card, and a switch squeezed that thin is a ribbon. */}
+            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+              <Toggle
+                checked={speakOn}
+                onChange={(next) => {
+                  setSpeakOn(next);
+                  if (!next) {
+                    player.stop();
+                    cancelBrowserTts();
+                  }
+                }}
+                label="Read replies aloud"
+              />
+              <button
+                type="button"
+                onClick={() => setVoiceHelp((open) => !open)}
+                aria-expanded={voiceHelp}
+                className="text-[11px] font-medium text-brand underline-offset-2 hover:underline"
+              >
+                {voiceHelp ? t("Hide this") : t("How does the voice work?")}
+              </button>
+              <div className="ml-auto flex items-center gap-2">
                 {player.status === "playing" || player.status === "paused" ? (
                   <Button variant="ghost" size="sm" onClick={() => player.stop()}>
                     <Square className="h-3.5 w-3.5" aria-hidden />
@@ -731,6 +782,14 @@ function ChatThread() {
                 ) : null}
               </div>
             </div>
+
+            {voiceHelp ? (
+              <p className="mt-1.5 text-[11px] leading-relaxed text-muted">
+                {t(
+                  "The server's speech service reads replies aloud over the internet, with your browser's own voice as a fallback. Settings names the exact service.",
+                )}
+              </p>
+            ) : null}
 
             {dictation.listening ? (
               <p className="mt-2 flex items-start gap-2 text-xs text-teal" role="status">

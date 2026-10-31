@@ -202,13 +202,16 @@ export function Toggle({
   const t = useT();
 
   return (
+    // A switch row is narrow on purpose and Hindi labels are long: `break-words` keeps a
+    // word that is wider than the row inside it instead of pushing the switch out of the
+    // card, which is what a 320px column measured at 340px of content here.
     <div className="flex items-start justify-between gap-4 py-1">
       <div className="min-w-0">
-        <p id={labelId} className="text-sm font-medium text-ink">
+        <p id={labelId} className="break-words text-sm font-medium text-ink">
           {shown(t, label)}
         </p>
         {description ? (
-          <p className="mt-0.5 text-xs leading-relaxed text-muted">{shown(t, description)}</p>
+          <p className="mt-0.5 break-words text-xs leading-relaxed text-muted">{shown(t, description)}</p>
         ) : null}
       </div>
       <button
@@ -223,10 +226,17 @@ export function Toggle({
           checked ? "bg-brand" : "bg-slate-300",
         )}
       >
+        {/* `left-0.5` is not decoration: a `<button>` is the knob's containing block, and a
+            browser is free to resolve the static position of an absolutely positioned child
+            inside button content however it likes. Without an explicit left this knob landed
+            at the track's own left edge plus its translate, which measured 20px past the
+            right edge of a 44px track — a white dot sitting outside every switch. The 20px of
+            `translate-x-5` is exactly the slack left by 44px minus the knob minus two sides
+            of 2px inset. */}
         <span
           className={cn(
-            "absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform",
-            checked ? "translate-x-[22px]" : "translate-x-[2px]",
+            "absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform",
+            checked ? "translate-x-5" : "translate-x-0",
           )}
         />
       </button>

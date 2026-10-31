@@ -257,7 +257,7 @@ export default async function CareerProfilePage({
           </section>
         ) : null}
 
-        <div className="mt-8 grid gap-6 sm:grid-cols-2">
+        <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2">
           <div>
             <h2 className="text-lg font-bold tracking-tight text-heading sm:text-xl">{t("What people like")}</h2>
             <ul className="mt-3 space-y-2 text-sm leading-relaxed text-ink">

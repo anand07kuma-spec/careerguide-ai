@@ -215,7 +215,7 @@ export default function ExamsScreen() {
         {list.state === "loading" ? (
           <>
             <p className="text-sm text-muted">{t("Loading the exam map…")}</p>
-            <div className="grid gap-4 lg:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               {Array.from({ length: 4 }).map((_, i) => (
                 <SkeletonCard key={i} />
               ))}
@@ -245,7 +245,7 @@ export default function ExamsScreen() {
           groups.map((group) => (
             <section key={group.id} className="space-y-3">
               <SectionHeading title={t(group.title)} description={t(group.description)} />
-              <div className="grid gap-4 lg:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 {group.exams.map((exam) => (
                   <ExamCardView key={exam.id} exam={exam} />
                 ))}

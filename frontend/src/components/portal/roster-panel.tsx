@@ -148,7 +148,7 @@ export function RosterPanel({
             </div>
 
             {canAssign ? (
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <Select
                   label={t("Assigned counsellor")}
                   value={assigned ? String(assigned.id) : ""}

@@ -386,7 +386,18 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </div>
 
-      <div className="flex min-w-0 flex-col" inert={drawerOpen}>
+      {/* `min-h-dvh` belongs here as well as on the outer box: this is the column whose
+          `flex-1` child is the page, and a column that is only as tall as its content
+          gives a screen asking for the rest of the window nothing to fill. Below `lg` the
+          bar is fixed over this column, so the column is asked to be exactly the window and
+          no taller: a box that grows to its content would push the chat's composer under
+          that bar and make the page scroll past a header that cannot move. On a laptop the
+          window scrolls as it always has. Dropped again for print, where a report should end
+          at its own last line. */}
+      <div
+        className="flex min-h-dvh min-w-0 flex-col max-lg:h-dvh print:min-h-0 print:max-lg:h-auto"
+        inert={drawerOpen}
+      >
         <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-line bg-canvas/90 px-4 py-3 backdrop-blur lg:hidden print:hidden">
           <button
             type="button"
@@ -410,7 +421,21 @@ export function AppShell({ children }: { children: ReactNode }) {
           </Link>
         </header>
 
-        <main className="min-w-0 flex-1 pb-24 lg:pb-10 print:pb-0">{children}</main>
+        {/* A flex column, so a screen that wants the rest of the window — the chat — can
+            take `flex-1` and get exactly the height between this header and the bottom
+            bar. Doing it here is what lets that screen avoid a `calc(100vh - 152px)`
+            guess that goes wrong on every phone that is not this tall. The `pb-24` is the
+            clearance for the fixed bar, and it now sits inside the height budget rather
+            than being added underneath it. `min-h-0` is what makes the budget real: a flex
+            item is by default not allowed to shrink below its own content, so without it the
+            chat's column reported a taller content box than the window and this box grew to
+            match, pushing the composer under the bar and the document into a scroll.
+            `overflow-x-hidden` has to be said out loud: a box that scrolls on one axis is
+            made a scroller on the other by CSS, and a phone that can pan sideways under a
+            page that cannot is a scrollbar nobody asked for. */}
+        <main className="flex min-w-0 flex-1 flex-col pb-24 max-lg:min-h-0 max-lg:overflow-y-auto max-lg:overflow-x-hidden lg:pb-10 print:max-lg:overflow-visible print:pb-0">
+          {children}
+        </main>
       </div>
 
       <nav
@@ -463,6 +488,7 @@ export function Screen({
   badge,
   children,
   className,
+  fill = false,
 }: {
   title: string;
   description?: ReactNode;
@@ -470,10 +496,22 @@ export function Screen({
   badge?: ReactNode;
   children: ReactNode;
   className?: string;
+  /**
+   * Hand this screen the rest of the window instead of letting it size to its content.
+   * Only the conversation wants it: a chat that stops at 52% of the screen leaves the
+   * composer floating in the middle of a phone with two hundred empty pixels under it.
+   */
+  fill?: boolean;
 }) {
   const t = useT();
   return (
-    <div className={cn("mx-auto w-full max-w-6xl px-4 py-5 sm:px-6 sm:py-8", className)}>
+    <div
+      className={cn(
+        "mx-auto w-full max-w-6xl px-4 py-5 sm:px-6 sm:py-8",
+        fill && "flex min-h-0 flex-1 flex-col",
+        className,
+      )}
+    >
       {/* The one printable thing inside a screen is the document the student wrote, not
           this heading and its buttons — a CV that opens with the app's own page title is
           the app printing itself on the child's paper. */}
