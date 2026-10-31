@@ -120,6 +120,7 @@ import type {
   UniversityCreate,
   UniversitySummary,
   UniversityUpdate,
+  VerificationRecent,
   VoiceInfo,
 } from "./types";
 
@@ -656,6 +657,18 @@ export const api = {
     ).toString();
     return request<Institution[]>(`/api/institutions${query ? `?${query}` : ""}`);
   },
+
+  /**
+   * The feed behind the public `/verified` page: every catalogue row signed as read against
+   * its official page inside the last `days` days, newest first.
+   *
+   * Needs no session and carries no per-student data, which is what makes it safe for a
+   * server render of a marketing page to call on every visitor's behalf. An empty `items` is
+   * a real answer — a date here is a human signature, never a batch stamp — and the page says
+   * "nothing was checked in this window" rather than inventing rows to fill the space.
+   */
+  verificationRecent: (days = 30) =>
+    request<VerificationRecent>(`/api/verification/recent?days=${days}`),
 
   /**
    * The study-abroad directory. Every one of these reads rows this repository has

@@ -114,4 +114,26 @@ export const HI: Record<string, string> = {
   "Ask the guide": "गाइड से पूछें",
   "Browse career profiles": "करियर प्रोफ़ाइलें देखें",
   "Read the disclaimer": "अस्वीकरण पढ़ें",
+
+  // /verified — the public check log
+  "What we checked, and when": "हमने क्या जाँचा, और कब",
+  "career and university names": "करियर और यूनिवर्सिटी के नाम",
+  "These are the catalogue rows a person read against an official page in the last {days} days. Each one shows the day it was signed off and the page it was read from.":
+    "पिछले {days} दिनों में किसी व्यक्ति ने इन जानकारी पंक्तियों को आधिकारिक पृष्ठ से मिलाकर पढ़ा है। हर पंक्ति में वह दिन और वह पृष्ठ दोनों दिए हैं जहाँ से इसे जाँचा गया।",
+  "A date here is written by the person who did the reading, never by a script that stamps everything at once. So an empty list means the reading has not happened recently — it does not mean the rows below the notice are wrong, and this page will not add rows to look busier than it is.":
+    "यहाँ तारीख उसी व्यक्ति ने लिखी होती है जिसने जाँच की है, कभी भी एक बार में सब कुछ मुहर लगाने वाले स्क्रिप्ट ने नहीं। इसलिए खाली सूची का मतलब है कि हाल में यह जाँच नहीं हुई — इसका यह मतलब नहीं कि नीचे दी पंक्तियाँ ग़लत हैं, और इस पेज पर भीड़ दिखाने के लिए झूठी पंक्तियाँ नहीं जोड़ी जाएँगी।",
+  "Nothing was checked in the last {days} days.":
+    "पिछले {days} दिनों में कुछ भी जाँचा नहीं गया।",
+  "That is the honest answer, and it is the one this page exists to give rather than hide. A green date on a card means somebody opened the official page and compared the row to it; nobody has done that inside this window. What is on the individual career, scholarship and university pages is still there, with its own badge saying whether it has been read and when.":
+    "यही ईमानदार जवाब है, और इस पेज का मौजूद होने का उद्देश्य यही जवाब छिपाना नहीं, देना है। कार्ड पर हरी तारीख का मतलब है कि किसी ने आधिकारिक पृष्ठ खोला और इस पंक्ति की उससे तुलना की; इस अवधि में किसी ने ऐसा नहीं किया है। करियर, स्कॉलरशिप और यूनिवर्सिटी के अपने पेजों पर दी जानकारी वहीं है, और वहाँ का अपना बैज बताता है कि उसे पढ़ा गया है या नहीं, और कब।",
+  "{n} checks in the last {days} days": "पिछले {days} दिनों में {n} जाँचें",
+  "No public page for this one yet.": "इसका अभी कोई सार्वजनिक पेज नहीं है।",
+  "A check is not permanent. Deadlines, fees and entry rules move, so a date older than this window — or a card with no date at all — should be read against this year's official notification before a family plans around it.":
+    "एक बार की गई जाँच स्थायी नहीं होती। डेडलाइन, फ़ीस और प्रवेश के नियम बदलते हैं, इसलिए इस अवधि से पुरानी तारीख पर — या बिना तारीख वाले कार्ड पर — परिवार को योजना बनाने से पहले इस साल का आधिकारिक नोटिफ़िकेशन खुद पढ़ना चाहिए।",
+  "The verification log replied {status} to this page.":
+    "जाँच लॉग ने इस पेज को {status} जवाब दिया।",
+  "The verification log could not be reached.": "जाँच लॉग तक पहुँचा नहीं जा सका।",
+  "The check log could not be loaded": "जाँच लॉग लोड नहीं हो सका",
+  "This is not the site saying nothing has been checked — it is the site saying it does not know. No dates have been filled in from a cached or invented list.":
+    "इसका यह मतलब नहीं कि साइट कह रही है कि कुछ भी जाँचा नहीं गया — इसका मतलब है कि साइट को यह पता नहीं है। यहाँ किसी भी तारीख को Cache या काल्पनिक सूची से नहीं भरा गया है।",
 };

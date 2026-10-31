@@ -47,6 +47,9 @@ const COLUMNS: { title: string; items: Item[] }[] = [
       // page, anchored to one heading, was the footer disagreeing with itself.
       { label: "Career profiles", href: "/careers" },
       { label: "Study abroad", href: "/study-abroad" },
+      // The page that says which of the above anybody has actually read against a source.
+      // A sitemap entry nobody can click to is not a page a family finds.
+      { label: "What we checked, and when", href: "/verified" },
       { label: "Pricing", href: "/pricing" },
     ],
   },
