@@ -211,6 +211,9 @@ One guard is worth knowing about: a reasoning model can spend the whole completi
 and come back with an empty answer. That counts as a provider failure, so the student sees the
 built-in reply with the reason beside it instead of silence. (`openai/gpt-oss-20b` does this on Groq;
 `gpt-oss-120b` was chosen because it answers in Hindi, English and Hinglish.)
+The streamed turn (§4) obeys the same rule, with one difference that only streaming can create: nothing
+sent yet means the built-in reply can still arrive whole, whereas words the child has already read are
+kept and named as unfinished rather than replaced under their feet.
 
 ---
 
@@ -1293,6 +1296,81 @@ full sweep of all 23 suites came back **126 passed, 0 failed** each. Nothing in 
 interview routes, so it is recorded as an unreproduced flake in a suite that has never shown one before, and as
 its own piece of work to chase rather than as a pass.
 
+### Streaming the guide's reply
+
+The chat asked a question and then said "Your guide is thinking…" for as long as the model call took — four
+seconds of a spinner before a child learns whether the guide understood them at all. **`POST
+/api/conversations/{session_id}/messages/stream`** answers the same turn as `text/event-stream`, so the first
+words land while the rest is still being written. It is an extra address, not a replacement: `POST /messages`
+still answers in one piece, and the browser falls back to it.
+
+Four frames, in this order, each flushed as it is produced — `meta` (`session_id`, `message_id`, `language`),
+then `delta` (`text`) once per fragment, then `done` carrying the whole `ChatOut` the non-streaming route would
+have returned. `error` (`code`, `message`) replaces `done` when there is no whole reply to hand over.
+
+- **Server-sent events, and `fetch` rather than `EventSource`.** This reply only ever travels one way, from the
+  guide to the screen, over the same POST, cookie and `Authorization` header as any other turn — which is
+  exactly why the named browser API for it cannot be used: `EventSource` issues a GET and sends no body, so it
+  could not carry the student's message or their session. The client is `fetch` plus
+  `response.body.getReader()` and about forty lines of framing.
+- **The route's database session is gone before the body is written.** FastAPI closes a `yield` dependency when
+  the handler returns, and a `StreamingResponse` is written *after* that, so the generator opens its own
+  `SessionLocal()` and closes it in `finally`. Had it used the injected session, every streamed turn would have
+  failed at the first write — the non-streaming route cannot show this, because it finishes its work before it
+  answers.
+- **The guards are the other route's own, by construction, not by copy.** `_prepare_turn()` is the extracted
+  sequence the non-streaming route already ran: student role, session ownership, `ensure_settings`, the ended
+  conversation, the empty message, `entitlements.guard_chat`, the language the student just used, the profile
+  facts learned from it, and the `plan_of` ownership check. `store` and `_chat_out` are shared the same way, so
+  the transcript, the journey event a safety note writes, and the response body cannot drift between the two
+  addresses. A stream that skipped the consent gate would be a data leak with a nicer time-to-first-token, so
+  the suite refuses it four ways and checks that nothing was streamed while doing it: another student's session
+  → `404`, no credential at all → `401`, a voice session without consent → `403`, an ended conversation → `409`
+  — each with a body that does not begin `event:`.
+- **One write of the question, one write of the answer.** The route stores the student's `Message` before it
+  streams, which is what lets `meta.message_id` name a row that exists (an invented assistant id would mean
+  writing the reply twice, and the assistant row is written once, at `done`) and what makes the day's allowance
+  independent of the URL used: `chats_today` counts stored messages, so a second address cannot buy a second
+  budget. The minute bucket is a different thing and it is per address — see the note below the measurements.
+- **A reply that stopped is kept.** When a configured provider dies mid-stream the words already read are stored
+  as the assistant message with `partial=True` and the conversation's stage is *not* advanced, because a reply
+  that never finished taught the guide nothing new; the client then gets `error{code:"cut_short"}` and no `done`.
+  Pasting the scripted guide's sentence under model words a child had already read would be the app writing its
+  own words into somebody else's answer.
+
+**Two providers, one event contract** (`app/services/ai_provider.py`). `stream_respond()` yields fragments and
+then exactly one finished `GuideReply`, and it keeps that shape for all three providers behind it: a model that
+streams yields its own fragments; a model that ignores `"stream": true` yields one fragment holding the whole
+reply and then the reply; and the built-in guide splits its scripted answer on sentence ends — `.!?` and `।`,
+trailing space kept so `"".join(fragments)` is byte-for-byte the stored reply — with 0.22 s between fragments
+and never a pause before the first. A provider that cannot be reached at all still answers, from the built-in
+guide, with the same note in `error` that `respond()` has always put there; that is the third branch, and the
+smoke suite drives all three against a stand-in server that streams, refuses to stream, and cuts a chunked body
+halfway through.
+
+**Measured.** `smoke_test.py` **104 → 131 checks**, `security_test.py` **162 → 167**, `payments_test.py` **172 →
+178**, 0 failed in each; the battery's totals are in §5. The event order, the exactly-one-assistant-row-per-stream
+claim, the disclosure that is answered whatever the plan, and both fallback shapes are all asserted there rather
+than reasoned about here. Over a real socket against uvicorn in demo mode: `content-type:
+text/event-stream; charset=utf-8`, `meta` and the first `delta` at **85 ms**, the next fragment at **348 ms**,
+body closed at **349 ms**. In a headless Chrome against the built app: the "thinking" line at **2 ms**, its first
+fragment replacing it at **40 ms**, the second at **294 ms**; with `/messages/stream` hidden behind a `404
+"Not Found"` the single-piece route answered and no error line appeared; with the body killed after one fragment
+the half reply stayed on screen above "This reply stopped partway. Ask again", and that button sent the question
+again and produced a second half reply; with a `402` from the stream both optimistic bubbles were removed and the
+server's own sentence shown. In Hindi: **यह जवाब बीच में रुक गया। दोबारा पूछें**. `npx tsc --noEmit`, `npx eslint
+src` and `npm run build` all exit 0; `hi-coverage` is 0 untranslated, unreached and unwired across **3 358** keys
+(three added by this screen) and `hi-duplicates` reports 0 conflicts.
+
+**The minute bucket is per address, and that is the honest reading of the library, not an oversight.** slowapi
+keys a limit on `{module}.{name}` of the decorated function, and its public `limit()` exposes no `shared` or
+`scope` to fold two routes onto one key; `key_style="url"` would be worse, since it splits on query strings.
+Folding the two handlers under one name would register the same rule twice against one counter and start refusing
+a student after two sends in a minute instead of three. So each address throttles its own abuse, and the budget
+that matters — the day's questions — is counted from stored messages, which `payments_test.py` now proves from
+both URLs: the third send of the day is refused `402` whichever address asks it, and the refusal arrives before
+the stream opens.
+
 ---
 
 ## 5. Verify it yourself
@@ -1345,6 +1423,23 @@ tts 72. That last one is worth reading carefully: `tts_provider_test.py`'s two *
 honest statement is "0 checks failed", not "speech works against a provider" — the 72 offline checks
 are what passed. `schema_fit_check.py`: every seeded string fits its declared column, **182 rows
 checked, 0 columns too short**.
+
+**Measured here on 2026-11-01, with the guide's reply streamed: 23 suites, 2 666 checks run, 0 failed**
+— 2 628 the day before plus the 38 checks §4's streaming section describes. Three rows moved: `smoke_test.py`
+104 → **131**, `security_test.py` 162 → **167**, `payments_test.py` 172 → **178**. Every other suite printed
+exactly the number it printed on the previous battery, `interview_test.py` among them at **126 passed, 0
+failed**, which is that §4 caveat not reproducing rather than a fix. `schema_fit_check.py` again: **182 rows,
+0 columns too short**; the two live TTS calls again printed `SKIP` for want of a key, so the same care about
+what "0 failed" means applies here.
+
+**The frontend the same day:** `npx tsc --noEmit` 0, `npm run lint` 0 errors (the one `scripts/layout-shot.mjs`
+warning predates this work), `npm run build` 0, `hi-coverage` **0 untranslated, 0 unreached, 0 unwired** across
+**3 358** keys, `hi-duplicates` 0 conflicting and ten harmless repeats, `hi-prose-check` 0 literals missing.
+And the streamed reply was watched arriving, not only asserted: over a real socket the first fragment landed at
+**85 ms**, and in a browser the "thinking" line in the bubble was replaced by the first words at **40 ms** with
+the rest following at **294 ms**. The four shapes that are not the happy path — the stream route missing, the
+body dying halfway, the day's allowance spent, the same screen in Hindi — were each walked through the running
+app, in `_scratch/stream_ui.mjs`, and what they printed is in §4.
 
 **The frontend the same day:** `npx tsc --noEmit` exits 0; `npx eslint .` is 0 errors with one warning,
 in `scripts/layout-shot.mjs`, that predates this work; `npm run build` exits 0 and the route manifest
@@ -1758,7 +1853,7 @@ asserts fewer, larger things and drops the checks that were specific to the old 
 
 | Suite | Result |
 | --- | --- |
-| `smoke_test.py` — consent gates, server-side ownership, conversations, the AI provider call against a stand-in service, recommendations, plans, reports, transcript deletion, logout | **104 passed, 0 failed** · 2026-10-18 (re-run) |
+| `smoke_test.py` — consent gates, server-side ownership, conversations, the AI provider call against a stand-in service, recommendations, plans, reports, transcript deletion, logout — **and the streamed turn: the `meta → delta → done` order, fragments that join back into exactly the stored reply, one assistant row per stream written at `done`, a provider that will not stream, a provider whose chunked body dies halfway, and every refusal (another student's session, no credential, an unconsented voice session, an ended conversation) arriving with no events at all** | **131 passed, 0 failed** · 2026-11-01 (104 → 131 with the streamed reply) |
 | `login_test.py` — come-back codes (still on the server, no screen offers them) | **62 passed, 0 failed** · 2026-10-20 (60 → 62. The suite now keeps two clients apart: the one that has a cookie jar full from its own sign-ins, and a bare one. Without that split an "anonymous request" check was being made with a session in hand and passing for the wrong reason) |
 | `guest_session_test.py` — the device-id entry path: new vs known device, one device one account, token still guards every read, start-over rotation, cross-device isolation | **71 passed, 0 failed** · 2026-10-20 (40 → 71, from two sections added when sessions moved off `localStorage`: renewal that happens quietly and only up to the ceiling, and the session travelling in a cookie the page cannot read) |
 | `conversation_facts_test.py` — the guide asking for facts inside the chat | **24 passed, 0 failed** · 2026-10-18 (re-run) |
@@ -1777,11 +1872,11 @@ because the suite was rewritten, not trimmed: the comparison now prints one resu
 | `tts_provider_test.py` — SSML escaping, key as header, error messages, provider choice, `/api/health`, plus a real Gemini synthesis | **72 passed, 1 failed, 1 skipped** · 2026-10-23 — the one failure is the single check that needs the outside world: the live Gemini call answered `429 Too Many Requests` again, the free-tier request quota on the key this machine tests with (the same answer on 2026-10-21 and 2026-10-22), and it is printed as a failure rather than a `SKIP` because a key *is* configured. Its live Azure call has no key in this shell and prints `SKIP` rather than pretending. Every other check in the suite is about the request and the answer shape and needs no network; the shape checks ran again today and all 72 passed. Recorded green on 2026-10-18 (**75 passed, 0 failed, 1 skipped**, when the same Gemini call returned playable audio) |
 | `serverless_guard_test.py` — the no-database shape | **10 passed, 0 failed** · 2026-10-18 (re-run) |
 | `clerk_auth_test.py` — the optional email sign-in, run against a stand-in that answers the way Clerk's API is documented to answer. The status call tells the truth when no keys are set; verification goes to Clerk's own endpoint with the server key and a timeout, and an unreachable Clerk is a `502` that says nothing changed; linking needs **this app's** bearer token *before* Clerk is consulted, so a stolen Clerk session grabs nothing; attaching the same identity twice changes nothing, and a second account that tries it gets a `409` naming the screen that fixes it; exactly two columns are written and no column here could hold an address; `enter` opens the same account with a freshly issued token; unlinking leaves the browser working and the email finding nothing; the webhook refuses unsigned, wrongly-signed, replayed and tampered deliveries without clearing a pointer, accepts a genuine `user.deleted` by clearing only the pointer, and stops accepting everything the moment its signing secret is off; and the finished-sitting list the profile screen reads is the student's own, newest first, with the "24 of 30 answered" counts and each questionnaire's own language | **106 passed, 0 failed** · 2026-10-19 (re-run). What it cannot prove is the part families would ask about: no Clerk project is attached to this build, so the live widget, a real token verification and a genuine Svix-signed delivery remain **unverified** (§4) |
-| `security_test.py` — the hardening pass, run with the throttles **on** and turned down to two and three a minute, so a limit is provable in three requests instead of twenty-one. The bucket is the caller's session, not their street: the key is a sha256 of the bearer token — never the token, so nothing logged or cached can carry it — two students on one machine get two headrooms, and a call with no session yet falls back to its address. Every rule is parsed at startup: `20每分钟`, `plenty per minute`, `20`, `per minute` and `-5 per minute` are refused rather than silently switching the guard off. A `429` is a sentence a child can read, with a `Retry-After` equal to the window and no library jargon in it, and a throttled call never reaches the speech vendor and never says whether a come-back code was right. CORS: `*` is dropped, whitespace and trailing slashes normalised, the site's own public URL folded in once, a stranger's `Origin` given no header, and nothing allowed with credentials. Input: a 15-character device id, an 81-character name, an unknown role, an age band nobody was offered, a 49-character interest, an empty interest, an extra key in a body, and `javascript:` / `data:` / relative text in a plan link are each refused — while `https://ncert.nic.in/…` still saves; `?limit=-1` on the journey feed is refused instead of meaning "every row"; a truncated, punctuated or empty-token bearer header is refused before a database lookup | **146 passed, 0 failed** · 2026-10-20 (105 → 146 once the shared read bucket arrived: which catalogue
+| `security_test.py` — the hardening pass, run with the throttles **on** and turned down to two and three a minute, so a limit is provable in three requests instead of twenty-one. The bucket is the caller's session, not their street: the key is a sha256 of the bearer token — never the token, so nothing logged or cached can carry it — two students on one machine get two headrooms, and a call with no session yet falls back to its address. Every rule is parsed at startup: `20每分钟`, `plenty per minute`, `20`, `per minute` and `-5 per minute` are refused rather than silently switching the guard off. A `429` is a sentence a child can read, with a `Retry-After` equal to the window and no library jargon in it, and a throttled call never reaches the speech vendor and never says whether a come-back code was right. CORS: `*` is dropped, whitespace and trailing slashes normalised, the site's own public URL folded in once, a stranger's `Origin` given no header, and nothing allowed with credentials. Input: a 15-character device id, an 81-character name, an unknown role, an age band nobody was offered, a 49-character interest, an empty interest, an extra key in a body, and `javascript:` / `data:` / relative text in a plan link are each refused — while `https://ncert.nic.in/…` still saves; `?limit=-1` on the journey feed is refused instead of meaning "every row"; a truncated, punctuated or empty-token bearer header is refused before a database lookup | **167 passed, 0 failed** · 2026-11-01 (146 → 162 with the CORS pass, 162 → 167 with the streamed turn; 105 → 146 once the shared read bucket arrived: which catalogue
 routes are exempt from it, which reads are counted against it, that an exemption matches a path segment
 rather than the start of a string, and that a read is still answered when the counter store cannot be
-reached — then re-counted the moment the store comes back). It also caught one drift outside its own scope: `conversation_facts_test.py` had been posting `{"mode": "chat"}` to `/api/conversations`, a key no screen has ever sent and no handler reads — the strict schema answered it `422 extra_forbidden`. The test was corrected to `{"kind": "chat"}`, which is what `frontend/src/lib/api.ts` sends |
-| `payments_test.py` — the money paths, against a stand-in for Razorpay that records what the server asked for, so it needs no key and no network. **The price list is arithmetic, not a claim**: yearly is the monthly times twelve minus the stated discount, the savings percentage is computed, and nothing is typed into a constant. **A server with no keys says so in words** — the routes answer, the flag comes back, and the provider is never contacted. **Signatures**: the only thing that turns a request into money, checked against a body someone edited. **Ordering**: the amount comes from the plan and never from the caller, so a body naming its own price is ignored; an unattested adult gets refused *before* the provider is asked for an order at all. **Verification**: a plan unlocks on a signature, not on a say-so — a callback that claims success without one changes nothing, a replayed confirmation grants one period and not two, and a failed payment leaves the account where it was. **The webhook**: unsigned, wrongly-signed and tampered deliveries are refused, `payment.captured` for an order that isn't this account's is ignored, the same event delivered twice grants the days once, and everything stops the moment the signing secret is turned off. **Giving up a paid period** is a confirmed action. **Limits, when a deployment switches them on**: the fourth chat of the day is refused with a sentence that points at the price list and promises nothing already made is lost, a disclosure of harm is answered whatever the plan and still counts as the chat it was, an unfinished questionnaire can always be resumed, one questionnaire finishes on Free and the second is where the allowance ends, the careers catalogue, streams and exams stay free, and a school **licence grant leaves no payment row pretending money arrived**. **Fairness**: a guardian inherits the family's paid period, an ended period is not a plan any other account can still read, the chat day rolls over at IST midnight rather than UTC, and — the check this whole feature exists to make — **the recommendation a child is told is byte-identical before and after someone pays for it** | **172 passed, 0 failed** · 2026-10-18 (new suite). What it cannot prove is in its own docstring: no real order has ever been opened and no payment has ever been captured, because that needs a test-mode key on this deployment (§5, "Still needs your own testing") |
+reached — then re-counted the moment the store comes back). It also caught one drift outside its own scope: `conversation_facts_test.py` had been posting `{"mode": "chat"}` to `/api/conversations`, a key no screen has ever sent and no handler reads — the strict schema answered it `422 extra_forbidden`. The test was corrected to `{"kind": "chat"}`, which is what `frontend/src/lib/api.ts` sends. A second address now answers the same turn, so five checks went with it: each write address holds its own minute bucket, a throttled stream is refused before a single `event:` line is written, its `Retry-After` is the window, and the refusal is a sentence a family can read rather than a library's |
+| `payments_test.py` — the money paths, against a stand-in for Razorpay that records what the server asked for, so it needs no key and no network. **The price list is arithmetic, not a claim**: yearly is the monthly times twelve minus the stated discount, the savings percentage is computed, and nothing is typed into a constant. **A server with no keys says so in words** — the routes answer, the flag comes back, and the provider is never contacted. **Signatures**: the only thing that turns a request into money, checked against a body someone edited. **Ordering**: the amount comes from the plan and never from the caller, so a body naming its own price is ignored; an unattested adult gets refused *before* the provider is asked for an order at all. **Verification**: a plan unlocks on a signature, not on a say-so — a callback that claims success without one changes nothing, a replayed confirmation grants one period and not two, and a failed payment leaves the account where it was. **The webhook**: unsigned, wrongly-signed and tampered deliveries are refused, `payment.captured` for an order that isn't this account's is ignored, the same event delivered twice grants the days once, and everything stops the moment the signing secret is turned off. **Giving up a paid period** is a confirmed action. **Limits, when a deployment switches them on**: the fourth chat of the day is refused with a sentence that points at the price list and promises nothing already made is lost, a disclosure of harm is answered whatever the plan and still counts as the chat it was, an unfinished questionnaire can always be resumed, one questionnaire finishes on Free and the second is where the allowance ends, a question asked of the streaming address is counted and refused exactly as the same question asked of the other one — which is the point, because a second URL must not be able to buy a second budget; the careers catalogue, streams and exams stay free, and a school **licence grant leaves no payment row pretending money arrived**. **Fairness**: a guardian inherits the family's paid period, an ended period is not a plan any other account can still read, the chat day rolls over at IST midnight rather than UTC, and — the check this whole feature exists to make — **the recommendation a child is told is byte-identical before and after someone pays for it** | **178 passed, 0 failed** · 2026-11-01 (172 → 178 once a streamed send had to prove the same allowance; new suite on 2026-10-18). What it cannot prove is in its own docstring: no real order has ever been opened and no payment has ever been captured, because that needs a test-mode key on this deployment (§5, "Still needs your own testing") |
 | `email_test.py` — the mail layer with no key and no network: the transport stubbed the way Razorpay's is, so a deployment with no `RESEND_API_KEY` answers "not configured" instead of pretending, and an address never reaches a log line — neither fact is observable against a real provider | **113 passed, 0 failed** · 2026-10-19 (re-run) |
 | `email_flow_test.py` — the decisions around the transport: an address that has not been opened at cannot receive anything (checked from the database as well as from the response), permission is per purpose rather than one global yes, and the outbox queue retries, ages and stops without ever sending blind | **89 passed, 0 failed** · 2026-10-19 (re-run) |
 | `study_abroad_test.py` — the directory's credibility: every seeded institution comes back `verified: false` with empty fee, intake and deadline fields across **every row** rather than a sample, an enquiry needs a tick before it needs a row, and the admin screen refuses a non-operator | **166 passed, 0 failed** · 2026-10-19 (re-run) |
