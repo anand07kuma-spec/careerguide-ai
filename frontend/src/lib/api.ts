@@ -249,20 +249,252 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   }
 
   if (!response.ok) {
-    const detail =
-      (data && typeof data === "object" && typeof (data as { detail?: unknown }).detail === "string"
-        ? (data as { detail: string }).detail
-        : null) ??
-      // FastAPI validation errors arrive as an array of { loc, msg } objects.
-      (Array.isArray(data) && data.length > 0
-        ? "Some answers need fixing before this can be saved."
-        : null) ??
-      `The server responded with ${response.status}.`;
     if (response.status === 401) dropInMemoryToken();
-    throw new ApiError(detail, response.status);
+    throw new ApiError(failureDetail(data, response.status), response.status);
   }
 
   return data as T;
+}
+
+/**
+ * The sentence a failed response carries.
+ *
+ * FastAPI writes refusals into `detail`; a validation failure arrives as an array of
+ * `{ loc, msg }` objects that no child can read; anything else is reported as the status.
+ * Both addresses a student can send a message to end a failed turn with this, so the
+ * words are the same whichever one answered.
+ */
+function failureDetail(data: unknown, status: number): string {
+  return (
+    (data && typeof data === "object" && typeof (data as { detail?: unknown }).detail === "string"
+      ? (data as { detail: string }).detail
+      : null) ??
+    (Array.isArray(data) && data.length > 0
+      ? "Some answers need fixing before this can be saved."
+      : null) ??
+    `The server responded with ${status}.`
+  );
+}
+
+/** A body that may or may not be JSON, read without letting it fail the turn again. */
+async function jsonOrNull(response: Response): Promise<unknown> {
+  const text = await response.text().catch(() => "");
+  if (!text) return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * One turn, sent to the address that answers in a single piece.
+ *
+ * Shared by `sendMessage` and the stream client's fallback so a question asked of the
+ * streaming route and then handed over here is byte-for-byte the same request.
+ */
+function postTurn(sessionId: number, body: string): Promise<ChatReply> {
+  return request<ChatReply>(`/api/conversations/${sessionId}/messages`, {
+    method: "POST",
+    body,
+  }).then(withAudio);
+}
+
+const turnBody = (message: string, speak: boolean, planOf: number | null | undefined) =>
+  JSON.stringify({ message, speak, plan_of: planOf ?? null });
+
+/** Speech lives on the backend, so a reply's audio path is a different origin. */
+function withAudio(reply: ChatReply): ChatReply {
+  return { ...reply, audio_url: mediaUrl(reply.audio_url) };
+}
+
+/**
+ * How a streamed reply can end.
+ *
+ * `complete` is the whole answer, with everything the single-piece route would have
+ * returned. `cut_short` is the words that did arrive: the guide stopped mid-sentence, and
+ * a child who has read half an answer is not served a blank space instead of it.
+ * `failed` is nothing at all, in a sentence a family can read.
+ */
+export type StreamedReply =
+  | { kind: "complete"; reply: ChatReply }
+  | { kind: "cut_short"; content: string }
+  | { kind: "failed"; message: string };
+
+const STREAM_NOT_FINISHED =
+  "The guide could not finish answering just now. Nothing you wrote has been lost — please send it again.";
+
+/** Two newlines, or a carriage return before them: the spec allows either. */
+const FRAME_BREAK = /\r?\n\r?\n/;
+
+function readFrame(raw: string): { event: string; data: string } | null {
+  let event = "message";
+  const data: string[] = [];
+  for (const line of raw.split(/\r?\n/)) {
+    // A line starting with `:` is a comment, and keep-alive pings are sent as one.
+    if (!line || line.startsWith(":")) continue;
+    const colon = line.indexOf(":");
+    const field = colon === -1 ? line : line.slice(0, colon);
+    const value = colon === -1 ? "" : line.slice(colon + 1).replace(/^ /, "");
+    if (field === "event") event = value;
+    else if (field === "data") data.push(value);
+  }
+  if (data.length === 0) return null;
+  return { event, data: data.join("\n") };
+}
+
+/**
+ * A `text/event-stream` body, one frame at a time, as the bytes land.
+ *
+ * `EventSource` is the named API for this and it cannot be used: it only ever sends a
+ * GET, so it carries neither this session's Authorization header nor the student's
+ * message. A `fetch` reading the response as a stream does both, and the framing is the
+ * few lines above.
+ */
+async function* eventFrames(
+  body: ReadableStream<Uint8Array>
+): AsyncGenerator<{ event: string; data: string }> {
+  const reader = body.getReader();
+  const decoder = new TextDecoder("utf-8");
+  let pending = "";
+  try {
+    for (;;) {
+      const next = await reader.read();
+      if (next.done) break;
+      pending += decoder.decode(next.value, { stream: true });
+      for (let match = FRAME_BREAK.exec(pending); match; match = FRAME_BREAK.exec(pending)) {
+        const frame = readFrame(pending.slice(0, match.index));
+        pending = pending.slice(match.index + match[0].length);
+        if (frame) yield frame;
+      }
+    }
+    // A server that closes without the trailing blank line still meant to say something.
+    const tail = readFrame(pending);
+    if (tail) yield tail;
+  } finally {
+    reader.releaseLock();
+  }
+}
+
+function frameFields(data: string): Record<string, unknown> | null {
+  try {
+    const parsed: unknown = JSON.parse(data);
+    return parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Which refusals are worth asking of the single-piece route as well.
+ *
+ * The guards that refuse a turn — a day's allowance used up, an ended conversation, an
+ * empty message, too many requests in a minute — sit in front of both addresses and
+ * answer identically, so a second ask would buy the same sentence and nothing else.
+ * What *is* worth a second ask is a stream that does not exist: a backend from before
+ * this route (FastAPI's bare `Not Found`), one that refuses the method, or one that is
+ * down. Nothing was taken from the day's allowance on those, because the request never
+ * reached the guide.
+ */
+function askAgainWorthwhile(status: number, detail: string): boolean {
+  if (status === 404) return detail === "Not Found";
+  if (status === 405) return detail === "Method Not Allowed";
+  return status >= 500;
+}
+
+/**
+ * One turn, asked of the streaming address, with every fragment handed to `onDelta` as
+ * it lands.
+ *
+ * What is deliberately *not* here is a second try once the server has taken the question.
+ * The streaming route writes the student's message before the guide starts answering, so
+ * a body that dies after the headers arrived is a turn that already happened — asking it
+ * again would spend a second question of the day and put the same words in the transcript
+ * twice. So a stream that never opened falls back to `postTurn`, a stream that stopped
+ * after some words keeps them, and a stream that stopped before any keeps what the
+ * server said about it.
+ */
+async function streamTurn(
+  sessionId: number,
+  message: string,
+  speak: boolean,
+  planOf: number | null | undefined,
+  onDelta: (fragment: string) => void
+): Promise<StreamedReply> {
+  const body = turnBody(message, speak, planOf);
+  let response: Response;
+  try {
+    response = await fetch(`${apiBase()}/api/conversations/${sessionId}/messages/stream`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "text/event-stream",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body,
+      cache: "no-store",
+      credentials: "include",
+    });
+  } catch {
+    return { kind: "complete", reply: await postTurn(sessionId, body) };
+  }
+
+  if (!response.ok) {
+    const detail = failureDetail(await jsonOrNull(response), response.status);
+    if (response.status === 401) dropInMemoryToken();
+    if (!askAgainWorthwhile(response.status, detail)) throw new ApiError(detail, response.status);
+    return { kind: "complete", reply: await postTurn(sessionId, body) };
+  }
+
+  // A reply that is not framed as a stream — an intermediate that buffered it, or a
+  // backend that has never heard of this address — is not an error, it is the old answer.
+  const framed = (response.headers.get("content-type") ?? "").includes("text/event-stream");
+  if (!framed || !response.body) {
+    const text = await response.text().catch(() => "");
+    let parsed: ChatReply | null = null;
+    try {
+      parsed = text ? (JSON.parse(text) as ChatReply) : null;
+    } catch {
+      parsed = null;
+    }
+    if (parsed && parsed.reply) return { kind: "complete", reply: withAudio(parsed) };
+    return { kind: "complete", reply: await postTurn(sessionId, body) };
+  }
+
+  let content = "";
+  let finished: ChatReply | null = null;
+  let stopped = "";
+  let cutShort = false;
+  try {
+    for await (const frame of eventFrames(response.body)) {
+      const fields = frameFields(frame.data);
+      if (frame.event === "delta") {
+        const piece = typeof fields?.text === "string" ? fields.text : "";
+        if (piece) {
+          content += piece;
+          onDelta(piece);
+        }
+      } else if (frame.event === "done") {
+        finished = (fields as unknown as ChatReply) ?? null;
+        break;
+      } else if (frame.event === "error") {
+        cutShort = fields?.code === "cut_short";
+        stopped = typeof fields?.message === "string" ? fields.message : "";
+        break;
+      }
+      // `meta` names the student's own stored message. Nothing on this screen needs it
+      // yet, and the deltas do not depend on it: it is there so a client can tell a
+      // reply that started from a reply that was never going to.
+    }
+  } catch {
+    // The connection stopped without saying why.
+  }
+
+  if (finished?.reply) return { kind: "complete", reply: withAudio(finished) };
+  if (cutShort || content.length > 0) {
+    return { kind: "cut_short", content };
+  }
+  return { kind: "failed", message: stopped || STREAM_NOT_FINISHED };
 }
 
 /**
@@ -476,13 +708,24 @@ export const api = {
     message: string,
     speak: boolean,
     planOf?: number | null,
-  ) => {
-    const reply = await request<ChatReply>(`/api/conversations/${sessionId}/messages`, {
-      method: "POST",
-      body: JSON.stringify({ message, speak, plan_of: planOf ?? null }),
-    });
-    return { ...reply, audio_url: mediaUrl(reply.audio_url) };
-  },
+  ) => postTurn(sessionId, turnBody(message, speak, planOf)),
+  /**
+   * The same turn, answered in fragments so the first words arrive before the sentence
+   * does. `onDelta` is called once per fragment, in order, and the returned reply is the
+   * one the server stored — so a screen that shows the fragments and then the finished
+   * answer shows the same text either way.
+   *
+   * A stream this client could not open at all falls back to `sendMessage` and answers in
+   * one piece; the route that answers in one piece is never removed, because a browser
+   * that cannot hold a stream must still be able to ask a question.
+   */
+  streamMessage: (
+    sessionId: number,
+    message: string,
+    speak: boolean,
+    planOf: number | null | undefined,
+    onDelta: (fragment: string) => void,
+  ) => streamTurn(sessionId, message, speak, planOf, onDelta),
   messages: (sessionId: number) => request<ChatMessage[]>(`/api/conversations/${sessionId}/messages`),
   endConversation: (sessionId: number) =>
     request<ConversationInfo>(`/api/conversations/${sessionId}/end`, { method: "POST" }),

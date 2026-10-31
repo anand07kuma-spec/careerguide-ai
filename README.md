@@ -14,8 +14,8 @@ and nothing is inferred from a child's voice, accent or typing speed.
 | Frontend | Next.js 16 (App Router, Turbopack), React 19, TypeScript, Tailwind CSS 4 |
 | Backend | FastAPI, Pydantic 2, SQLAlchemy 2.0, Alembic |
 | Database | PostgreSQL (Supabase-ready); SQLite works out of the box locally |
-| AI | Groq for replies, Gemini / Azure / Edge TTS for voice, browser Web Speech for listening |
-| Tests | 23 backend suites (last full battery: 2 613 checks, 0 failed; its two live TTS calls skip for want of a key on this machine), `tsc` + ESLint + production build, three Hindi validators |
+| AI | Groq for replies, Gemini / Azure / Edge TTS for voice, browser Web Speech for listening. A guide's reply arrives as `text/event-stream`, so the first words are on screen before the sentence is finished |
+| Tests | 23 backend suites (last full battery: 2 666 checks, 0 failed; its two live TTS calls skip for want of a key on this machine), `tsc` + ESLint + production build, three Hindi validators |
 
 ## Quick local setup
 

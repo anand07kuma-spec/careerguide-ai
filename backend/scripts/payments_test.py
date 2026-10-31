@@ -176,6 +176,20 @@ def say(token: str, session_id: int, message: str, speak: bool = False):
     )
 
 
+def stream_say(token: str, session_id: int, message: str):
+    """The same question at the streaming address, read to the end.
+
+    `TestClient` runs an event stream to completion for an ordinary post, so the whole
+    `text/event-stream` body comes back as text here. That is enough for what this file
+    is checking: which answers arrive, which are refused, and what each of them costs.
+    """
+    return client.post(
+        f"/api/conversations/{session_id}/messages/stream",
+        json={"message": message, "speak": False},
+        headers=auth(token),
+    )
+
+
 def finish_one_questionnaire(token: str) -> int | None:
     """Start, answer and submit the first likert questionnaire. Returns the sitting id."""
     likert = None
@@ -671,6 +685,37 @@ after_rescue = say(token_e, session_e, "Another ordinary question?")
 check("a disclosure does not refill the day's quota", after_rescue.status_code == 402)
 check("the disclosure was counted as a chat, honestly",
       client.get("/api/payments/me", headers=auth(token_e)).json()["usage"]["chats_today"] == 5)
+
+# The streaming address is a second way of asking the same question, so it has to spend
+# the same day's allowance and refuse in the same words. `chats_today` is derived from
+# the child's stored messages, which is the one number a different URL cannot leave
+# behind — a per-route throttle is an abuse guard, and it is not what keeps a free plan
+# free.
+token_g, user_g = signup("Zen")
+session_g = new_conversation(token_g)
+first_stream = stream_say(token_g, session_g, "Which careers use drawing and maths?")
+check("a streamed question is answered on Free", first_stream.status_code == 200,
+      first_stream.text[:160])
+check("and it really is a stream rather than a body wearing that header",
+      first_stream.headers.get("content-type", "").startswith("text/event-stream")
+      and first_stream.text.startswith("event: meta")
+      and "\nevent: done\n" in first_stream.text,
+      first_stream.text[:160])
+check("a streamed turn is counted as a chat of the day",
+      client.get("/api/payments/me", headers=auth(token_g)).json()["usage"]["chats_today"] == 1,
+      str(client.get("/api/payments/me", headers=auth(token_g)).json()["usage"]))
+second_stream = stream_say(token_g, session_g, "What about architecture?")
+check("the second streamed turn is answered too", second_stream.status_code == 200,
+      second_stream.text[:160])
+exhausted_send = say(token_g, session_g, "And after class 12?")
+check("the day's third question is refused whichever address asks it",
+      exhausted_send.status_code == 402, str(exhausted_send.status_code))
+refused_stream = stream_say(token_g, session_g, "What about product design?")
+check("and a stream over the allowance is refused before it opens, in the same words",
+      refused_stream.status_code == 402
+      and not refused_stream.text.startswith("event:")
+      and "/pricing" in refused_stream.json()["detail"],
+      refused_stream.text[:160])
 
 started_other = client.post("/api/assessments/aptitude/start", json={"language": "en"},
                             headers=auth(token_e))

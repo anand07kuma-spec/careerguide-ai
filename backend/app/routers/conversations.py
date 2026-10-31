@@ -2,13 +2,19 @@
 
 from __future__ import annotations
 
+import json
+import logging
+from collections.abc import AsyncIterator
+from dataclasses import dataclass
 from datetime import datetime, timezone
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from ..database import get_db
+from ..database import SessionLocal, get_db
 from ..middleware.rate_limit import chat_limit
 from ..models import (
     ConsentRecord,
@@ -35,6 +41,8 @@ from ..services.recommender import build_recommendations
 from .auth import CLASS_TO_AGE
 
 router = APIRouter(prefix="/api/conversations", tags=["conversations"])
+
+log = logging.getLogger(__name__)
 
 GREETING = {
     "en": "Hi! I'm your AI career guide. We can talk about school, hobbies, or anything you are curious about. There are no right or wrong answers. What would you like to talk about today?",
@@ -100,15 +108,42 @@ def start_session(
     return out
 
 
-@router.post("/{session_id}/messages", response_model=ChatOut)
-@chat_limit
-async def send_message(
-    request: Request,
-    session_id: int,
-    payload: ChatIn,
-    user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-) -> ChatOut:
+@dataclass
+class TurnSetup:
+    """Everything about a turn that is decided before the guide is called.
+
+    Both the answering route and the streaming route get one from `_prepare_turn`, so the
+    rules a child's conversation runs under are written exactly once: whose session this
+    is, whether it is still open, whether the plan allows another message, what language
+    the student just used, what their words teach the profile, and which plan a result
+    page pinned to this chat. A second copy of that list is how a stream ends up skipping
+    one of them, and a stream that skips one is a way into another child's conversation.
+
+    `history` and `ctx` are plain data by the time they are stored here — no database
+    access happens while the reply is being streamed, which is what lets the streaming
+    route outlive the request that started it.
+    """
+
+    student_id: int
+    session_id: int
+    language: str
+    text: str
+    learned: dict[str, Any]
+    ctx: ai_provider.GuideContext
+    history: list[Message]
+    speak: bool
+    voice: str
+
+
+def _prepare_turn(
+    db: Session, user: User, session_id: int, payload: ChatIn
+) -> tuple[TurnSetup, ConversationSession]:
+    """Run every guard, then build what the guide needs to answer.
+
+    Returns the session too, for the route that stores the reply on this same database
+    connection. The streaming route must not use it: FastAPI closes `get_db` before the
+    response body is produced, so that session is gone by the first fragment.
+    """
     student_id = require_student(user)
     session = _load_session(db, session_id, student_id)
     settings = ensure_settings(db, user.id)
@@ -204,27 +239,48 @@ async def send_message(
         asked_facts=profile_facts.asked_keys(history),
     )
 
-    reply = await ai_provider.respond(text, ctx, history, db)
-
-    db.add(
-        Message(session_id=session.id, role="user", content=text[:2000])
-    )
-    db.add(
-        Message(
+    return (
+        TurnSetup(
+            student_id=student_id,
             session_id=session.id,
-            role="assistant",
-            content=reply.text,
-            demo_generated=reply.demo_generated,
-        )
+            language=session.language,
+            text=text,
+            learned=learned,
+            ctx=ctx,
+            history=history,
+            # Read here rather than at the end of a stream, when the settings row this
+            # object came from no longer has a connection to read through.
+            speak=payload.speak and settings.speak_responses,
+            voice=settings.voice,
+        ),
+        session,
     )
+
+
+def _store_reply(
+    db: Session, session: ConversationSession, turn: TurnSetup, reply: ai_provider.GuideReply
+) -> tuple[Message, list[str]]:
+    """Write the guide's answer, once, and say which themes it noticed.
+
+    Both routes call this, so a streamed answer cannot be stored under different rules
+    from an answered one: the same stage advance, the same one observation per new
+    theme, the same safety note that records a concern without quoting the child.
+    """
+    answer = Message(
+        session_id=session.id,
+        role="assistant",
+        content=reply.text,
+        demo_generated=reply.demo_generated,
+    )
+    db.add(answer)
     session.stage = reply.stage
 
-    new_themes = _persist_observations(db, student_id, session.id, text, reply.themes)
+    new_themes = _persist_observations(db, turn.student_id, session.id, turn.text, reply.themes)
 
     if reply.safety_flag:
         db.add(
             JourneyEvent(
-                student_id=student_id,
+                student_id=turn.student_id,
                 kind="safety_note",
                 title="A safety concern came up",
                 detail="The guide shared child-safety contact information. No conversation content is stored beyond the messages.",
@@ -232,27 +288,22 @@ async def send_message(
         )
 
     db.commit()
+    db.refresh(answer)
+    return answer, new_themes
 
-    audio_url = None
-    audio_error = None
-    if payload.speak and settings.speak_responses:
-        try:
-            audio_url = await tts.synthesize(reply.text, session.language, settings.voice)
-        except tts.TTSError as exc:
-            audio_error = str(exc)
 
-    assistant_message = (
-        db.scalars(
-            select(Message)
-            .where(Message.session_id == session.id, Message.role == "assistant")
-            .order_by(Message.id.desc())
-            .limit(1)
-        )
-        .first()
-    )
-
+def _chat_out(
+    session: ConversationSession,
+    turn: TurnSetup,
+    reply: ai_provider.GuideReply,
+    answer: Message,
+    new_themes: list[str],
+    audio_url: str | None,
+    audio_error: str | None,
+) -> ChatOut:
+    """The body both routes hand back — `done` on a stream, the response otherwise."""
     return ChatOut(
-        reply=MessageOut.model_validate(assistant_message),
+        reply=MessageOut.model_validate(answer),
         stage=session.stage,
         audio_url=audio_url,
         audio_error=audio_error,
@@ -260,7 +311,182 @@ async def send_message(
         needs_support=reply.safety_flag,
         provider=reply.provider,
         language=session.language,
-        profile_updates=learned,
+        profile_updates=turn.learned,
+    )
+
+
+@router.post("/{session_id}/messages", response_model=ChatOut)
+@chat_limit
+async def send_message(
+    request: Request,
+    session_id: int,
+    payload: ChatIn,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ChatOut:
+    turn, session = _prepare_turn(db, user, session_id, payload)
+
+    reply = await ai_provider.respond(turn.text, turn.ctx, turn.history, db)
+
+    db.add(Message(session_id=session.id, role="user", content=turn.text[:2000]))
+    answer, new_themes = _store_reply(db, session, turn, reply)
+
+    audio_url = None
+    audio_error = None
+    if turn.speak:
+        try:
+            audio_url = await tts.synthesize(reply.text, session.language, turn.voice)
+        except tts.TTSError as exc:
+            audio_error = str(exc)
+
+    return _chat_out(session, turn, reply, answer, new_themes, audio_url, audio_error)
+
+
+def _sse(event: str, data: dict) -> str:
+    """One `text/event-stream` frame.
+
+    `ensure_ascii=False` so a Hindi reply leaves this server as Hindi; the frames are
+    UTF-8 and a client that had to decode `\\u0905` would be reading an escape rather
+    than the words a child is watching arrive.
+    """
+    return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
+
+
+# Both sentences are written for a parent reading the screen over a child's shoulder,
+# and both say what happened to the child's own words, because that is the thing a
+# failed send makes you wonder about.
+CUT_SHORT_MESSAGE = (
+    "The guide's reply stopped partway. What it managed to say is kept, and nothing you "
+    "wrote has been lost — send it again when you are ready."
+)
+STREAM_FAILED_MESSAGE = (
+    "The guide could not finish answering just now. Nothing you wrote has been lost — "
+    "please send it again."
+)
+
+
+async def _stream_turn(turn: TurnSetup, question_id: int) -> AsyncIterator[str]:
+    """Produce the body of a streamed reply: `meta`, then `delta`s, then `done`.
+
+    The database session is this generator's own, and it has to be: FastAPI closes the
+    session the route was handed before the response body starts being written, so by
+    the first fragment there is nothing to write through. One reply, stored once at the
+    end, is what that buys — storing per fragment would put a half-finished sentence in
+    a child's transcript every time the model pauses.
+    """
+    db = SessionLocal()
+    try:
+        # The guards have all passed by now (they run before this generator exists), so
+        # this frame is the answer to "did my message reach the right conversation?".
+        yield _sse(
+            "meta",
+            {
+                "session_id": turn.session_id,
+                # The student's own message: the guide's row cannot have an id before
+                # its words exist, and `done` carries that one in full.
+                "message_id": question_id,
+                "language": turn.language,
+            },
+        )
+
+        reply: ai_provider.GuideReply | None = None
+        try:
+            async for chunk in ai_provider.stream_respond(turn.text, turn.ctx, turn.history):
+                if chunk.text:
+                    yield _sse("delta", {"text": chunk.text})
+                if chunk.reply is not None:
+                    reply = chunk.reply
+        except Exception:  # noqa: BLE001
+            # A bug or a lost connection inside the guide must not reach the student as
+            # a stream that quietly stops; it reaches them as the sentence below.
+            log.exception("streamed reply failed for session %s", turn.session_id)
+            yield _sse("error", {"code": "failed", "message": STREAM_FAILED_MESSAGE})
+            return
+
+        if reply is None:
+            yield _sse("error", {"code": "failed", "message": STREAM_FAILED_MESSAGE})
+            return
+
+        session = db.get(ConversationSession, turn.session_id)
+        if session is None:
+            # The conversation was cleared or the account deleted mid-reply. There is no
+            # thread left to write into, and inventing one would put words somewhere a
+            # child never asked for them.
+            yield _sse("error", {"code": "failed", "message": STREAM_FAILED_MESSAGE})
+            return
+
+        # Stored once, here — including the partway reply below, because words a child
+        # has already read belong in their transcript even when the sentence never
+        # finished.
+        try:
+            answer, new_themes = _store_reply(db, session, turn, reply)
+        except Exception:  # noqa: BLE001
+            log.exception("could not store the streamed reply for session %s", turn.session_id)
+            yield _sse("error", {"code": "failed", "message": STREAM_FAILED_MESSAGE})
+            return
+
+        if reply.partial:
+            yield _sse("error", {"code": "cut_short", "message": CUT_SHORT_MESSAGE})
+            return
+
+        audio_url = None
+        audio_error = None
+        if turn.speak:
+            try:
+                audio_url = await tts.synthesize(reply.text, session.language, turn.voice)
+            except tts.TTSError as exc:
+                audio_error = str(exc)
+
+        out = _chat_out(session, turn, reply, answer, new_themes, audio_url, audio_error)
+        yield _sse("done", out.model_dump(mode="json"))
+    finally:
+        db.close()
+
+
+@router.post("/{session_id}/messages/stream")
+@chat_limit
+async def send_message_stream(
+    request: Request,
+    session_id: int,
+    payload: ChatIn,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> StreamingResponse:
+    """Answer a turn as it is written, so the first words arrive inside a second.
+
+    Four events, and a client written for them works against a streaming model, a model
+    that ignores `stream`, and the built-in guide alike, because `stream_respond` keeps
+    the same shape for all three:
+
+      * `meta`  — `{session_id, message_id, language}`, after every guard has passed;
+      * `delta` — `{text}`, one fragment of the guide's reply;
+      * `done`  — the complete `ChatOut`, the same body the non-streaming route returns;
+      * `error` — `{code, message}`, one sentence a family can read.
+
+    The guards are the non-streaming route's own (`_prepare_turn`), and so is the chat
+    throttle: this address is a write, and it is counted as one. What a second URL must
+    not be able to buy is the day's allowance, and it cannot — `entitlements.guard_chat`
+    counts the child's stored messages, whichever address stored them. A stream that
+    skipped any of the guards would be a way into another child's conversation, which is
+    why the tests prove each one.
+    """
+    turn, session = _prepare_turn(db, user, session_id, payload)
+
+    # The student's question is stored — with the profile facts it taught — before the
+    # first fragment goes out. A reply that never arrives must not take their message
+    # with it, and `meta` has to name a message that really exists.
+    question = Message(session_id=session.id, role="user", content=turn.text[:2000])
+    db.add(question)
+    db.commit()
+    db.refresh(question)
+
+    return StreamingResponse(
+        _stream_turn(turn, question.id),
+        # `no-transform` and `X-Accel-Buffering` both exist for the same reason: a proxy
+        # that helpfully waits for the whole body would make this route answer exactly as
+        # slowly as the one it replaced.
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache, no-transform", "X-Accel-Buffering": "no"},
     )
 
 
