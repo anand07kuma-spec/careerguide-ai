@@ -23,7 +23,8 @@ from .middleware.cors import configure_cors
 from .middleware.rate_limit import register_rate_limiting
 from .routers import admin, assessments, auth, catalogue, careers, clerk, clerk_webhooks, conversations
 from .routers import email, exams, interests, interview, journey, organizations, payments, recommendations
-from .routers import report_pdfs, reports, resume, study_abroad, study_plans, users, voice
+from .routers import report_pdfs, reports, resume, study_abroad, study_plans, users, verification
+from .routers import voice
 from .schema_sync import add_missing_columns
 from .schemas import HealthOut
 from .seed import seed_if_empty
@@ -127,6 +128,7 @@ for module in (
     catalogue,
     reports,
     report_pdfs,
+    verification,
 ):
     app.include_router(module.router)
 
