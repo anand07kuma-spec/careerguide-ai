@@ -45,25 +45,6 @@ export function Badge({
   );
 }
 
-/**
- * Data-trust labels. Anything the family must verify themselves is marked here
- * rather than presented as settled fact.
- */
-export function VerificationBadge({
-  verified,
-  className,
-}: {
-  verified: boolean;
-  className?: string;
-}) {
-  const t = useT();
-  return (
-    <Badge tone={verified ? "success" : "warning"} className={className}>
-      {verified ? t("Verified source") : t("Verify on official site")}
-    </Badge>
-  );
-}
-
 /** One page, listed in `SourceBadge`'s dialog. */
 export interface SourceLink {
   label: string;

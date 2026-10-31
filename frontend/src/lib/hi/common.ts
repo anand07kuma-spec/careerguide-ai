@@ -73,7 +73,6 @@ export const HI: Record<string, string> = {
   "Some evidence": "कुछ प्रमाण",
   "Several signals": "कई संकेत",
   "Verified source": "स्रोत सत्यापित",
-  "Verify on official site": "आधिकारिक साइट पर जाँचें",
   "Not yet checked against a source": "अभी किसी स्रोत से जाँची नहीं गई",
   "Where this record came from": "यह जानकारी कहाँ से आई",
   "On {date} somebody opened the page below and read this record against it.":

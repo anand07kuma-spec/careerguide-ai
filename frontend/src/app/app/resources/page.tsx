@@ -5,12 +5,13 @@ import { BookOpen, Clock, ExternalLink, Globe, Info, Layers, Search, X } from "l
 import { Screen } from "@/components/layout/app-shell";
 import { Card } from "@/components/ui/card";
 import { LinkButton } from "@/components/ui/button";
-import { Badge, VerificationBadge } from "@/components/ui/badge";
+import { Badge } from "@/components/ui/badge";
 import { EmptyState, ErrorState, SkeletonCard } from "@/components/ui/feedback";
 import { Input, Select } from "@/components/ui/field";
 import { PillGroup } from "@/components/ui/tabs";
+import { VerifiedBadge } from "@/components/ui/verified-badge";
 import { api } from "@/lib/api";
-import { useT, useTf } from "@/lib/i18n";
+import { useT, useTf, useUiLang } from "@/lib/i18n";
 import { useSession } from "@/lib/session";
 import { useResource } from "@/lib/use-resource";
 import type { Resource } from "@/lib/types";
@@ -33,6 +34,7 @@ const LANGUAGE_OPTIONS = [
 export default function ResourcesScreen() {
   const t = useT();
   const tf = useTf();
+  const lang = useUiLang();
   const { status: sessionStatus, profile } = useSession();
 
   const [search, setSearch] = useState("");
@@ -258,7 +260,13 @@ export default function ResourcesScreen() {
                   </div>
 
                   <div className="mt-4 flex items-center justify-between gap-2 border-t border-line pt-3">
-                    <VerificationBadge verified={resource.verified} />
+                    {/* The marker every other catalogue surface uses, and the reason no
+                        date goes to it: a resource row stores a bare `verified` flag with
+                        no `verified_at` and no page named beside it, so this card cannot
+                        honestly print a day. The flag is not an input here on purpose —
+                        `VerifiedBadge` keys off the signature, and a tick that came from a
+                        checkbox would be the app claiming a reading nobody recorded. */}
+                    <VerifiedBadge lang={lang} />
                     <LinkButton href={resource.url} variant="outline" size="sm">
                       {t("Open")}
                       <ExternalLink className="h-3.5 w-3.5" aria-hidden />
