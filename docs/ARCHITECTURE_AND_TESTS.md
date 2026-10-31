@@ -77,7 +77,7 @@ frontend code, never in a commit, never pasted into chat or a screenshot.
 | `RATE_LIMIT_CHAT` / `RATE_LIMIT_SPEAK` | backend | `20 per minute` each | Conversations and speech synthesis, per session |
 | `RATE_LIMIT_ASSESSMENT` / `RATE_LIMIT_ANSWER` | backend | `10` / `40 per minute` | Starting and submitting a questionnaire, and the per-answer autosave — deliberately looser, see §6 |
 | `RATE_LIMIT_AUTH` / `RATE_LIMIT_GUEST` | backend | `5` / `30 per minute` | Sign-in routes, and the device lookup that runs on every page load |
-| `RATE_LIMIT_READ` | backend | `60 per minute` | One shared fixed window for the read routes, per session: the dashboard, the journey feed, the report list, saved careers, assessment history, the portals and `/api/admin/*` reads are counted together, because three limits of sixty are three chances to hammer the same database. The catalogue reads are **exempt** (`/api/exams`, `/api/careers`, `/api/scholarships`, `/api/resources`, `/api/study-abroad/*`, `/api/payments/plans`, `/api/voice/voices`) — a student who is only browsing must never see a list refuse to load — and neither is `/api/auth/me` or the portal lookup, because those run on every page load and would spend the budget on their own. `/api/exams/admin` is deliberately back inside the bucket, since that is where a stray loop would show up. A `429` here says what a child can read and carries `Retry-After`; nothing already loaded changes |
+| `RATE_LIMIT_READ` | backend | `60 per minute` | One shared fixed window for the read routes, per session: the dashboard, the journey feed, the report list, saved careers, assessment history, the portals and `/api/admin/*` reads are counted together, because three limits of sixty are three chances to hammer the same database. The catalogue reads are **exempt** (`/api/exams`, `/api/careers`, `/api/scholarships`, `/api/resources`, `/api/study-abroad/*`, `/api/payments/plans`, `/api/voice/voices`) — a student who is only browsing must never see a list refuse to load — and neither is `/api/auth/me` or the portal lookup, because those run on every page load and would spend the budget on their own. `/api/verification/recent` is exempt on the same reasoning with a different reason attached: it answers a stranger exactly what it answers the family, so a bucket there defends nothing and only locks the site's own `/verified` page out of its data under load. `/api/exams/admin` is deliberately back inside the bucket, since that is where a stray loop would show up. A `429` here says what a child can read and carries `Retry-After`; nothing already loaded changes |
 | `RATE_LIMIT_ADMIN` | backend | `10 per minute` | The operator's exam writes only — create, update and delete under `/api/exams`. It is the one screen that can change what every student reads, so the limit is the tight one, and the refusal is written so the operator knows the edits already made are stored rather than lost mid-form. Not a defence against an attacker: an attacker with those credentials can do worse than fill a form |
 | `RATE_LIMIT_RESUME` | backend | `10 per minute` | The resume's ✨ suggester only (`POST /api/ai/resume-suggest`), because that is the one resume route that spends an outside call. Half the chat's rate: a student reads a list, thinks, presses again for a second idea, and a chat is a message every few seconds. Reading the CV rides on `RATE_LIMIT_READ` above like any other authenticated `GET`, and saving it gets no bucket of its own — it writes one row the student is already looking at. A `429` here says the ideas are coming faster than they can be made, that a minute is enough, and that whatever is already on the resume is saved |
 | `RATE_LIMIT_ROADMAP` | backend | `6 per minute` | The result page's ✨ **Rewrite this plan with AI** only (`POST /api/assessments/result/{id}/roadmap`) — the other route that spends an outside call on something the app can write by itself. Tighter than the resume bucket on purpose: what it overwrites is a four-week plan a student may have already printed, so a few fast clicks should not spin the model three times while they decide. Reading a result needs no bucket of its own, because the plan arrives inside the result on the ordinary read rule. A `429` says plans are being asked for faster than they can be written, that a minute is enough, and that the plan already on the result is saved and unchanged |
@@ -1020,17 +1020,24 @@ one command. Every accepted attestation and every `unattest` goes into `audit_ev
 `origin="script"`, a null actor and the URL in the detail, which is how a change made from a shell is told
 apart from one made by an operator on a screen.
 
-**The interface** is one component, `SourceBadge` in `src/components/ui/badge.tsx`, on the three surfaces
-this round was scoped to: `/app/careers/[slug]`, the institution rows on `/study-abroad/[country]`, and the
-rows on `/app/scholarships`. Two states, and the difference between them is a fact about the database rather
-than a style: a date means somebody opened a page, no date means nobody has. Clicking either opens a small
-panel that says which, and lists the page that was read (`source_url`, monospaced under its own label)
-beside the places the same figure would otherwise have to be checked — the institute's own site, the apply
-portal, the regulator. The unchecked state is grey, not red: the old "Needs Verification" badge read as an
-error in the app on the page where a student is meant to feel welcome, when what it names is an ordinary
-unfinished step in checking a number. The date is rendered in UTC from a naive UTC stamp, because a
-verification done in the Indian evening would otherwise print tomorrow's date; English reads
-"Verified 23 October 2026" and हिन्दी "23 अक्टूबर 2026 को सत्यापित".
+**The interface** was, at first, one component: `SourceBadge` in `src/components/ui/badge.tsx`, on the three
+surfaces that round was scoped to. It has since been superseded by `VerifiedBadge` in
+`src/components/ui/verified-badge.tsx` (see the next subsection), which is now the single way this site prints
+"this was checked". Two states, and the difference between them is a fact about the database rather than a
+style: a date means somebody opened a page, no date means nobody has. The unchecked state is grey, not red: the
+old "Needs Verification" badge read as an error in the app on the page where a student is meant to feel
+welcome, when what it names is an ordinary unfinished step in checking a number. The date is rendered in UTC
+from a naive UTC stamp, because a verification done in the Indian evening would otherwise print tomorrow's
+date; English reads "Checked 23 October 2026" and हिन्दी "23 अक्टूबर 2026 को जाँचा गया".
+
+`SourceBadge` stays on `/app/careers/[slug]` alone, because that screen's dialog is the one place that lists
+*every* official link a career points at, not only the page that was read — a feature the flat badge has no
+room for. Its own gating was tightened in the same pass that introduced `VerifiedBadge`: it used to render the
+green tick from `verified` alone and show the panel's date from `checkedAt`, which meant a row could be marked
+"verified" with no day under it. It now treats `checkedAt` as the signature and ignores the boolean, so an
+operator's tick with no date reads as unchecked. `VerificationBadge` — the same boolean-only tick — is
+date-gated out of every screen in scope and survives only on `/app/resources`, where the `resources` table has
+a `verified` column and no date column at all, so there is nothing honest for it to print yet.
 
 **The legal page had to be re-read, because this feature changes what it describes.** `/disclaimer`'s
 "Accuracy and currency of information" section already said the catalogue is sample data that the app never
@@ -1071,10 +1078,14 @@ by reading instead of by stamping. That last row needs an edit, not a badge. The
 is why no career is green yet: the pages this catalogue points at (`icai.org` and friends) would not load
 from this machine, and a link copied without being read is precisely what the tool refuses to record.
 
-**Not in this round's scope**, deliberately: the public `/careers` cards and the printed PDF still carry the
-older `VerificationBadge`, the institutes and resources screens were not touched, and the operator's content
-screen keeps its own certify flow. Those are four more surfaces with the same question on them, and they can
-now be moved onto `SourceBadge` one at a time without any of them being able to invent a date.
+**Not in that round's scope**, as it was written then: the public `/careers` cards and the printed PDF still
+carried the older `VerificationBadge`, and the institutes and resources screens were untouched. The next pass
+closed most of that — the public career page, `/app/exams`, `/app/institutes` and the university rows all read
+`VerifiedBadge` now, and nothing in this round's scope lights a marker from a boolean alone. What is genuinely
+left is one screen and one column: `/app/resources`, because `resources` has a `verified` flag and **no date
+column at all**, so a badge there would be the exact claim this feature exists to forbid. The operator's content
+screen keeps its own certify flow, which writes the flag but is not a student-facing marker. See "The check log"
+below.
 
 
 The brief asked for `frontend/app/(admin)/admin/*`. This repo has no root `app/` and no route
@@ -1178,6 +1189,109 @@ do the indexable half. The rules worth knowing:
 - `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION` is a placeholder that stays invisible until filled. Search
   Console cannot be verified for a domain this project does not own, so shipping a fake token would
   be a broken feature wearing a meta tag.
+
+### The check log: `VerifiedBadge` and `/verified`
+
+Every page above could say *how* a row gets a date. None of them could say what has been dated — a family
+was told to verify things, and the app held the list of what it had already verified in one field per row and
+showed it nowhere at once. **`backend/app/routers/verification.py`** (new) is that answer:
+`GET /api/verification/recent?days=30` returns one response with careers, exams, scholarships and universities
+together, newest first, each row as `{kind, name, verified_at, source_url, path}`.
+
+Four decisions in that file are the feature, not the plumbing:
+
+- **A row joins the feed only with a date *and* the flag agreeing with it.** `verified_at` is a signature: the
+  day comes from `verify_data.py`'s own clock or from the operator route that sets the flag, never from a
+  payload. A date whose `needs_verification` is still raised — or a cleared flag with no date — is the half
+  state `verify_data.py report` prints as `IMPOSSIBLE`, and putting it on a page headed "what we checked" would
+  be the app advertising its own data error. `count` is therefore the number of rows after the window, not a
+  count of verified rows in the catalogue.
+- **`days` is bounded (`1..365`, `MAX_DAYS`).** A wider window is a full table read asked for by a number
+  nobody displays; `0` and `9999` both answer `422` rather than silently meaning "everything".
+- **`path` is present only where a stranger can land.** Careers give `/careers/<slug>`, universities give
+  `/study-abroad/<country>`; exams and scholarships live behind `/app`, so their rows carry no link and the
+  page says "No public page for this one yet." rather than offering a login wall as a result.
+- **No session, and it is in the read-exempt list** in `app/middleware/rate_limit.py` — deliberately, and
+  against the usual rule here. The exempt list is for requests that answer a caller the same way they answer
+  anybody else, and this one does: it serves the same public list to a stranger, a parent and a crawler. A
+  bucket would do nothing except lock the site's own server-rendered page out of its data under load.
+
+**`frontend/src/components/ui/verified-badge.tsx`** (new) is now the one place the words "this was checked" are
+printed. Three states, decided by the database: date + https source → `Checked 12 Oct 2026 · source`, where
+*source* is a real anchor with `target="_blank" rel="noopener noreferrer"`; date, no source → `Checked 12 Oct
+2026` alone, which is an honest older record rather than a missing one; no date → `Not checked yet — confirm on
+the official site`. It is a plain module rather than a `Badge` call at each screen for one reason: a null
+`verifiedAt` cannot reach the green side of a single branch, where it could be got wrong five times over five
+pages. It is a server component, so `/careers/[slug]` and `/study-abroad/[country]` keep rendering it in the
+first HTML a crawler and a slow-phone reader both depend on; `components/ui/badge.tsx` is `"use client"`, which
+is why the badge is its own file. The day is formatted in UTC from a naive UTC stamp (`checkedOn` appends `Z`),
+same rule as before: a check made in the Indian evening would otherwise print tomorrow's date in Europe.
+
+Two things the styling does on purpose, both measured rather than assumed. **Nothing is colour-only** — the
+word travels with the colour in both states, so the badge says the same thing in a grey printout, to a
+colour-blind reader, and with the stylesheet failing to load. **And the checked state does not use the shared
+success tone**: at 12px on the tokens this repo ships, `text-success` (`#16a34a`) on `success-mist` (`#dcfce7`)
+measures **3.00:1**, which fails and has been failing on the older badges for as long as they have existed.
+The badge reads `text-success-dark` on `success-mist`, measured in a browser at 375px and 12px at **8.3:1**
+light and **8.8:1** dark; the unchecked grey reads **9.45:1** / **11.47:1**. The `--color-success-dark` token
+is added in `src/app/globals.css` (`#14532d` light, `#4ade80` dark). The 3.00:1 tone is still there on the
+badges that predate this — restyling every use of it is a different brief, and changing a colour token the
+whole app inherits to satisfy one new component is not a fix, it is a rewrite nobody asked for. It is recorded
+here rather than left to be rediscovered.
+
+**Where it sits** — one badge per fact block, which with this data model means one per record card: the public
+`/careers/[slug]` header, the exam cards on `/app/exams`, the scholarship cards on `/app/scholarships`, the
+institution cards on `/app/institutes`, each university row on `/study-abroad/[country]`, and each row of
+`/verified`. Three of those replaced an existing marker rather than adding one, and each replacement was an
+upgrade in kind, because both of the components it displaced rendered a green tick from a boolean alone:
+`SourceBadge` lit from `verified === true` with `verified_at === null` under it, and `VerificationBadge` lit
+from `resource.verified` with no date column to check it against. That is the same false claim this feature
+exists to make visible, so `SourceBadge` is date-gated at its remaining use (`/app/careers/[slug]`, kept for
+the dialog that lists every official link a career points at) and `VerificationBadge` survives only on
+`/app/resources`, which is the honest gap: **`resources` has `verified` and no date column at all**, so a
+marker there has nothing truthful to print until a migration gives it one.
+
+Two placements turn on the data rather than on layout. An institution has `last_verified_at` and **no
+`source_url`**, so its badge is the date-only state and the Website button beside it is the page to check
+against; the `/verified` row for a scholarship does the same thing with `last_verified_at`, which is why the
+feed reads that column and not `verified_at` there. And the public career page shows either the existing
+"Figures to verify" warning **or** the badge, never both: `needs_verification` is the inverse of the same act,
+so two markers on one header would be one fact wearing two colours.
+
+**`/verified`** is the page a family can be sent to. It lists what was checked in the last 30 days, newest
+first, grouped Careers / Exams / Scholarships / Universities, each row the name (linked when there is a public
+page for it), the date and the source. It is registered once, as an entry in `PUBLIC_PAGES` in
+`src/lib/site.ts` — `app/sitemap.ts` and the footer both read that array, so the path is never written twice
+and the sitemap cannot drift from the page. `changeFrequency: "weekly"` because a fresh date lands on it
+whenever somebody reads a row, and the list's whole value to a crawler is how recent it is. Two non-happy
+paths, both deliberate: an empty window prints **"Nothing was checked in the last 30 days."** with a plain
+paragraph beside it and buttons onward, instead of a table with no rows that reads as a broken page; and if
+the API does not answer, the page names the failure and offers a retry plus the career guide, rather than
+printing an empty log that a reader would take for "nothing has been checked".
+
+**Measured the same day.** `scripts/verification_test.py` grew a ninth section and went **72 → 87 checks,
+0 failed**, and it is the same file, not a parallel suite: a stranger with no session gets 200; a signed
+career appears with its date and its `/careers/<slug>` link; a career with a date and no source appears with
+`source_url: null`; a row whose flag disagrees with its date is absent; `count == len(items)`; the list is
+newest-first across *all four kinds in one response*; the window boundary holds to within two minutes on both
+sides; `days=1` drops the row parked near the far edge of a month while keeping today's; a scholarship is
+found by `last_verified_at`; and `days=0` and `days=9999` are both refused. **Nothing in the feed is fabricated
+for the sake of the demo**: the three dated rows the browser pass used came from `verify_data.py attest`
+against a throwaway copy of the database under `_scratch/`, and both that copy and its empty twin were deleted
+afterwards, so the repository's own `careerguide.db` still stands at careers **0 of 55**, exams **0**,
+scholarships **0 of 31**, universities **0 of 510** with dates, and `/verified` therefore renders the plain
+"nothing was checked" sentence against it. On the frontend: `npx tsc --noEmit` exit **0**, `npx eslint src`
+exit **0**, `npm run build` exit **0** with `/verified` emitted as a dynamic route (`ƒ` — it asks the backend
+at request time, so it cannot be prerendered) and `/verified/page` present in
+`app-path-routes-manifest.json`, which now holds **65** entries, `node scripts/hi-coverage.mjs` **0**
+untranslated, unwired and unreached, and `node scripts/hi-duplicates.mjs` **3 355** keys with **0** conflicting
+duplicates. The whole backend battery was re-run against this tree: **23 suites, 2 628 checks, 0 failed**
+(2 613 on 2026-10-30, plus the 15 new feed checks). One caveat belongs in that sentence rather than under the
+table: the first sweep took `interview_test.py` down to **125 passed, 1 failed** on the check that erasure
+removes anything a student said in an interview, and it did not reproduce — three standalone runs and a second
+full sweep of all 23 suites came back **126 passed, 0 failed** each. Nothing in this change touches the
+interview routes, so it is recorded as an unreproduced flake in a suite that has never shown one before, and as
+its own piece of work to chase rather than as a pass.
 
 ---
 
@@ -1695,7 +1809,14 @@ appears with a null actor and `origin="script"`, its `subject_id` is the identif
 detail over the column's 400 characters is cut with the URL kept whole. **Half states are named as the
 impossible thing they are**: a page with no date is printed as such rather than counted as checked, and
 `unattest` clears all three columns and logs the taking-back. **`worklist` writes nothing** and lists exactly
-the rows the database itself marks unread | **72 passed, 0 failed** · 2026-10-23 (new suite, written with the feature) |
+the rows the database itself marks unread. **The public feed tells the truth about its own window**: a stranger
+with no session gets 200; a dated career appears with its date and its `/careers/<slug>`; a date with no source
+appears with `source_url` null instead of vanishing; a row whose flag disagrees with its date is absent from a
+list headed "what we checked"; `count` is the length of `items`, not a table total; all four kinds arrive in one
+response and are sorted newest-first across the merge; the window boundary holds on both sides to within two
+minutes; a scholarship is matched by `last_verified_at`, which is that table's date column; `days=1` drops the
+row parked near the far edge of a month; and `days=0` and `days=9999` are both refused | **87 passed, 0
+failed** · 2026-10-31 (new suite on 2026-10-23 with 72, section 9 added with `/api/verification/recent`) |
 | `schema_fit_check.py` | 182 seeded values measured, **0 columns too short** · 2026-10-20 |
 | `tsc --noEmit`, `eslint src` | clean · 2026-10-18 (re-run with the pricing page, the billing screen, the three `components/pricing/*` files, `lib/checkout.ts` and `lib/money.ts` in place; both exit 0. Two things this caught on the first pass and both are worth naming, because they are the kind of bug these two tools exist for: a `react-hooks/purity` error — the checkout dialog was computing its own expiry date with `Date.now()` during render, which would have printed a date the server had never agreed to, so the line is gone and the billing screen shows the server's answer instead — and an unused-parameter warning on a FAQs helper that took a translator it never needed, which became a module-level list) |
 | `npm run build` | **63 page routes** in `app-path-routes-manifest.json` · 2026-10-22, exit 0, counted with `node -e "Object.keys(require('./.next/app-path-routes-manifest.json')).length"` and `/app/resume` found in that list. The 60 in the rest of this row was measured on 2026-10-18 and has not been re-derived — five routes have arrived since (`/welcome`, `/app/resume`, `/app/admin/study-abroad`, `/account/connect`, `/account/enter`), which does not add up to 63, so the older figure is left exactly as it was written rather than quietly corrected to a number nobody counted today. (40 when this row was first written, 54 with the portals; the operator's dashboard added seven — `/app/admin` itself plus `dashboard`, `users`, `content`, `leads`, `settings` and the pre-existing `study-abroad`, all of which `.next/server/app/app/admin/` now holds a build output for). The three portal routes build as themselves: `/school/dashboard` and `/counsellor/dashboard` come out `◐` — Partial Prerendered, because each reads `?portal=<slug>` and the request headers at request time, which is also why both carry `export const instant = false` — and `/join` comes out `ƒ`, because its token arrives in a query string. Pages (including `/_not-found`) plus the dynamic `/api/contact`, everything else prerendered static. Two were new at the last row: **`/pricing`** and **`/app/billing`**, and both come out `○` (static) — the pricing page asks the backend nothing at build time and renders whatever `GET /api/payments/plans` says once it is open in a browser, so the whole set builds with **Clerk's and Razorpay's keys both absent**, which is the state this deployment is actually in. `/app/reports/[id]` stays in that table as a Partial Prerendered page, next to `/app/assessments`, `/app/assessments/[type]`, `/app/assessments/result/[id]` and `/app/profile`, alongside `/app/streams`, `/app/exams`, `/legal`, `/privacy`, `/terms`, `/refund`, `/disclaimer`, `/about`, `/contact` · 2026-10-18. The build still prints `ƒ Proxy (Middleware)` — Next 16 renamed that file convention, `src/middleware.ts` is still the name that compiles, and it is the one that now carries the Razorpay hosts. **Re-run on 2026-10-23** after the plan on a result landed: exit 0, still **63 page routes**, because the feature adds none — its two cards render inside `/app/assessments/result/[id]/page`, one of the Partial Prerendered rows above |
