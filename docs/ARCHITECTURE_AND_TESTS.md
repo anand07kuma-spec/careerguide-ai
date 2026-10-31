@@ -1035,9 +1035,10 @@ date; English reads "Checked 23 October 2026" and हिन्दी "23 अक�
 room for. Its own gating was tightened in the same pass that introduced `VerifiedBadge`: it used to render the
 green tick from `verified` alone and show the panel's date from `checkedAt`, which meant a row could be marked
 "verified" with no day under it. It now treats `checkedAt` as the signature and ignores the boolean, so an
-operator's tick with no date reads as unchecked. `VerificationBadge` — the same boolean-only tick — is
-date-gated out of every screen in scope and survives only on `/app/resources`, where the `resources` table has
-a `verified` column and no date column at all, so there is nothing honest for it to print yet.
+operator's tick with no date reads as unchecked. `VerificationBadge` — the same boolean-only tick — is gone
+from the codebase. Its last user was `/app/resources`, whose table has a `verified` column and no date column
+at all; that screen now calls `VerifiedBadge` with no date, so every resource card prints "Not checked yet —
+confirm on the official site", which is what 64 rows with `verified = false` and no signature actually say.
 
 **The legal page had to be re-read, because this feature changes what it describes.** `/disclaimer`'s
 "Accuracy and currency of information" section already said the catalogue is sample data that the app never
@@ -1081,11 +1082,20 @@ from this machine, and a link copied without being read is precisely what the to
 **Not in that round's scope**, as it was written then: the public `/careers` cards and the printed PDF still
 carried the older `VerificationBadge`, and the institutes and resources screens were untouched. The next pass
 closed most of that — the public career page, `/app/exams`, `/app/institutes` and the university rows all read
-`VerifiedBadge` now, and nothing in this round's scope lights a marker from a boolean alone. What is genuinely
-left is one screen and one column: `/app/resources`, because `resources` has a `verified` flag and **no date
-column at all**, so a badge there would be the exact claim this feature exists to forbid. The operator's content
-screen keeps its own certify flow, which writes the flag but is not a student-facing marker. See "The check log"
-below.
+`VerifiedBadge` now, and nothing in this round's scope lights a marker from a boolean alone. What was left over
+is one screen and one column: `/app/resources`, because `resources` has a `verified` flag and **no date column
+at all**, so a dated badge there would be the exact claim this feature exists to forbid. It now prints the same
+component with no date, so the card says what the record knows rather than what a checkbox was clicked to mean.
+Giving that screen a day of its own needs a `resources.last_verified_at` column and a person to stamp it — a
+migration this repo has not invented a date to fill. The operator's content screen keeps its own certify flow,
+which writes the flag but is not a student-facing marker. See "The check log" below.
+
+**One surface is still outside all of this, and it is the paper one.** `services/pdf_report.py` prints
+"Verified source" beside a recommended career whenever that row's `needs_verification` is false — a boolean
+inverse, with no `verified_at` in the payload the report builder is handed (`routers/assessments.py` picks the
+fields). A career that was ticked but never read therefore claims a check on the printout this screen exists to
+stop making. Fixing it means carrying the date into the report and re-wording the row in both languages, which
+is a change to the PDF's own tests, not to a badge.
 
 
 The brief asked for `frontend/app/(admin)/admin/*`. This repo has no root `app/` and no route
@@ -1241,15 +1251,16 @@ here rather than left to be rediscovered.
 
 **Where it sits** — one badge per fact block, which with this data model means one per record card: the public
 `/careers/[slug]` header, the exam cards on `/app/exams`, the scholarship cards on `/app/scholarships`, the
-institution cards on `/app/institutes`, each university row on `/study-abroad/[country]`, and each row of
-`/verified`. Three of those replaced an existing marker rather than adding one, and each replacement was an
-upgrade in kind, because both of the components it displaced rendered a green tick from a boolean alone:
-`SourceBadge` lit from `verified === true` with `verified_at === null` under it, and `VerificationBadge` lit
-from `resource.verified` with no date column to check it against. That is the same false claim this feature
-exists to make visible, so `SourceBadge` is date-gated at its remaining use (`/app/careers/[slug]`, kept for
-the dialog that lists every official link a career points at) and `VerificationBadge` survives only on
-`/app/resources`, which is the honest gap: **`resources` has `verified` and no date column at all**, so a
-marker there has nothing truthful to print until a migration gives it one.
+institution cards on `/app/institutes`, the resource cards on `/app/resources`, each university row on
+`/study-abroad/[country]`, and each row of `/verified`. Four of those replaced an existing marker rather than
+adding one, and each replacement was an upgrade in kind, because both of the components it displaced rendered a
+green tick from a boolean alone: `SourceBadge` lit from `verified === true` with `verified_at === null` under
+it, and `VerificationBadge` lit from `resource.verified` with no date column to check it against. That is the
+same false claim this feature exists to make visible, so `SourceBadge` is date-gated at its remaining use
+(`/app/careers/[slug]`, kept for the dialog that lists every official link a career points at) and
+`VerificationBadge` has been deleted. The resources cards hand it no date on purpose: **`resources` has
+`verified` and no date column**, so all 64 of those cards read "Not checked yet" — which is the truth, and is
+not the same sentence as "nobody chose this link".
 
 Two placements turn on the data rather than on layout. An institution has `last_verified_at` and **no
 `source_url`**, so its badge is the date-only state and the Website button beside it is the page to check
@@ -1868,6 +1879,8 @@ failed** · 2026-10-31 (new suite on 2026-10-23 with 72, section 9 added with `/
 | A Hindi screen that stayed English, and what actually caused it | A gate rendered English in a browser holding the right code, and the tell was that React's own view of the tree said `Checking your account…` while the DOM said something else — which is not a missing translation. `navigator.serviceWorker.getRegistrations()` named it: the PWA worker in `public/sw.js` had cached the pre-edit chunks under `careerguide-v2-assets` and `careerguide-v2-static` and was serving those. Unregistering it and deleting both caches made the same URL Hindi on the next load. The speculative store change that theory had already produced was then **reverted** — `lib/i18n.ts` is untouched, the `mounted`-gated store was never the bug — and `tsc`, `eslint` and `hi-duplicates` were re-run against the original file. **For anyone testing this round**: a hard refresh is not always enough. DevTools → Application → Service workers → Unregister, delete those two caches, reload; the worker re-registers itself with current code on that load |
 
 | The whole battery and all three Hindi validators, re-run when the last screens went into Hindi | 23 suites, **2 613 checks, 0 failed** — with the honest caveat that `tts_provider_test.py`'s two live calls printed `SKIP` because that shell carried neither `GEMINI_API_KEY` nor `AZURE_SPEECH_KEY`, so this row says nothing about provider audio, only about the 72 shape checks. `schema_fit_check.py` **182 rows, 0 columns too short**. `npx tsc --noEmit` and `npx eslint .` exit 0 (one pre-existing warning in `scripts/layout-shot.mjs`); `npm run build` exits 0 with **64** entries in `app-path-routes-manifest.json` — 59 pages, one API handler, four meta routes. `hi-coverage.mjs` **3 335 keys, 0 untranslated, 0 unreached, 0 unwired**; `hi-duplicates.mjs` 0 conflicting, ten harmless repeats. Nothing was run through Prettier: the workflow does not check formatting, and `--check` already fails on 174 files tree-wide. Then re-probed in a browser, service worker cleared: `/careers?lang=hi`, `/app/interests`, `/app/reports`, `/app/chat`, `/app/plans`, `/app/billing`, `/app/exams` · 2026-10-30 |
+
+| The last boolean-only trust marker deleted, and `/app/resources` put on the shared badge | `VerificationBadge` is gone from `components/ui/badge.tsx` and its one caller now renders `VerifiedBadge` with no date, so the resources card says "Not checked yet — confirm on the official site" instead of lighting a green tick from `resource.verified`. No test changed, because no suite ever asserted the old sentence; the deleted Hindi key (`आधिकारिक साइट पर जाँचें`) is the only dictionary edit and the label it replaced is already translated. `npx tsc --noEmit` → **0** · `npx eslint .` → 0 errors, the one pre-existing `scripts/layout-shot.mjs` warning · `npm run build` → **0** · `hi-coverage.mjs` **3 354 keys, 0 untranslated, 0 unreached, 0 unwired** · `hi-duplicates.mjs` **0** conflicting · `hi-prose-check.mjs` **0**. Measured in headless Chrome against the built app and a throwaway seeded database, not read off the JSX: **64** cards render the badge at 375px and at 1440px in both scripts, it wraps to **2 lines** and stays **44px** tall with `scrollHeight − clientHeight = 0` (no Devanagari matra clipped), sits **8px** clear of the Open button, never crosses its row or its card, and the page has **0px** of horizontal overflow. Both screenshots were looked at, in both languages · 2026-11-01 |
 
 Walked in a real browser starting from a clean slate — no token, no login, only a device id:
 the one question → consent gate → dashboard, a **real Groq** Hinglish reply that learned a class and
