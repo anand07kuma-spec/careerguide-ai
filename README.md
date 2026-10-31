@@ -76,4 +76,5 @@ code change. Until then, treat accounts as single-device and payments as unavail
 This is a working prototype, not a compliance product. It has not had a legal review against the
 DPDP Act or any other regime, the legal pages carry placeholder operator details, and the
 recommendation catalogue is seeded data with a verification badge that is only lit by a human
-attestation. Details in §4 and §6 of the docs.
+attestation — `/verified` lists every row that one exists for, and says plainly when none does.
+Details in §4 and §6 of the docs.

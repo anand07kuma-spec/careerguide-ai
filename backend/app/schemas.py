@@ -2158,3 +2158,45 @@ class ErasureOut(BaseModel):
     removed: dict[str, int]
     kept: list[str]
     message: str
+
+
+# ------------------------------------------------------- what has been checked
+
+
+class VerificationItemOut(BaseModel):
+    """One catalogue row a person signed as having been read against its official page.
+
+    `verified_at` is required and `source_url` is not, and that asymmetry is the whole
+    record. A date is the signature — `scripts/verify_data.py` takes it from the clock and
+    no request body can supply one — so a row in this list says somebody read something on
+    that day. The page they read is usually on the row too, but a row verified before the
+    column existed, or by an operator who ticked the box without naming a page, still
+    carries a real date, and this list reports it with the gap visible rather than
+    dropping the row.
+
+    `path` is the public page this row is on, where one exists. A career and a university
+    have public profiles; an exam and a scheme are only on the signed-in screens, and a
+    marketing page that linked a stranger to a session shell would promise a URL that
+    renders a login. `null` means the row has a name and a date and nowhere public to go.
+    """
+
+    kind: Literal["career", "exam", "scholarship", "university"]
+    name: str
+    verified_at: datetime
+    source_url: str | None
+    path: str | None
+
+
+class VerificationRecentOut(BaseModel):
+    """The feed behind `/verified`: everything checked inside the window, newest first.
+
+    `count` is the number of rows in `items` after the window was applied, which is the
+    number the page prints. It is not "how many rows are verified in total", and the two
+    differ every time a date falls out of the window — a page that said "312 checks" from
+    a list of eight rows would be inventing a figure out of a filter.
+    """
+
+    days: int
+    since: datetime
+    count: int
+    items: list[VerificationItemOut]

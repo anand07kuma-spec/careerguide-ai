@@ -990,6 +990,30 @@ export interface ExamAdminRow extends ExamCard {
   created_at: string;
 }
 
+/**
+ * `/api/verification/recent` — one row somebody signed as read against its official page.
+ *
+ * `verified_at` is present because a row without a date never enters the feed; `source_url`
+ * is nullable because a signature can predate the column that names the page, and the feed
+ * shows the gap rather than dropping the row. `path` is null for the kinds that only exist
+ * behind a session, so a public page never links a stranger to a login.
+ */
+export interface VerificationItem {
+  kind: "career" | "exam" | "scholarship" | "university";
+  name: string;
+  verified_at: string;
+  source_url: string | null;
+  path: string | null;
+}
+
+/** The whole feed. `count` is the size of `items` after the window, not a total elsewhere. */
+export interface VerificationRecent {
+  days: number;
+  since: string;
+  count: number;
+  items: VerificationItem[];
+}
+
 export interface ExamGroupAdminRow extends Omit<ExamGroupCard, "exams"> {
   is_active: boolean;
   sort_order: number;

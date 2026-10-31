@@ -24,6 +24,12 @@ entry that is the only proof of who signed a date — no actor, because a shell 
 (section 6) — and `worklist`, which is the requested bulk mode with the lie taken out of it:
 ten rows, their claims, their pages, and nothing written (section 8).
 
+Section 9 is the page that lists all of this publicly. `/api/verification/recent` turns the
+same three columns into "what has been checked lately", so it inherits every rule above and
+adds one of its own: a row can be signed, and still not belong on the list because the day
+it was signed has aged out. The window's edge, a row signed with no page named, and a row
+nobody signed that nonetheless carries a date are each run against the live route there.
+
 Runs against a throwaway database, never `careerguide.db`. Nothing here touches the network —
 the script under test has no network access at all, which is why it can record a person's
 claim to have read a page but cannot read one itself.
@@ -41,7 +47,7 @@ import pathlib
 import sys
 import tempfile
 from contextlib import ExitStack, redirect_stderr, redirect_stdout
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -61,7 +67,7 @@ from sqlalchemy import inspect, select  # noqa: E402
 from app import models  # noqa: E402
 from app.database import SessionLocal  # noqa: E402
 from app.main import app  # noqa: E402
-from app.models import AuditEvent, Career, Scholarship, University  # noqa: E402
+from app.models import AuditEvent, Career, Exam, Scholarship, University  # noqa: E402
 
 PASS: list[str] = []
 FAIL: list[str] = []
@@ -226,9 +232,10 @@ scholarship_id = str(next(row.id for row in scholarships if not row.verified))
 
 # --------------------------------------------------------------------------- 2
 section("2. the API tells the pages what they can actually say")
-# `SourceBadge` reads these fields off the payload: a null renders as "Not yet checked against
-# a source", a value renders as green with a date. So the payload is where a fabricated badge
-# would enter the frontend, and this is what is really in it.
+# `VerifiedBadge` reads these fields off the payload, so the payload is where a fabricated
+# marker would enter the frontend and this is what is really in it: a null date renders as
+# "Not checked yet", a date renders as "Checked <day>", and nothing short of a date renders
+# green.
 detail = client.get(f"/api/careers/{career_slug}")
 check("a career's own page carries both fields rather than leaving them off the payload",
       detail.status_code == 200 and {"source_url", "verified_at"} <= set(detail.json()),
@@ -507,6 +514,120 @@ check("the closing report states where all three tables stand, which is the numb
       "feature exists to be honest about",
       code == 0 and all(name in out for name in ("career:", "scholarship:", "university:")),
       out[:400])
+
+# --------------------------------------------------------------------------- 9
+section("9. /api/verification/recent, which is the same record read as a list")
+# Everything above is about a badge on one row. This route is the same three columns asked
+# question-wide, and it fails in ways a per-row badge cannot: a date that has aged out of the
+# window keeps drawing a badge on its own page and must not appear in a list headed "checked
+# lately"; a row signed before the source column existed has no link and still belongs there;
+# and a row whose flag says nobody checked must stay off it even if a date is sitting in the
+# column. All three are run against the live route rather than against the query, because the
+# route is what the page reads.
+from app.models import Exam  # noqa: E402  - only this section needs the exam table
+
+with SessionLocal() as db:
+    exam_row = db.scalars(select(Exam).where(Exam.is_active.is_(True))).first()
+exam_id = exam_row.id if exam_row else None
+
+# Row 1: signed today, with the page. The ordinary case, and the anchor for the ordering.
+set_columns(Career, Career.slug, career_slug, source_url=NMC,
+            verified_at=datetime.now(timezone.utc), needs_verification=False)
+# Row 2: signed today, no page named — the shape a row verified before `source_url` existed
+# still has, and the reason the feed carries the link rather than requiring it.
+set_columns(Career, Career.slug, second_career, source_url=None,
+            verified_at=datetime.now(timezone.utc) - timedelta(minutes=5),
+            needs_verification=False)
+# Row 3: a date, and the warning flag still raised — the half state section 7 calls
+# IMPOSSIBLE, built here on purpose to see which way the list errs.
+set_columns(Career, Career.slug, third_career, source_url=NMC,
+            verified_at=datetime.now(timezone.utc), needs_verification=True)
+
+feed = client.get("/api/verification/recent")
+check("a stranger with no session gets the list, because it is the public page's own answer",
+      feed.status_code == 200 and {"days", "since", "count", "items"} <= set(feed.json()),
+      feed.text[:200])
+listed = {(item["kind"], item["name"]): item for item in feed.json()["items"]}
+titles = {row.slug: row.title for row in careers}
+check("…and the career signed today with a page beside it is on it, dated and linked",
+      ("career", titles[career_slug]) in listed
+      and listed[("career", titles[career_slug])]["source_url"] == NMC,
+      sorted(key[1] for key in listed)[:5])
+check("…pointing at the public profile the badge sits on, not at a screen a stranger cannot "
+      "open",
+      listed[("career", titles[career_slug])]["path"] == f"/careers/{career_slug}",
+      listed.get(("career", titles[career_slug]), {}).get("path"))
+check("…while the career signed with no page named is still listed with a null link, rather "
+      "than dropped for an absence it did not cause",
+      ("career", titles[second_career]) in listed
+      and listed[("career", titles[second_career])]["source_url"] is None,
+      listed.get(("career", titles[second_career]), "absent"))
+check("…and the row with a date and the warning flag is not, because the list would otherwise "
+      "promote a data error into a claim",
+      ("career", titles[third_career]) not in listed, sorted(key[1] for key in listed)[:5])
+check("…so the count the page prints is the number of rows it was given",
+      feed.json()["count"] == len(feed.json()["items"]),
+      (feed.json()["count"], len(feed.json()["items"])))
+check("…newest first, which is the only order a page headed 'checked lately' can be read in",
+      [item["verified_at"] for item in feed.json()["items"]]
+      == sorted((item["verified_at"] for item in feed.json()["items"]), reverse=True),
+      [item["verified_at"][:19] for item in feed.json()["items"]][:4])
+
+# The window's edge, measured against the `since` the route published rather than against a
+# clock this file keeps, so the test says what the API said and not what the runner thinks.
+cutoff = datetime.fromisoformat(feed.json()["since"])
+set_columns(Career, Career.slug, career_slug, source_url=NMC,
+            verified_at=cutoff + timedelta(minutes=2), needs_verification=False)
+set_columns(Career, Career.slug, second_career, source_url=NMC,
+            verified_at=cutoff - timedelta(minutes=2), needs_verification=False)
+edge = client.get("/api/verification/recent").json()
+inside = {(item["kind"], item["name"]) for item in edge["items"]}
+check("a date two minutes inside the window is on the list",
+      ("career", titles[career_slug]) in inside, edge["count"])
+check("…and the same row two minutes older is not, with no rounding at the boundary that "
+      "quietly makes the window a day wider",
+      ("career", titles[second_career]) not in inside, edge["count"])
+
+# Exams, scholarships and universities are the other three kinds the page groups by, and each
+# stores the same fact under a different column name.
+exam_row = next((row for row in client.get("/api/exams").json()[0]["exams"]), None)
+if exam_row is None:  # pragma: no cover - the seed always lists exams for a page that needs them
+    raise AssertionError("the seeded exam catalogue came back empty")
+set_columns(Exam, Exam.id, exam_row["id"], verified=True,
+            verified_at=datetime.now(timezone.utc), source_url=NMC)
+scheme = client.get("/api/scholarships").json()[0]
+set_columns(Scholarship, Scholarship.id, scheme["id"], verified=True,
+            last_verified_at=datetime.now(timezone.utc), source_url=NMC)
+set_columns(University, University.slug, university_slug, verified=True,
+            verified_at=datetime.now(timezone.utc), source_url="https://www.adelaide.edu.au/")
+wide = client.get("/api/verification/recent").json()
+seen = {(item["kind"], item["name"]) for item in wide["items"]}
+kinds = sorted({item["kind"] for item in wide["items"]})
+check("all four kinds reach the one response, because the page groups by kind and cannot ask "
+      "four times",
+      kinds == ["career", "exam", "scholarship", "university"], kinds)
+check("…and a scholarship is found by the column it actually stores its date in, not by the "
+      "name the other three use",
+      ("scholarship", scheme["name"]) in seen, wide["count"])
+check("…while a university links out to the destination page it is listed on",
+      any(item["kind"] == "university" and str(item["path"]).startswith("/study-abroad/")
+          for item in wide["items"]),
+      [item["path"] for item in wide["items"] if item["kind"] == "university"][:3])
+check("…and a row nobody signed never appears: the seed leaves every one of these tables "
+      "waiting, and a list headed 'what we checked' is exactly where a stray default would "
+      "surface",
+      ("career", titles[spare_career]) not in seen, wide["count"])
+one_day = {(item["kind"], item["name"]) for item in
+           client.get("/api/verification/recent?days=1").json()["items"]}
+check("…with `days` applied as a filter rather than a label: the row parked near the far edge "
+      "of a month is gone from a one-day window and the three signed today are not",
+      ("career", titles[career_slug]) not in one_day
+      and ("scholarship", scheme["name"]) in one_day, sorted(one_day))
+check("a window wider than a year is refused rather than answered, since the page offers one "
+      "window and a script should not get the whole table for asking",
+      client.get("/api/verification/recent?days=9999").status_code == 422
+      and client.get("/api/verification/recent?days=0").status_code == 422,
+      "both bounds")
 
 print(f"\n{len(PASS)} passed, {len(FAIL)} failed")
 if FAIL:

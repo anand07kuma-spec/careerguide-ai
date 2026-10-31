@@ -133,6 +133,9 @@ export const PUBLIC_PAGES: PublicPage[] = [
   { path: "/pricing", changeFrequency: "monthly", priority: 0.8 },
   { path: "/careers", changeFrequency: "weekly", priority: 0.8 },
   { path: "/study-abroad", changeFrequency: "monthly", priority: 0.7 },
+  // The check log. `weekly` because a fresh date lands on it whenever somebody reads a row
+  // against a source, and the page's whole value to a crawler is how recent the list is.
+  { path: "/verified", changeFrequency: "weekly", priority: 0.6 },
   { path: "/blog", changeFrequency: "weekly", priority: 0.7 },
   { path: "/about", changeFrequency: "yearly", priority: 0.5 },
   { path: "/legal", changeFrequency: "yearly", priority: 0.4 },

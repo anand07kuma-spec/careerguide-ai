@@ -3,7 +3,6 @@
 import { useCallback } from "react";
 import {
   BadgeCheck,
-  ExternalLink,
   GraduationCap,
   Info,
   Landmark,
@@ -17,10 +16,11 @@ import { Card, SectionHeading } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState, ErrorState, SkeletonCard } from "@/components/ui/feedback";
 import { Button } from "@/components/ui/button";
+import { VerifiedBadge } from "@/components/ui/verified-badge";
 import { api } from "@/lib/api";
 import { useSession } from "@/lib/session";
 import { useResource } from "@/lib/use-resource";
-import { useT, useTf } from "@/lib/i18n";
+import { useT, useUiLang } from "@/lib/i18n";
 import type { ExamCard } from "@/lib/types";
 
 /**
@@ -68,24 +68,25 @@ const NOT_COUNSELLING = [
   "No exam guarantees a selection, a career or a life. Every route has many entries and many exits — which is why this app explores and never gives a verdict.",
 ];
 
-function recordedOn(value: string | null): string | null {
-  if (!value) return null;
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? null : date.toLocaleDateString("en-IN");
-}
-
 /** One exam. The four sentences are general information; a date or a fee is a record. */
 function ExamCardView({ exam }: { exam: ExamCard }) {
   const t = useT();
-  const tf = useTf();
-  const readOn = recordedOn(exam.verified_at);
-  const hasFigure = Boolean(exam.exam_date || exam.fee_note);
+  const lang = useUiLang();
 
   return (
     <Card className="flex flex-col">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <h3 className="text-base font-semibold leading-tight text-ink">{exam.name}</h3>
-        <Badge tone="brand">{t(exam.authority)}</Badge>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <Badge tone="brand">{t(exam.authority)}</Badge>
+          {/* One marker for this exam, and it sits on the card rather than under each
+              sentence. The four general sentences above are not records and never were
+              checked; only `verified_at` is, and the badge is the only place on this card
+              that says so. It renders whether or not the date exists, because the
+              absence is the common state and hiding it would leave an unverified exam
+              looking the same as a checked one. */}
+          <VerifiedBadge verifiedAt={exam.verified_at} sourceUrl={exam.source_url} lang={lang} />
+        </div>
       </div>
 
       <dl className="mt-3 space-y-2 text-sm leading-relaxed">
@@ -120,27 +121,6 @@ function ExamCardView({ exam }: { exam: ExamCard }) {
           </div>
         ) : null}
       </dl>
-
-      {hasFigure && exam.source_url ? (
-        <div className="mt-3 rounded-xl border border-success/25 bg-success-mist px-3 py-2.5">
-          <p className="text-xs leading-relaxed text-ink">
-            {readOn
-              ? tf("Recorded from the official page on {day}. Check it against this year's notification.", {
-                  day: readOn,
-                })
-              : t("Recorded from the official page below. Check it against this year's notification.")}
-          </p>
-          <a
-            href={exam.source_url}
-            target="_blank"
-            rel="noopener noreferrer nofollow"
-            className="mt-1.5 inline-flex items-center gap-1.5 text-xs font-medium text-brand-dark underline-offset-2 hover:underline"
-          >
-            <ExternalLink className="h-3.5 w-3.5" aria-hidden />
-            {t("Open the page it was read from")}
-          </a>
-        </div>
-      ) : null}
 
       {/* Disclaimer — always visible, not hidden behind a tooltip */}
       <div className="mt-3 rounded-xl border border-warning/30 bg-warning-mist px-3 py-2.5">

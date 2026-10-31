@@ -368,6 +368,11 @@ _READ_EXEMPT = (
     "/api/study-abroad/universities",
     "/api/study-abroad/services",
     "/api/study-abroad/stories",
+    # The verification feed. Same judgement as the catalogue above and stated in the file's
+    # own words: it answers a stranger exactly what it answers the family, so a bucket here
+    # defends nothing — and the caller is a Next.js render of `/verified`, which would spend
+    # one shared container budget for every visitor that afternoon.
+    "/api/verification",
     # The static price list, and the two public halves of a school portal: which tiers
     # exist and what a portal looks like before anybody signs in.
     "/api/payments/plans",

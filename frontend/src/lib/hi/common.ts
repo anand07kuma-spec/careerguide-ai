@@ -84,6 +84,12 @@ export const HI: Record<string, string> = {
   "The page that was read": "जो पृष्ठ पढ़ा गया",
   "The university's own site": "विश्वविद्यालय की अपनी साइट",
   "Where you apply": "जहाँ आवेदन होता है",
+  // `VerifiedBadge` — the one place "this was checked" is printed. The label is deliberately
+  // a sentence, not a dot, so the badge survives a grey printout and a failed stylesheet.
+  "Checked {date}": "{date} को जाँचा गया",
+  source: "स्रोत",
+  "Not checked yet — confirm on the official site":
+    "अभी जाँची नहीं गई — आधिकारिक साइट पर पुष्टि करें",
   "Class 6": "कक्षा 6",
   "Class 7": "कक्षा 7",
   "Class 8": "कक्षा 8",

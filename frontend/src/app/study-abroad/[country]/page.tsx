@@ -12,9 +12,10 @@ import {
   NotInDirectory,
   OfficialPortal,
 } from "@/components/study-abroad/study-shell";
-import { Badge, SourceBadge } from "@/components/ui/badge";
+import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { LinkButton } from "@/components/ui/button";
+import { VerifiedBadge } from "@/components/ui/verified-badge";
 import { api, ApiError } from "@/lib/api";
 import { publicLang } from "@/lib/request-lang";
 import { makeT, makeTf } from "@/lib/public-i18n";
@@ -300,11 +301,16 @@ export default async function StudyAbroadCountryPage({ params, searchParams }: {
                     </p>
                   </div>
                   <div className="flex shrink-0 items-center gap-3">
-                    <SourceBadge
-                      verified={row.verified}
-                      checkedAt={row.verified_at}
+                    {/* One marker per university. It reads `verified_at`, not `verified`,
+                        because a tick an operator set without a day under it is a claim,
+                        and a day is a record. The dialog this replaced listed the
+                        institution's own site as the place to check — that site is already
+                        the link beside this badge, so nothing on this row was lost, and the
+                        row is now server-rendered like the rest of the page. */}
+                    <VerifiedBadge
+                      verifiedAt={row.verified_at}
                       sourceUrl={row.source_url}
-                      alternatives={[{ label: "The university's own site", url: row.official_url }]}
+                      lang={lang}
                     />
                     <a
                       href={row.official_url}

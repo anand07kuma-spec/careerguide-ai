@@ -118,10 +118,14 @@ export function SourceBadge({
   const [open, setOpen] = useState(false);
 
   const date = checkedAt ? checkedDate(checkedAt, lang) : null;
-  const label = verified
-    ? date
-      ? tf("Verified {date}", { date })
-      : t("Verified source")
+  // The tick needs the day, not just the flag. `verified` is a box an operator can tick in
+  // the content screen without naming a page or a date, and a green marker that means
+  // 'somebody read this on this day' cannot honestly come from a boolean alone. So the
+  // colour, the icon and the sentence all key off the signature, and a flagged-but-undated
+  // row reads as unchecked — which is what the record actually says.
+  const stamped = verified && date ? date : null;
+  const label = stamped
+    ? tf("Verified {date}", { date: stamped })
     : t("Not yet checked against a source");
 
   const links: SourceLink[] = [
@@ -139,7 +143,7 @@ export function SourceBadge({
           className,
         )}
       >
-        <Badge tone={verified ? "success" : "neutral"} icon={verified ? <CheckCircle2 className="h-3.5 w-3.5" /> : undefined}>
+        <Badge tone={stamped ? "success" : "neutral"} icon={stamped ? <CheckCircle2 className="h-3.5 w-3.5" /> : undefined}>
           {label}
         </Badge>
       </button>
@@ -149,8 +153,8 @@ export function SourceBadge({
         size="sm"
         title={t("Where this record came from")}
         description={
-          verified && date
-            ? tf("On {date} somebody opened the page below and read this record against it.", { date })
+          stamped
+            ? tf("On {date} somebody opened the page below and read this record against it.", { date: stamped })
             : t("Nobody has read this record against a source yet. It is the app's own note, and the numbers in it need checking before you plan around them.")
         }
       >

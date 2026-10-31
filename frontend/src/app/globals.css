@@ -25,6 +25,14 @@
   --color-line: #e2e8f5;
   --color-success: #16a34a;
   --color-success-mist: #dcfce7;
+  /* The step of the green ramp that is read *on* the mist, the same job
+     `--color-brand-dark` does on `--color-brand-mist`. `--color-success` itself
+     measures 3.00:1 against `--color-success-mist`, which is a large-text ratio:
+     at the 12px a badge is set in it fails, so the word would have to borrow the
+     page's own ink. Deepening the text to 8.30:1 keeps the trust colour and lets
+     the label be legible on its own. Dark flips it back up the ramp (8.80:1 on
+     the flipped mist), measured with the same script as the light pair. */
+  --color-success-dark: #14532d;
   --color-warning: #f59e0b;
   --color-warning-mist: #fef3c7;
   --color-danger: #dc2626;
@@ -150,6 +158,7 @@ html[data-high-contrast="true"] .cg-card {
 
     --color-success: #4ade80;
     --color-success-mist: #102a1c;
+    --color-success-dark: #4ade80;
     --color-warning: #fbbf24;
     --color-warning-mist: #2d2411;
     --color-danger: #f87171;

@@ -12,6 +12,7 @@ import { JsonLd } from "@/components/seo/json-ld";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { LinkButton } from "@/components/ui/button";
+import { VerifiedBadge } from "@/components/ui/verified-badge";
 import { api, ApiError } from "@/lib/api";
 import { publicLang } from "@/lib/request-lang";
 import { makeT, makeTf } from "@/lib/public-i18n";
@@ -213,9 +214,21 @@ export default async function CareerProfilePage({
         <div className="mt-5 flex flex-wrap items-center gap-2">
           <Badge tone="teal">{t(profile.category)}</Badge>
           <Badge tone="neutral">{tf("From class {n}", { n: profile.min_class })}</Badge>
+          {/* One badge for this record, and the two states cannot both be on screen.
+              `needs_verification` and `verified_at` are the same flag pointing opposite ways
+              — `scripts/verify_data.py` clears the first when it writes the second — so the
+              warning covers what the green date would otherwise have to say, and a row that
+              is neither flagged nor signed gets the plain "not checked yet" rather than
+              nothing. */}
           {profile.needs_verification ? (
             <Badge tone="warning">{t("Figures to verify")}</Badge>
-          ) : null}
+          ) : (
+            <VerifiedBadge
+              verifiedAt={profile.verified_at}
+              sourceUrl={profile.source_url}
+              lang={lang}
+            />
+          )}
         </div>
 
         <h1 className="mt-4 text-balance text-3xl font-bold leading-tight tracking-tight text-heading sm:text-4xl">
