@@ -44,6 +44,8 @@ interface Turn extends ChatMessage {
   themes?: string[];
   /** What this turn saved to the profile, in words the student can read. */
   saved?: string[];
+  /** The reply stopped partway. Kept, because a child already read it, and named. */
+  cut_short?: boolean;
 }
 
 const GUIDE_STAGES = 7;
@@ -268,22 +270,88 @@ function ChatThread() {
       setDraft("");
       dictation.reset();
 
+      // Both bubbles go on screen before the guide has answered. The first is the
+      // question the student can see they asked; the second is empty, and is the bubble
+      // the fragments land in — a reply that takes four seconds has to be visibly
+      // arriving from the first second, and a bubble that appears already full proves
+      // nothing of the kind.
+      const asked = Date.now();
+      const answerSlot = asked + 1;
+      setMessages((current) => [
+        ...current,
+        {
+          id: asked,
+          role: "user",
+          content: trimmed,
+          demo_generated: false,
+          created_at: new Date().toISOString(),
+        },
+        {
+          id: answerSlot,
+          role: "assistant",
+          content: "",
+          demo_generated: false,
+          created_at: new Date().toISOString(),
+        },
+      ]);
+
+      // One render per fragment. React batches them, and the scroll effect above follows
+      // `messages`, so a long reply keeps its own bottom in view as it grows.
+      const putFragment = (piece: string) => {
+        setMessages((current) =>
+          current.map((turn) =>
+            turn.id === answerSlot ? { ...turn, content: turn.content + piece } : turn
+          )
+        );
+      };
+
       try {
         // The result id travels with a message only while that plan is pinned on screen.
         // The server re-reads the plan from its own row rather than trusting this number,
         // and it refuses an id that is not this student's, so nothing here can hand over
         // another family's answers.
-        const answer = await api.sendMessage(session.id, trimmed, speakOn, pinned ? planId : null);
+        const answer = await api.streamMessage(
+          session.id,
+          trimmed,
+          speakOn,
+          pinned ? planId : null,
+          putFragment
+        );
+
+        if (answer.kind === "failed") {
+          // The guide took the question — it is on the server's transcript — and then
+          // could not answer it. The question stays on screen because it was really
+          // asked; the empty bubble goes, because an empty reply is not a fact.
+          setMessages((current) => current.filter((turn) => turn.id !== answerSlot));
+          setSendError(t(answer.message));
+          return;
+        }
+
+        if (answer.kind === "cut_short") {
+          // Half an answer is kept, not thrown away. The server wrote these same words to
+          // the transcript, so what reloads is what was read — and the line under the
+          // bubble says so rather than letting a sentence just stop.
+          setMessages((current) =>
+            current.map((turn) =>
+              turn.id === answerSlot
+                ? { ...turn, content: answer.content, cut_short: true }
+                : turn
+            )
+          );
+          return;
+        }
+
+        const reply = answer.reply;
         // The reply carries the guide's own judgement about whether this sounds
         // like a child asking for help, so a second request that fails cannot
         // decide whether the helpline card appears.
-        setSafety(answer.needs_support);
+        setSafety(reply.needs_support);
         // Follow the guide's language for the next dictation and any fallback voice.
-        setSpoken(answer.language || language);
+        setSpoken(reply.language || language);
         // Anything this turn revealed about the student is already saved on the
         // server. Saying so here keeps the storage visible instead of silent.
         const saved: string[] = [];
-        const updates = answer.profile_updates ?? {};
+        const updates = reply.profile_updates ?? {};
         for (const [key, value] of Object.entries(updates)) {
           // A spoken age fills in two columns — the number and the band the server
           // derived from it. One fact was said, so one chip says it back.
@@ -296,36 +364,42 @@ function ChatThread() {
                 : t(FACT_NOTICES[key] ?? key);
           if (label) saved.push(label);
         }
-        setMessages((current) => [
-          ...current,
-          {
-            id: Date.now(),
-            role: "user",
-            content: trimmed,
-            demo_generated: false,
-            created_at: new Date().toISOString(),
-          },
-          { ...answer.reply, themes: answer.detected_themes, saved },
-        ]);
-        setSession({ ...session, stage: answer.stage });
+        // The bubble the student watched being written is replaced by the reply the
+        // server stored, which is the same text by construction — and this is the point
+        // where `demo_generated`, the theme chips and the profile chips become known.
+        setMessages((current) =>
+          current.map((turn) =>
+            turn.id === answerSlot
+              ? { ...reply.reply, themes: reply.detected_themes, saved }
+              : turn
+          )
+        );
+        setSession({ ...session, stage: reply.stage });
         if (saved.length) void reload();
 
-        if (answer.audio_url) {
-          setLastAudio(answer.audio_url);
-          if (speakOn) void player.play(answer.audio_url);
+        if (reply.audio_url) {
+          setLastAudio(reply.audio_url);
+          if (speakOn) void player.play(reply.audio_url);
         } else if (speakOn) {
           // The server's text-to-speech failed; the browser's own voice is a
           // different sound, so the reply still says it is labelled as such.
-          if (answer.audio_error) {
+          if (reply.audio_error) {
             setNotice(
               tf("{failed} Your browser's own voice is reading this reply.", {
-                failed: answer.audio_error,
+                failed: reply.audio_error,
               }),
             );
-            speakWithBrowser(answer.reply.content, answer.language || language);
+            speakWithBrowser(reply.reply.content, reply.language || language);
           }
         }
       } catch (error) {
+        // A refusal from the server means the question was never taken — the day's
+        // allowance, an ended chat, too many sends in a minute. So neither bubble stays:
+        // a question the server does not have would be a promise the guide never made,
+        // and the sentence that explains it is shown in its place.
+        setMessages((current) =>
+          current.filter((turn) => turn.id !== asked && turn.id !== answerSlot)
+        );
         setSendError(
           error instanceof Error ? t(error.message) : t("The guide could not answer just now."),
         );
@@ -336,7 +410,33 @@ function ChatThread() {
     [dictation, language, pinned, planId, player, reload, sending, session, speakOn, t, tf],
   );
 
+  /** Asking again from under the bubble whose answer stopped partway. */
+  const askAgain = useCallback(
+    (index: number) => {
+      for (let i = index - 1; i >= 0; i -= 1) {
+        const earlier = messages[i];
+        if (earlier.role === "user") {
+          void replyTo(earlier.content);
+          return;
+        }
+      }
+    },
+    [messages, replyTo],
+  );
+
   const canSend = Boolean(session) && draft.trim().length > 0 && !sending;
+
+  /** The bubble whose reply has not started.
+   *
+   * The placeholder goes on screen the moment a question is sent, so "thinking" and
+   * "arriving" are one and the same bubble with its text filled in underneath. That is
+   * what keeps the indicator honest: it disappears on the first fragment because the
+   * condition is that bubble still being empty, not a timer. */
+  const isThinking = (index: number) =>
+    sending &&
+    index === messages.length - 1 &&
+    messages[index].role === "assistant" &&
+    messages[index].content === "";
 
   const startNewConversation = useCallback(async () => {
     player.stop();
@@ -603,9 +703,16 @@ function ChatThread() {
                           : "border border-line bg-surface text-ink",
                       )}
                     >
-                      {message.content}
+                      {isThinking(index) ? (
+                        <span role="status">{t("Your guide is thinking…")}</span>
+                      ) : (
+                        message.content
+                      )}
                     </div>
-                    {message.role === "assistant" ? (
+                    {/* The chips under a bubble are what this turn *did*. While the reply
+                        is still arriving there is nothing to say yet, and the last
+                        message's voice button would have offered the previous answer. */}
+                    {message.role === "assistant" && message.content ? (
                       <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                         {message.demo_generated ? (
                           <Badge tone="warning">{t("Demo guide answer")}</Badge>
@@ -645,17 +752,26 @@ function ChatThread() {
                         ) : null}
                       </div>
                     ) : null}
+                    {/* Half a reply is shown as half a reply. Stopping silently would
+                        read as the guide choosing not to finish; the button sends the
+                        same question again, which is what the server's own sentence
+                        asks the family to do. */}
+                    {message.cut_short ? (
+                      <p className="mt-1.5 text-[11px] leading-relaxed text-danger">
+                        {t("This reply stopped partway.")}{" "}
+                        <button
+                          type="button"
+                          onClick={() => askAgain(index)}
+                          className="font-medium underline underline-offset-2"
+                        >
+                          {t("Ask again")}
+                        </button>
+                      </p>
+                    ) : null}
                   </div>
                 </div>
               ))
             )}
-            {sending ? (
-              <div className="flex justify-start">
-                <div className="rounded-card border border-line bg-surface px-4 py-3 text-sm text-muted">
-                  <span role="status">{t("Your guide is thinking…")}</span>
-                </div>
-              </div>
-            ) : null}
           </div>
 
           <div className="border-t border-line p-3 sm:p-4">

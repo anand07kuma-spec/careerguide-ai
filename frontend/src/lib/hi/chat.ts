@@ -30,6 +30,10 @@ export const HI: Record<string, string> = {
   "The chat could not start": "चैट शुरू नहीं हो सकी",
   "Could not open the conversation.": "बातचीत नहीं खुल सकी।",
   "The guide could not answer just now.": "गाइड अभी जवाब नहीं दे सका।",
+  "This reply stopped partway.": "यह जवाब बीच में रुक गया।",
+  "Ask again": "दोबारा पूछें",
+  "The guide could not finish answering just now. Nothing you wrote has been lost — please send it again.":
+    "गाइड अभी जवाब पूरा नहीं कर सका। आपने जो लिखा था वह नहीं मिटा — कृपया उसे दोबारा भेजें।",
   "Could not start a new chat.": "नई चैट शुरू नहीं हो सकी।",
   "The previous chat may still be listed as open on the Journey page.":
     "हो सकता है पिछली चैट यात्रा पेज पर अभी खुली ही दिखे।",
