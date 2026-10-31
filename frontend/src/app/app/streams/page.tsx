@@ -305,7 +305,7 @@ export default function StreamSelector() {
               "Each card ends with the thing students usually wish they had known before choosing.",
             )}
           />
-          <div className="grid gap-4 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
             {STREAMS.map((stream) => (
               <StreamCard key={stream.id} stream={stream} />
             ))}
@@ -320,7 +320,7 @@ export default function StreamSelector() {
               "Science, Commerce and Humanities are the usual labels, not the only doors. Availability of these varies by state and school.",
             )}
           />
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             {OTHER_ROUTES.map((route) => {
               const Icon = route.icon;
               return (
@@ -404,7 +404,7 @@ export default function StreamSelector() {
             title={t("Things said about streams that are not true")}
             description={t("Most of the pressure around this choice comes from these ideas.")}
           />
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {MYTHS.map((myth) => (
               <Card key={myth.claim} className="border-warning/25">
                 <p className="text-sm font-semibold leading-relaxed text-ink">

@@ -37,7 +37,7 @@ export function TierList({ kind, currentCode }: { kind: OrgKind; currentCode: st
         title="Places this portal can hold"
         description="A tier is a ceiling on seats, not a level of service to a child. Nobody's recommendations, answers or report change with the tier their school is on."
       />
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         {data.map((tier) => {
           const current = tier.code === currentCode;
           return (

@@ -49,7 +49,7 @@ export function AnalyticsPanel({ slug }: { slug: string }) {
           }
         />
 
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Stat label="In the cohort" value={data.cohort_size} />
           <Stat label="Started" value={data.sittings_started} tone="teal" />
           <Stat label="Finished" value={data.sittings_completed} tone="success" />
@@ -62,7 +62,7 @@ export function AnalyticsPanel({ slug }: { slug: string }) {
         </div>
       </Card>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <BucketCard title="By stage" buckets={data.by_stage} empty="No stage breakdown is reportable for this cohort." />
         <BucketCard
           title="By language"

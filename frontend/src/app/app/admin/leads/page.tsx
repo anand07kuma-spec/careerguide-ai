@@ -160,7 +160,7 @@ function LeadRow({
             </p>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Select
               label="Where this has got to"
               options={STATUSES.filter((option) => option.value !== "")}
@@ -268,7 +268,7 @@ export default function AdminLeadsScreen() {
         <PillGroup items={STATUSES} value={status} onChange={setStatus} />
 
         <form
-          className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]"
+          className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_auto]"
           onSubmit={(event) => {
             event.preventDefault();
             setApplied(search);
@@ -285,14 +285,18 @@ export default function AdminLeadsScreen() {
             />
           </div>
           <div className="flex items-end gap-2">
-            <Button type="submit" size="sm">
+            {/* `md`, because the box in the other column is `h-11`. A 36px button beside a
+                44px field shares the row's `items-end`, which lines their bottoms up and
+                leaves the button looking like it shrank — the one place in this app where a
+                control and its action are visibly different heights. */}
+            <Button type="submit" size="md">
               {t("Search")}
             </Button>
             {applied ? (
               <Button
                 type="button"
                 variant="ghost"
-                size="sm"
+                size="md"
                 onClick={() => {
                   setSearch("");
                   setApplied("");

@@ -256,7 +256,7 @@ function DeploymentPanel({ config }: { config: AdminDeployment }) {
 function AuditRow({ event }: { event: AuditEventRow }) {
   const t = useT();
   return (
-    <li className="grid gap-1 border-b border-line/60 py-2.5 text-sm last:border-b-0 sm:grid-cols-[9.5rem_minmax(0,1fr)]">
+    <li className="grid grid-cols-1 gap-1 border-b border-line/60 py-2.5 text-sm last:border-b-0 sm:grid-cols-[9.5rem_minmax(0,1fr)]">
       <span className="text-xs text-muted tabular-nums">{dateTime(event.created_at)}</span>
       <span className="min-w-0">
         <span className="font-mono text-xs text-ink">{event.action}</span>
@@ -300,7 +300,7 @@ function AuditPanel() {
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Select
           label="Action"
           options={[{ value: "", label: "Every action" }, ...(page.data?.actions ?? []).map((name) => ({ value: name, label: name }))]}

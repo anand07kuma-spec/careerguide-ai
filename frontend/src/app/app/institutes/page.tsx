@@ -163,7 +163,7 @@ export default function InstitutesScreen() {
 
         {/* Filters */}
         <Card className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <div className="relative lg:col-span-1">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" aria-hidden />
               <Input
@@ -235,7 +235,7 @@ export default function InstitutesScreen() {
 
         {/* Results */}
         {list.state === "loading" ? (
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             {Array.from({ length: 4 }).map((_, i) => (
               <SkeletonCard key={i} />
             ))}
@@ -272,7 +272,7 @@ export default function InstitutesScreen() {
                 : tf("Showing {n} institutes", { n: items.length })}
               {hasFilters ? ` ${t("with your filters")}` : ""}. {t("Order here is not a ranking.")}
             </p>
-            <div className="grid gap-4 lg:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               {items.map((institution) => (
                 <Card key={institution.id} className="flex flex-col">
                   <div className="flex flex-wrap items-start justify-between gap-2">

@@ -100,7 +100,7 @@ export function Footer() {
   return (
     <footer className="mt-10 border-t border-line bg-surface print:hidden">
       <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
-        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.2fr)_repeat(4,minmax(0,1fr))]">
+        <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.2fr)_repeat(4,minmax(0,1fr))]">
           <div className="max-w-xs">
             <Wordmark compact />
             <p className="mt-3 text-xs leading-relaxed text-muted">

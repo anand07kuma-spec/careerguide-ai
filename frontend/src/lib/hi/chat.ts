@@ -58,15 +58,21 @@ export const HI: Record<string, string> = {
     " — मुफ़्त, दिन या रात कभी भी। करियर की बात रुक सकती है।",
   "I have read this": "मैंने यह पढ़ लिया है",
 
-  // The composer
-  "Type your answer… (Enter sends, Shift+Enter makes a new line)":
-    "अपना जवाब लिखें… (Enter भेजता है, Shift+Enter नई लाइन बनाता है)",
+  // The composer. The shortcut is spelled below the box, not in its placeholder: in Hindi
+  // the old one-line sentence is three lines tall and the box it sat in is one line.
+  "Type your answer…": "अपना जवाब लिखें…",
+  "Enter sends your message. Shift+Enter starts a new line.":
+    "Enter दबाने से आपका संदेश भेजा जाता है। Shift+Enter से नई लाइन शुरू होती है।",
+  "Enter sends your answer. Shift+Enter starts a new line.":
+    "Enter दबाने से आपका जवाब भेजा जाता है। Shift+Enter से नई लाइन शुरू होती है।",
   "Message to your guide": "अपने गाइड के लिए संदेश",
   "Send your message": "अपना संदेश भेजें",
   "Send (Enter)": "भेजें (Enter)",
 
   // Reading replies aloud
   "Read replies aloud": "जवाब बोलकर सुनाएँ",
+  "How does the voice work?": "आवाज़ कैसे काम करती है?",
+  "Hide this": "यह छिपाएँ",
   "The server's speech service reads replies aloud over the internet, with your browser's own voice as a fallback. Settings names the exact service.":
     "सर्वर की स्पीच सेवा इंटरनेट पर जवाब बोलकर सुनाती है, और वह न चले तो आपका ब्राउज़र अपनी आवाज़ देता है। सेटिंग्स में सेवा का ठीक नाम बताया गया है।",
   "Pause voice": "आवाज़ रोकें",

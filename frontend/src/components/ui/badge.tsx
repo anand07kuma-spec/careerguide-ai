@@ -31,7 +31,10 @@ export function Badge({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium leading-none",
+        // `text-xs` on its own leaves a 16px line box; `leading-none` shrank it to 12px
+        // and clipped 4px off the top of every label — measured on both scripts, since a
+        // Devanagari matra and a Latin ascender both need that room.
+        "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium",
         TONES[tone],
         className,
       )}

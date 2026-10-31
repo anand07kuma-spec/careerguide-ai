@@ -419,7 +419,7 @@ export default function InterestsPage() {
                 onRetry={summaryPanel.reload}
               />
             ) : summary && summary.themes.length > 0 ? (
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 {summary.themes.map((theme) => (
                   <div key={theme.theme} className="rounded-2xl border border-line bg-surface p-4">
                     <Badge tone="teal">{theme.label}</Badge>

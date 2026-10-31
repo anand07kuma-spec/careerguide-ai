@@ -117,7 +117,7 @@ export default function ResourcesScreen() {
       <div className="space-y-5">
         {/* Filters */}
         <Card className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" aria-hidden />
               <Input
@@ -194,7 +194,7 @@ export default function ResourcesScreen() {
 
         {/* Results */}
         {list.state === "loading" ? (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {Array.from({ length: 6 }).map((_, i) => (
               <SkeletonCard key={i} />
             ))}
@@ -231,7 +231,7 @@ export default function ResourcesScreen() {
                 : tf("Showing {n} resources", { n: items.length })}
               {hasFilters ? ` ${t("with your filters")}` : ""}.
             </p>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {items.map((resource) => (
                 <Card key={resource.id} className="flex flex-col">
                   <div className="flex flex-wrap items-center gap-1.5">

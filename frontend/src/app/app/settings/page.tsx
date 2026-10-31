@@ -713,11 +713,16 @@ export default function SettingsScreen() {
     >
       <div className="max-w-3xl space-y-5">
         {/* ------------------------------------------------------------- Identity */}
+        {/* `basis-40` on the name column is what makes this row wrap instead of crush: with
+            a `flex-1` basis of zero the column happily shrank to 26px on a phone and every
+            label in it became an ellipsis, because the two Hindi buttons beside it would not
+            give up their own line. A real basis says "160px of me must be on this line", and
+            the buttons move to the next one. */}
         <Card className="flex flex-wrap items-center gap-4">
           <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-brand text-lg font-semibold text-white">
             {initials(user?.display_name)}
           </span>
-          <div className="min-w-0 flex-1">
+          <div className="min-w-0 basis-40 flex-1">
             <p className="truncate text-base font-semibold text-ink">{user?.display_name}</p>
             <p className="mt-0.5 truncate text-sm text-muted">
               {isStudent
@@ -1046,7 +1051,7 @@ export default function SettingsScreen() {
       >
         {isStudent ? (
           <div className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Select
                 label="Class"
                 options={classOptions}
@@ -1090,7 +1095,7 @@ export default function SettingsScreen() {
               </p>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               {contextSelect(
                 "School setting",
                 "education_context",

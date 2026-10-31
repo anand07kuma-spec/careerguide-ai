@@ -39,7 +39,7 @@ export function PortalSummaryPanel({ summary }: { summary: PortalSummary }) {
         }
       />
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Stat label="Joined" value={summary.joined} hint="Accounts that opened a link" />
         <Stat label="Waiting" value={summary.invited} tone="teal" hint="Invites not yet accepted" />
         <Stat label="Adults on staff" value={summary.staff} tone="brand" hint="Counsellors and administrators" />

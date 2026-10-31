@@ -216,7 +216,7 @@ export default async function CareersPage({ searchParams }: { searchParams: Page
           groups.map(([name, items]) => (
             <section key={name} className="mt-10">
               <h2 className="text-xl font-bold tracking-tight text-heading sm:text-2xl">{t(name)}</h2>
-              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
                 {items.map((career) => (
                   <Card key={career.slug} className="flex flex-col p-5">
                     <h3 className="text-base font-semibold text-heading">

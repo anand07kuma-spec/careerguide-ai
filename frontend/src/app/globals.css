@@ -35,7 +35,8 @@
   --shadow-card: 0 1px 2px rgb(23 32 51 / 0.04), 0 8px 24px -12px rgb(11 23 48 / 0.12);
   --shadow-lift: 0 2px 4px rgb(23 32 51 / 0.06), 0 18px 40px -16px rgb(11 23 48 / 0.22);
 
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-geist-sans), "Nirmala UI", "Kohinoor Devanagari",
+    "Noto Sans Devanagari", "Mangal", ui-sans-serif, system-ui, sans-serif;
 }
 
 @layer base {
@@ -63,6 +64,23 @@
   ::selection {
     background: var(--color-brand-mist);
   }
+}
+
+/* Devanagari is set with marks above and below the headline, so the two things that make
+   Latin headings look sharp make Hindi ones read badly: a negative letter-spacing pulls a
+   matra away from the consonant it belongs to, and a line box as short as the font size
+   clips the mark off the top of the line — "गोपनीयता नीति" at `text-3xl tracking-tight`
+   lost 3px of its leading mark in measurement. Every number here came from this app's own
+   screens, which is why the rule is scoped to a heading instead of the whole document, and
+   `:lang(hi)` matches only elements inheriting the tag `src/lib/i18n.ts` writes onto <html>,
+   so an English heading is untouched.
+   It sits OUTSIDE `@layer base` on purpose. Layered rules lose to any later layer no matter
+   how specific they are, so inside the base layer this rule was quietly beaten by the
+   `tracking-tight` and `leading-*` utility on the very heading it was written for; unlayered
+   CSS outranks every layer, which is what makes it stick. */
+:lang(hi) :is(h1, h2, h3) {
+  letter-spacing: normal;
+  line-height: 1.35;
 }
 
 /* Honour the in-app accessibility switch as well as the OS setting. */

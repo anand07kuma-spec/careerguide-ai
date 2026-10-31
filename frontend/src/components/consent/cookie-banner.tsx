@@ -42,9 +42,15 @@ export function CookieBanner() {
 
   if (!pending) return null;
 
+  // The only change here is the gap under the sheet. Measured on a 375x780 phone the card
+  // is 392px tall and its last button ends 29px above the bottom edge — with `pb-3`, which
+  // is all the clearance there was, that 29px is a fiction on any device that reserves a
+  // home-indicator area: the inset is 34px on the iPhones this app's own bottom bar already
+  // allows for, so "Manage preferences" lands under the swipe zone. Same reservation the
+  // bottom bar and the dialog footer make.
   return (
     <section aria-label={t("Storage and privacy")} className="cg-rise fixed inset-x-0 bottom-0 z-[60] print:hidden">
-      <div className="mx-auto max-w-3xl px-3 pb-3 sm:px-6 sm:pb-6">
+      <div className="mx-auto max-w-3xl px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-6 sm:pb-6">
         <div className="rounded-card border border-line bg-surface p-4 shadow-[var(--shadow-lift)] sm:p-5">
           <p className="text-sm font-semibold text-heading">
             {measurementOn

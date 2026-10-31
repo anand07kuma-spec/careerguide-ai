@@ -71,7 +71,11 @@ export function PlanCard({
       <p className="mt-1.5 text-sm leading-relaxed text-muted">{t(plan.tagline)}</p>
 
       <div className="mt-4 flex flex-wrap items-baseline gap-x-2 gap-y-1">
-        <span className="text-3xl font-bold tracking-tight text-ink tabular-nums">
+        {/* No `tracking-tight`: this span holds either numerals or, on the plan with no
+            published price, the words "Talk to us" — and negative letter-spacing at 30px
+            pulls a Devanagari matra off the consonant it belongs to. On ₹2,499 the tightening
+            was worth less than a pixel. */}
+        <span className="text-3xl font-bold text-ink tabular-nums">
           {plan.price_paise === null ? t("Talk to us") : rupees(plan.price_paise)}
         </span>
         {plan.price_paise !== null && plan.price_paise > 0 ? (
@@ -130,7 +134,11 @@ export function PlanCard({
             {t("This is your plan")}
           </Button>
         ) : needsContact ? (
-          <LinkButton href="/contact" variant="outline" size="lg">
+          // `whitespace-normal` because this label is 192px of text in a 188px button: the
+          // four cards share a 1024px column, so the footer is 190px wide here and a
+          // `whitespace-nowrap` CTA let its own words walk past the rounded border. Measured
+          // at 1440 viewport / `lg` grid on this card and the "not open yet" one below it.
+          <LinkButton href="/contact" variant="outline" size="lg" className="whitespace-normal text-center">
             {t("Ask about school licences")}
           </LinkButton>
         ) : !paid ? (
@@ -148,7 +156,7 @@ export function PlanCard({
           </Button>
         ) : (
           <>
-            <Button variant="outline" size="lg" disabled>
+            <Button variant="outline" size="lg" disabled className="whitespace-normal text-center">
               {t("Upgrades are not open yet")}
             </Button>
             <p className="text-xs leading-relaxed text-muted">

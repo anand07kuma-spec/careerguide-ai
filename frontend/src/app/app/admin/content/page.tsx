@@ -213,7 +213,7 @@ function CareerEditor({ slug, onSaved }: { slug: string; onSaved: () => void }) 
 
   return (
     <div className="space-y-3 border-t border-line pt-3">
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Input label="Title" value={draft.title} onChange={field("title")} maxLength={120} />
         <Input label="Category" value={draft.category} onChange={field("category")} maxLength={64} />
         <Input
@@ -328,7 +328,7 @@ function CareersPanel() {
   return (
     <div className="space-y-4">
       <form
-        className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]"
+        className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_auto]"
         onSubmit={(event) => {
           event.preventDefault();
           setApplied(search);
@@ -510,7 +510,7 @@ function QuestionEditor({ question, onSaved }: { question: AdminQuestionRow; onS
         maxLength={400}
         hint="A child answering in Hindi sees this one. Five characters at least."
       />
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Input
           label="Dimension"
           value={draft.dimension}
@@ -645,7 +645,7 @@ function QuestionsPanel() {
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
         <Select
           label="Questionnaire"
           options={ASSESSMENT_TYPES}

@@ -98,7 +98,7 @@ export function LegalLayout({
         </div>
       </header>
 
-      <main className="mx-auto grid w-full max-w-5xl gap-x-10 px-4 py-6 sm:px-6 sm:py-10 lg:grid-cols-[15rem_minmax(0,1fr)]">
+      <main className="mx-auto grid grid-cols-1 w-full max-w-5xl gap-x-10 px-4 py-6 sm:px-6 sm:py-10 lg:grid-cols-[15rem_minmax(0,1fr)]">
         {hasToc ? (
           <aside className="lg:col-start-1 lg:row-start-1 print:hidden">
             {/* Phone: a button that opens the list in place. */}

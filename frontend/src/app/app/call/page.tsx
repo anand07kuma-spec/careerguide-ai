@@ -463,8 +463,13 @@ export default function VoiceCallPage() {
               ? "muted"
               : "idle";
 
+  // `min-h-full`, not `min-h-dvh`: inside the app shell the viewport height is already spent
+  // on the header and the bottom bar's clearance, so asking for a full window here made this
+  // page 63px taller than the space it was given and pushed its own footnote under the
+  // navigation bar. `lg:h-dvh` stays: on a laptop there is no bar to clear and the call
+  // screen is meant to be one fixed panel.
   return (
-    <div className="min-h-dvh bg-navy text-white lg:h-dvh">
+    <div className="min-h-full bg-navy text-white lg:h-dvh">
       <div className="mx-auto flex h-full w-full max-w-3xl flex-col px-4 py-5 sm:px-6">
         <header className="flex items-center justify-between gap-3">
           <Wordmark tone="white" compact />
@@ -718,19 +723,34 @@ export default function VoiceCallPage() {
             void sendTurn(typed);
           }}
         >
+          {/* Same 44px as the chat composer's three controls: this box asked for 46px while
+              the icon button beside it was 40px, so the two bottoms sat at different heights
+              on the same line. `min-w-0` is the chat's lesson — a flex box will not give way
+              to the button unless it is allowed to. */}
           <input
             value={typed}
             onChange={(event) => setTyped(event.target.value)}
             placeholder={t("Or type your answer here…")}
             aria-label={t("Type your answer")}
-            className="min-h-[46px] flex-1 rounded-card border border-white/15 bg-white/10 px-4 py-2.5 text-sm text-white outline-none placeholder:text-white/40 focus:border-brand-light"
+            className="min-h-11 min-w-0 flex-1 rounded-card border border-white/15 bg-white/10 px-4 py-2.5 text-sm text-white outline-none placeholder:text-white/40 focus:border-brand-light"
           />
-          <Button type="submit" size="icon" aria-label={t("Send your message")} disabled={!typed.trim() || busy}>
+          <Button
+            type="submit"
+            size="icon"
+            aria-label={t("Send your message")}
+            disabled={!typed.trim() || busy}
+            className="h-11 w-11 shrink-0"
+          >
             <Send className="h-4 w-4" aria-hidden />
           </Button>
         </form>
 
-        <p className="mt-4 pb-6 text-center text-[11px] leading-relaxed text-white/40">
+        {/* `pb-28` is this page's own clearance for the fixed bar. The shell reserves space
+            for that bar with padding on `main`, but this screen is a full-bleed column that
+            sizes itself to the window and scrolls inside itself, and the measured bottom of
+            this note at the end of the scroll was 780 against a bar top of 695 — the shell's
+            clearance never reached it. On a laptop there is no bar. */}
+        <p className="mt-4 pb-28 text-center text-[11px] leading-relaxed text-white/40 lg:pb-6">
           {t(
             "The microphone only records while the call screen is listening — never in the background, and raw audio is not stored. Speech recognition is your browser's, spoken replies come from the server's speech service over the internet (Settings names which one), and this is not full-duplex streaming: one voice speaks at a time.",
           )}

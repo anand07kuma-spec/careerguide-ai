@@ -75,7 +75,7 @@ export default function WelcomePage() {
           </p>
         </div>
 
-        <div className="mt-8 grid gap-3 sm:grid-cols-2">
+        <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
           {WAYS_IN.map((way) => {
             const Icon = way.icon;
             return (

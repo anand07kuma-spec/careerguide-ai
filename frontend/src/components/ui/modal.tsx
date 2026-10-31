@@ -139,7 +139,11 @@ export function Modal({
         </div>
         <div className="cg-scrollbar flex-1 overflow-y-auto px-5 py-4">{children}</div>
         {footer ? (
-          <div className="flex flex-wrap items-center justify-end gap-2 border-t border-line bg-canvas/60 px-5 py-3">
+          /* This dialog is a sheet that sits on the bottom edge of the phone, so its buttons
+             are exactly where the home indicator is. The app's own bottom bar already reserves
+             `env(safe-area-inset-bottom)`; a footer with a flat `py-3` did not, and "Save" was
+             under the gesture bar on a real device. */
+          <div className="flex flex-wrap items-center justify-end gap-2 border-t border-line bg-canvas/60 px-5 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
             {footer}
           </div>
         ) : null}

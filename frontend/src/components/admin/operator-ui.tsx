@@ -117,7 +117,7 @@ export function KeyValue({
 }) {
   const t = useT();
   return (
-    <div className="grid gap-1 border-b border-line/60 py-2.5 last:border-b-0 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] sm:items-baseline">
+    <div className="grid grid-cols-1 gap-1 border-b border-line/60 py-2.5 last:border-b-0 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] sm:items-baseline">
       <dt className="text-xs font-medium uppercase tracking-wide text-muted">
         {typeof label === "string" ? t(label) : label}
       </dt>

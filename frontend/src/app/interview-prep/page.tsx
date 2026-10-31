@@ -234,6 +234,7 @@ export default function InterviewPrepPage() {
 
   return (
     <Screen
+      fill
       title="Practice Interview"
       description={
         <>
@@ -254,7 +255,10 @@ export default function InterviewPrepPage() {
         </Button>
       }
     >
-      <div className="space-y-4">
+      {/* `gap-4`, not `space-y-4`: this column now has a child that is asked to take what is
+          left (`flex-1`), and `space-y-4` puts its margin *inside* that child's box, so the
+          thread card measured its own height one gap too short. */}
+      <div className="flex min-h-0 flex-1 flex-col gap-4">
         {support ? (
           <Card className="border-warning/40 bg-warning-mist">
             <div className="flex items-start gap-3">
@@ -279,7 +283,12 @@ export default function InterviewPrepPage() {
           </p>
         ) : null}
 
-        <Card className={cn("flex flex-col p-0", outcome ? null : "h-[52vh] min-h-[320px]")}>
+        {/* Same rule as the chat thread: the card is handed the height the screen has left
+            and the answers scroll inside it, instead of the screen agreeing in advance that
+            a conversation is 52% of a window tall. */}
+        <Card
+          className={cn("flex flex-col p-0", outcome ? null : "min-h-[240px] flex-1 overflow-hidden")}
+        >
           <div ref={setListRef} className="cg-scrollbar flex-1 space-y-4 overflow-y-auto p-4 sm:p-5">
             {exchanges.map((entry, index) => (
               <div key={`${index}-${entry.question}`} className="space-y-2">
@@ -299,14 +308,14 @@ export default function InterviewPrepPage() {
                 ) : null}
 
                 <div className="flex justify-start">
-                  <div className="max-w-[88%] rounded-card border border-line bg-surface px-4 py-3 text-sm leading-relaxed text-ink shadow-card sm:max-w-[76%]">
+                  <div className="max-w-[88%] min-w-0 break-words rounded-card border border-line bg-surface px-4 py-3 text-sm leading-relaxed text-ink shadow-card sm:max-w-[76%]">
                     {say(entry.question, entry.scripted)}
                   </div>
                 </div>
 
                 {entry.answer ? (
                   <div className="flex justify-end">
-                    <div className="max-w-[88%] rounded-card bg-brand px-4 py-3 text-sm leading-relaxed text-white shadow-card sm:max-w-[76%]">
+                    <div className="max-w-[88%] min-w-0 break-words rounded-card bg-brand px-4 py-3 text-sm leading-relaxed text-white shadow-card sm:max-w-[76%]">
                       {entry.answer}
                     </div>
                   </div>
@@ -330,7 +339,12 @@ export default function InterviewPrepPage() {
                   {error}
                 </p>
               ) : null}
-              <div className="flex items-end gap-2">
+              {/* One height for the box and its button, as in the chat: `items-end` matched
+                  their bottoms while a 46px box and a 40px round button sat at different
+                  heights, and the box needed `min-w-0` to give way to the button on a phone.
+                  `field-sizing-content` so a long answer is read, not scrolled inside a slot
+                  that stays 44px no matter what was typed into it. */}
+              <div className="flex items-center gap-2">
                 <textarea
                   value={draft}
                   onChange={(event) => setDraft(event.target.value)}
@@ -342,9 +356,9 @@ export default function InterviewPrepPage() {
                   }}
                   rows={1}
                   maxLength={1200}
-                  placeholder={t("Type your answer… (Enter sends, Shift+Enter makes a new line)")}
+                  placeholder={t("Type your answer…")}
                   aria-label={t("Your answer to the interviewer")}
-                  className="cg-scrollbar max-h-32 min-h-[46px] flex-1 resize-none rounded-card border border-line bg-surface px-3.5 py-2.5 text-sm text-ink outline-none placeholder:text-muted/70 focus:border-brand focus:ring-2 focus:ring-brand-mist"
+                  className="cg-scrollbar max-h-32 min-h-11 min-w-0 flex-1 resize-none rounded-card border border-line bg-surface px-3.5 py-2 text-sm leading-relaxed text-ink outline-none field-sizing-content placeholder:text-muted/70 focus:border-brand focus:ring-2 focus:ring-brand-mist"
                 />
                 <Button
                   size="icon"
@@ -352,11 +366,18 @@ export default function InterviewPrepPage() {
                   title={t("Send (Enter)")}
                   disabled={!draft.trim() || busy}
                   onClick={send}
+                  className="h-11 w-11 shrink-0"
                 >
                   <Send className="h-4 w-4" aria-hidden />
                 </Button>
               </div>
               <p className="mt-2 text-xs leading-relaxed text-muted">
+                {/* The shortcut the placeholder used to carry, which in Hindi was three
+                    lines tall inside a one-line box. Kept off the phone: the thumb that
+                    needs it has no Shift key to find. */}
+                <span className="hidden sm:block">
+                  {t("Enter sends your answer. Shift+Enter starts a new line.")}
+                </span>
                 {t(
                   "Take your time. A short answer is fine — say what you would try first, and that counts.",
                 )}

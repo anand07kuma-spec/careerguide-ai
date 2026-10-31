@@ -136,7 +136,7 @@ export default function AboutPage() {
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted">
             {t("Three things happen in a normal visit, in this order.")}
           </p>
-          <div className="mt-5 grid gap-4 sm:grid-cols-3">
+          <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-3">
             {STEPS.map((step, index) => (
               <Card key={step.title} className="p-5">
                 <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-brand-mist text-brand">
@@ -169,7 +169,7 @@ export default function AboutPage() {
           <h2 className="text-xl font-bold tracking-tight text-heading sm:text-2xl">
             {t("What this project holds to")}
           </h2>
-          <div className="mt-5 grid gap-4 sm:grid-cols-2">
+          <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
             {VALUES.map((value) => (
               <Card key={value.title} className="p-5">
                 <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-teal-mist text-teal">

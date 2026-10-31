@@ -152,7 +152,7 @@ export default async function LandingPage({
             className="pointer-events-none absolute inset-x-0 -top-24 h-64 bg-brand-mist opacity-60 blur-3xl"
             aria-hidden
           />
-          <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-14 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:py-20">
+          <div className="mx-auto grid grid-cols-1 max-w-6xl items-center gap-10 px-4 py-14 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:py-20">
             <div>
               <Badge tone="teal" className="mb-5">
                 {t("For students in class 6 to 12, and the parents who support them")}
@@ -232,7 +232,7 @@ export default async function LandingPage({
           <h2 className="text-2xl font-bold tracking-tight text-heading sm:text-3xl">
             {t("Everything a first conversation should do")}
           </h2>
-          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {FEATURES.map((item) => (
               <Card key={item.title} className="p-5">
                 <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-brand-mist text-brand">
@@ -248,7 +248,7 @@ export default async function LandingPage({
         {/* How it works */}
         <section id="how" className="mx-auto max-w-6xl scroll-mt-20 px-4 py-14 sm:px-6 lg:py-20">
           <div className="cg-card overflow-hidden">
-            <div className="grid gap-px bg-line lg:grid-cols-4">
+            <div className="grid grid-cols-1 gap-px bg-line lg:grid-cols-4">
               {STEPS.map((step, index) => (
                 <div key={step.title} className="bg-surface p-6">
                   <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-navy text-sm font-semibold text-white">
@@ -264,7 +264,7 @@ export default async function LandingPage({
 
         {/* Parents */}
         <section id="parents" className="mx-auto max-w-6xl scroll-mt-20 px-4 pb-14 sm:px-6">
-          <div className="grid items-center gap-8 lg:grid-cols-[0.95fr_1.05fr]">
+          <div className="grid grid-cols-1 items-center gap-8 lg:grid-cols-[0.95fr_1.05fr]">
             <div>
               <Badge tone="brand" className="mb-4">
                 {t("For parents and guardians")}
@@ -327,7 +327,7 @@ export default async function LandingPage({
                 "A guidance tool for children is only useful if it can be trusted. These limits are built into the app, not written as policy you have to read.",
               )}
             </p>
-            <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {[
                 {
                   icon: EarOff,

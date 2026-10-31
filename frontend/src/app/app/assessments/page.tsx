@@ -72,7 +72,7 @@ export default function AssessmentsPage() {
         </p>
 
         {panel.state === "loading" ? (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <SkeletonCard />
             <SkeletonCard />
             <SkeletonCard />
@@ -96,7 +96,7 @@ export default function AssessmentsPage() {
             }
           />
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {instruments.map((instrument) => (
               <InstrumentCard key={instrument.type} instrument={instrument} />
             ))}
