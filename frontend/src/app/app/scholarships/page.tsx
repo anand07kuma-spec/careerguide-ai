@@ -17,11 +17,12 @@ import {
 import { Screen } from "@/components/layout/app-shell";
 import { Card, SectionHeading } from "@/components/ui/card";
 import { LinkButton } from "@/components/ui/button";
-import { Badge, SourceBadge } from "@/components/ui/badge";
+import { Badge } from "@/components/ui/badge";
+import { VerifiedBadge } from "@/components/ui/verified-badge";
 import { EmptyState, ErrorState, SkeletonCard } from "@/components/ui/feedback";
 import { Input, Select } from "@/components/ui/field";
 import { api } from "@/lib/api";
-import { useT, useTf } from "@/lib/i18n";
+import { useT, useTf, useUiLang } from "@/lib/i18n";
 import { useSession } from "@/lib/session";
 import { useResource } from "@/lib/use-resource";
 import type { Scholarship } from "@/lib/types";
@@ -71,6 +72,7 @@ function stateLabel(value: string): string {
 export default function ScholarshipsScreen() {
   const t = useT();
   const tf = useTf();
+  const lang = useUiLang();
   const { status: sessionStatus } = useSession();
 
   const [search, setSearch] = useState("");
@@ -360,11 +362,15 @@ export default function ScholarshipsScreen() {
                     </div>
 
                     <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-line pt-3">
-                      <SourceBadge
-                        verified={scholarship.verified}
-                        checkedAt={scholarship.last_verified_at}
+                      {/* The badge is the marker for this scheme, and the button beside it is
+                          where a student actually applies — the two never point at the same
+                          link, because `source_url` is the page a person read the figures off
+                          and `official_url` is the portal. The old dialog listed the portal;
+                          the portal has been on this card as a button all along. */}
+                      <VerifiedBadge
+                        verifiedAt={scholarship.last_verified_at}
                         sourceUrl={scholarship.source_url}
-                        alternatives={[{ label: "Where you apply", url: scholarship.official_url }]}
+                        lang={lang}
                       />
                       <LinkButton href={scholarship.official_url} variant="outline" size="sm">
                         {t("Official site")}

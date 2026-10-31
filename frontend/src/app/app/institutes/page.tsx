@@ -16,12 +16,13 @@ import {
 import { Screen } from "@/components/layout/app-shell";
 import { Card, SectionHeading } from "@/components/ui/card";
 import { LinkButton } from "@/components/ui/button";
-import { Badge, VerificationBadge } from "@/components/ui/badge";
+import { Badge } from "@/components/ui/badge";
+import { VerifiedBadge } from "@/components/ui/verified-badge";
 import { EmptyState, ErrorState, SkeletonCard } from "@/components/ui/feedback";
 import { Input, Select } from "@/components/ui/field";
 import { PillGroup } from "@/components/ui/tabs";
 import { api } from "@/lib/api";
-import { useT, useTf } from "@/lib/i18n";
+import { useT, useTf, useUiLang } from "@/lib/i18n";
 import type { Institution } from "@/lib/types";
 import { useSession } from "@/lib/session";
 import { useResource } from "@/lib/use-resource";
@@ -61,6 +62,7 @@ function eduLabel(value: string): string {
 export default function InstitutesScreen() {
   const t = useT();
   const tf = useTf();
+  const lang = useUiLang();
   const { status: sessionStatus } = useSession();
 
   const [search, setSearch] = useState("");
@@ -343,7 +345,14 @@ export default function InstitutesScreen() {
                   </dl>
 
                   <div className="mt-4 flex items-center justify-between gap-2 border-t border-line pt-3">
-                    <VerificationBadge verified={institution.verified} />
+                    {/* One marker per institution, and only the day can make it green.
+                        `verified` is a tick an operator can set without naming a page or a
+                        date, and a marker that means 'somebody read this' cannot come from a
+                        boolean alone — so this reads `last_verified_at`, the part a person
+                        actually signed. An institution row stores no `source_url`, so the
+                        badge carries no link here and the website button beside it is the page
+                        to check against. */}
+                    <VerifiedBadge verifiedAt={institution.last_verified_at} lang={lang} />
                     <LinkButton href={institution.website} variant="outline" size="sm">
                       {t("Website")}
                       <ExternalLink className="h-3.5 w-3.5" aria-hidden />
