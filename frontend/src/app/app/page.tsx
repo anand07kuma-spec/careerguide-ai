@@ -723,16 +723,15 @@ export default function StudentHome() {
         {isYounger ? null : (
           <section aria-labelledby="family-heading">
             <SectionHeading id="family-heading" title="Family" className="mb-3" />
-            {/* Card-shaped links are the one place where the shared button recipe's
-                `whitespace-nowrap` costs more than it buys: this label is a sentence, and in
-                Hindi it measured 415px against a 341px box, which is a page 432px wide on a
-                375px phone. `whitespace-normal` gives the sentence back its right to wrap and
-                `min-w-0` on the two columns is what lets it exercise it. */}
+            {/* Card-shaped links are the reason the button recipe no longer forces
+                `whitespace-nowrap`: this label is a sentence, and in Hindi it measured 415px
+                against a 341px box, which is a page 432px wide on a 375px phone. A label is
+                allowed to wrap now, and `min-w-0` on the two columns is what lets it. */}
             <LinkButton
               href="/app/settings"
               variant="outline"
               size="md"
-              className="h-auto w-full justify-between whitespace-normal p-4 text-left min-h-11"
+              className="h-auto w-full justify-between p-4 text-left min-h-11"
             >
               <span className="flex min-w-0 items-center gap-3">
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-success-mist text-success">

@@ -134,11 +134,7 @@ export function PlanCard({
             {t("This is your plan")}
           </Button>
         ) : needsContact ? (
-          // `whitespace-normal` because this label is 192px of text in a 188px button: the
-          // four cards share a 1024px column, so the footer is 190px wide here and a
-          // `whitespace-nowrap` CTA let its own words walk past the rounded border. Measured
-          // at 1440 viewport / `lg` grid on this card and the "not open yet" one below it.
-          <LinkButton href="/contact" variant="outline" size="lg" className="whitespace-normal text-center">
+          <LinkButton href="/contact" variant="outline" size="lg">
             {t("Ask about school licences")}
           </LinkButton>
         ) : !paid ? (
@@ -156,7 +152,7 @@ export function PlanCard({
           </Button>
         ) : (
           <>
-            <Button variant="outline" size="lg" disabled className="whitespace-normal text-center">
+            <Button variant="outline" size="lg" disabled>
               {t("Upgrades are not open yet")}
             </Button>
             <p className="text-xs leading-relaxed text-muted">
