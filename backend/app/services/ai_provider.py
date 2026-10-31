@@ -7,11 +7,26 @@ Two implementations live behind `respond()`:
 
 Demo replies are always flagged with `demo_generated=True` so no part of the
 product can present them as real model output.
+
+Two providers, one event contract
+---------------------------------
+
+`respond()` answers a turn in one piece. `stream_respond()` answers it in fragments so
+the first words reach a child before the whole sentence exists, and it deliberately keeps
+the same shape for both implementations: fragments, then one finished `GuideReply`. A
+configured model that streams, a model that ignores `stream`, and the built-in guide are
+three different speeds and must not be three different protocols — a client written for
+one of them has to work against all three, including on the demo deployment this project
+ships with no credentials at all.
 """
 
 from __future__ import annotations
 
+import asyncio
+import json
 import random
+import re
+from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 
 import httpx
@@ -32,6 +47,10 @@ class GuideReply:
     demo_generated: bool
     error: str | None = None
     safety_flag: bool = False
+    # True when a streamed reply stopped before it was finished. Nothing that arrives
+    # whole can set it, so `partial` is how the streaming route learns that the words
+    # a child already watched appear are not the end of the sentence.
+    partial: bool = False
     # Which language the reply came back in, so the caller can pick a matching
     # voice instead of assuming the session never changed.
     language: str = "en"
@@ -467,8 +486,13 @@ def pick_stage2(language: str) -> str:
     return _pick(STAGE2_QUESTION, language)
 
 
-async def _openai_compatible_respond(user_text: str, ctx: GuideContext, history: list[Message]) -> GuideReply:
-    settings = get_settings()
+def _chat_turns(user_text: str, ctx: GuideContext, history: list[Message]) -> list[dict[str, str]]:
+    """The request body both provider calls send, built once.
+
+    The streaming call has to send exactly what the answering-one does, or the two
+    paths would give a student different answers depending on whether their browser
+    managed to hold a connection open.
+    """
     system = prompts.build_system_prompt(
         name=ctx.name,
         language=ctx.language,
@@ -484,18 +508,32 @@ async def _openai_compatible_respond(user_text: str, ctx: GuideContext, history:
         role = "assistant" if message.role == "assistant" else "user"
         turns.append({"role": role, "content": message.content})
     turns.append({"role": "user", "content": user_text})
+    return turns
+
+
+def _provider_request(turns: list[dict[str, str]], stream: bool) -> dict:
+    settings = get_settings()
+    body: dict = {
+        "model": settings.ai_model,
+        "messages": turns,
+        "temperature": 0.6,
+        "max_tokens": 220,
+    }
+    if stream:
+        body["stream"] = True
+    return body
+
+
+async def _openai_compatible_respond(user_text: str, ctx: GuideContext, history: list[Message]) -> GuideReply:
+    settings = get_settings()
+    turns = _chat_turns(user_text, ctx, history)
 
     url = settings.ai_base_url.rstrip("/") + "/chat/completions"
     async with httpx.AsyncClient(timeout=45) as client:
         response = await client.post(
             url,
             headers={"Authorization": f"Bearer {settings.ai_api_key}"},
-            json={
-                "model": settings.ai_model,
-                "messages": turns,
-                "temperature": 0.6,
-                "max_tokens": 220,
-            },
+            json=_provider_request(turns, stream=False),
         )
         response.raise_for_status()
         payload = response.json()
@@ -538,11 +576,189 @@ async def respond(
             reply = await _openai_compatible_respond(user_text, ctx, history)
         except (httpx.HTTPError, KeyError, IndexError, ValueError) as exc:
             reply = demo_respond(user_text, ctx)
-            reply.error = (
-                "The configured AI provider could not be reached, so this reply came "
-                "from the built-in guide instead."
-            )
+            reply.error = FALLBACK_NOTE
     # Whatever produced the reply, the caller needs to know which language it came
     # back in so text-to-speech picks a voice that can actually pronounce it.
     reply.language = _lang(ctx.language)
     return reply
+
+
+# The sentence both entry points put on a fallback reply. One constant, because a
+# student who retried the same message as a stream and as an ordinary send must read
+# the same explanation of whose words they are looking at.
+FALLBACK_NOTE = (
+    "The configured AI provider could not be reached, so this reply came from the "
+    "built-in guide instead."
+)
+
+# How long the built-in guide waits between sentences when its reply is being streamed.
+# The scripted answer exists in full before the first fragment goes out, so without a
+# pause the demo deployment would show every reply as one block and the path most
+# families actually use would never exercise the client's incremental rendering.
+DEMO_STREAM_PAUSE = 0.22
+
+# A sentence ends at a period, `?`, `!` or the Devanagari danda. `demo_respond` writes
+# whole sentences from its own buckets, so this never has to guess about abbreviations.
+_SENTENCE_END = re.compile(r"[.!?।]")
+
+
+def _sentence_chunks(text: str) -> list[str]:
+    """Split a reply into sentence-sized pieces that join back to `text` exactly.
+
+    Each piece keeps the space that follows its terminator, so `"".join()` is the
+    original string — the words a child watched arrive are the words that get stored.
+    """
+    chunks: list[str] = []
+    start = 0
+    for match in _SENTENCE_END.finditer(text):
+        end = match.end()
+        while end < len(text) and text[end] == " ":
+            end += 1
+        chunks.append(text[start:end])
+        start = end
+    if start < len(text):
+        chunks.append(text[start:])
+    return [chunk for chunk in chunks if chunk]
+
+
+@dataclass
+class StreamChunk:
+    """One step of `stream_respond`: text for the bubble, or the finished reply.
+
+    Fragments come first and the finished `GuideReply` always comes last and exactly
+    once, so a caller never has to guess whether the reply is complete, and never has
+    to reassemble a stage, a theme list or a safety flag out of the words themselves.
+    """
+
+    text: str = ""
+    reply: GuideReply | None = None
+
+
+def _stream_fragment(payload: dict) -> str:
+    """The new words in one provider event, or an empty string.
+
+    `delta.content` is the streaming shape. A gateway that sends the finished
+    `message` instead is tolerated here too, because the alternative is a child
+    watching an empty bubble while a perfectly good reply goes past unread.
+    """
+    choices = payload.get("choices")
+    if not isinstance(choices, list) or not choices:
+        return ""
+    first = choices[0] if isinstance(choices[0], dict) else {}
+    delta = first.get("delta")
+    content = delta.get("content") if isinstance(delta, dict) else None
+    if content is None:
+        message = first.get("message")
+        content = message.get("content") if isinstance(message, dict) else None
+    return content if isinstance(content, str) else ""
+
+
+async def _openai_compatible_stream(
+    user_text: str, ctx: GuideContext, history: list[Message]
+) -> AsyncIterator[str]:
+    """The configured provider's reply, as its own fragments arrive."""
+    settings = get_settings()
+    turns = _chat_turns(user_text, ctx, history)
+    url = settings.ai_base_url.rstrip("/") + "/chat/completions"
+
+    async with httpx.AsyncClient(timeout=45) as client:
+        async with client.stream(
+            "POST",
+            url,
+            headers={"Authorization": f"Bearer {settings.ai_api_key}"},
+            json=_provider_request(turns, stream=True),
+        ) as response:
+            response.raise_for_status()
+            async for line in response.aiter_lines():
+                if not line.startswith("data:"):
+                    continue
+                payload = line[5:].strip()
+                # `[DONE]` is the OpenAI-compatible end marker, and it is not JSON.
+                if not payload or payload == "[DONE]":
+                    continue
+                piece = _stream_fragment(json.loads(payload))
+                if piece:
+                    yield piece
+
+
+async def stream_respond(
+    user_text: str, ctx: GuideContext, history: list[Message]
+) -> AsyncIterator[StreamChunk]:
+    """Answer a turn in fragments, then hand back the finished reply.
+
+    Three cases, one contract of `delta…` followed by exactly one reply:
+
+    * a provider that streams gives its own fragments as they arrive;
+    * a provider that cannot stream, or that is not configured at all, produces the
+      built-in guide's reply in sentence-sized pieces with a short pause, so the demo
+      deployment behaves like the real one rather than like a special case;
+    * a provider configured but unable to stream answers in a single fragment carrying
+      the whole reply, which is the contract the client already handles.
+
+    A failure *after* words have reached the student does not switch guide mid-sentence:
+    the fragments so far are handed back as a broken reply and the caller ends the
+    stream honestly instead of pasting a scripted sentence under model words the child
+    has already read.
+    """
+    settings = get_settings()
+    streamed: list[str] = []
+
+    if settings.ai_configured and not possible_distress(user_text):
+        try:
+            async for piece in _openai_compatible_stream(user_text, ctx, history):
+                streamed.append(piece)
+                yield StreamChunk(text=piece)
+            text = "".join(streamed).strip()
+            if not text:
+                # A reasoning model can spend the whole budget thinking and stream
+                # nothing. An empty bubble is not an answer, so this is a provider
+                # failure and the built-in guide takes over.
+                raise ValueError("the configured provider returned an empty reply")
+            hits = detect_themes(user_text)
+            reply = GuideReply(
+                text=text,
+                stage=_advance(ctx.stage, hits, user_text),
+                themes=list(dict.fromkeys([*ctx.known_themes, *hits])),
+                provider=settings.ai_provider,
+                demo_generated=False,
+            )
+            reply.language = _lang(ctx.language)
+            yield StreamChunk(reply=reply)
+            return
+        except (httpx.HTTPError, KeyError, IndexError, ValueError) as exc:
+            if streamed:
+                # The child has read the model's own words. Keep them, say they are
+                # unfinished, and let the caller emit an error event.
+                partial = GuideReply(
+                    text="".join(streamed).strip(),
+                    stage=ctx.stage,
+                    themes=list(dict.fromkeys([*ctx.known_themes, *detect_themes(user_text)])),
+                    provider=settings.ai_provider,
+                    demo_generated=False,
+                    error="The guide's reply stopped partway.",
+                    partial=True,
+                )
+                partial.language = _lang(ctx.language)
+                yield StreamChunk(reply=partial)
+                return
+            # Nothing has been sent yet, so the whole reply can still come as one
+            # fragment and the event contract stays identical.
+            reply = demo_respond(user_text, ctx)
+            reply.error = FALLBACK_NOTE
+            yield StreamChunk(text=reply.text)
+            reply.language = _lang(ctx.language)
+            yield StreamChunk(reply=reply)
+            return
+    else:
+        reply = demo_respond(user_text, ctx)
+        reply.language = _lang(ctx.language)
+        chunks = _sentence_chunks(reply.text)
+        for index, chunk in enumerate(chunks):
+            if index:
+                await asyncio.sleep(DEMO_STREAM_PAUSE)
+            yield StreamChunk(text=chunk)
+        if not chunks:
+            # A reply with no sentences in it still has to arrive, or the client would
+            # wait for a fragment that never comes.
+            yield StreamChunk(text=reply.text)
+        yield StreamChunk(reply=reply)

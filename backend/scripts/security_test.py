@@ -615,6 +615,50 @@ check(
     third_message.headers.get("retry-after"),
 )
 
+# --- the streaming address is a write, and is throttled like one
+# The minute bucket is an abuse guard, and slowapi keys it per decorated route, so the
+# streaming address has its own count of the same rule rather than a shared one. What
+# a second URL must not be able to buy is the day's allowance, and it cannot: that is
+# counted from the child's stored messages (`chats_today`), whichever address wrote
+# them — payments_test.py proves exactly that, and both checks belong in this file
+# because they are two halves of one rule.
+stream_b = f"/api/conversations/{sid_b}/messages/stream"
+streamed_first = client.post(
+    stream_b, json={"message": "Mujhe drawing pasand hai"}, headers=head_b
+)
+check(
+    "a streamed turn is answered as a stream for the student who still has headroom",
+    streamed_first.status_code == 200
+    and streamed_first.headers.get("content-type", "").startswith("text/event-stream")
+    and streamed_first.text.startswith("event: meta"),
+    f"{streamed_first.status_code} {streamed_first.text[:120]}",
+)
+streamed_second = client.post(
+    stream_b, json={"message": "Aur machines banana"}, headers=head_b
+)
+check(
+    "a second streamed turn in the same minute is answered",
+    streamed_second.status_code == 200,
+    f"{streamed_second.status_code} {streamed_second.text[:120]}",
+)
+streamed_third = client.post(stream_b, json={"message": "what next"}, headers=head_b)
+check(
+    "and a third is throttled by the chat rule, not left running",
+    _throttled(streamed_third),
+    f"{streamed_third.status_code} {streamed_third.text[:160]}",
+)
+check(
+    "the throttle on a stream keeps the same sentence about nothing being lost",
+    "lost" in streamed_third.json()["detail"].lower(),
+    streamed_third.json()["detail"],
+)
+check(
+    "a throttled stream is refused before any reply is opened",
+    not streamed_third.text.startswith("event:")
+    and streamed_third.headers.get("retry-after") == "60",
+    f"{streamed_third.text[:120]} {streamed_third.headers.get('retry-after')}",
+)
+
 # --- speech: a slow external service must not be reachable once throttled
 speak_payload = {"text": "Namaste! Main aapki guide hoon.", "language": "hinglish"}
 for attempt in (1, 2):

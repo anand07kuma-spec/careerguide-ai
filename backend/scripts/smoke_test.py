@@ -12,6 +12,7 @@ Run from `backend/`:
 
 from __future__ import annotations
 
+import json
 import os
 import pathlib
 import sys
@@ -46,6 +47,46 @@ def section(title: str) -> None:
 
 def auth(token: str) -> dict:
     return {"Authorization": f"Bearer {token}"}
+
+
+def sse_events(response) -> list[tuple[str, dict]]:
+    """Read a `text/event-stream` body into `(event, data)` pairs, in order.
+
+    Order matters more than content here: a reply that arrives complete but *before*
+    `meta` is a stream that answered a stranger, and a `done` with no fragments in front
+    of it is a client waiting on words that never came.
+    """
+    events: list[tuple[str, dict]] = []
+    name: str | None = None
+    for line in response.iter_lines():
+        if not line:
+            continue
+        if line.startswith("event:"):
+            name = line[len("event:") :].strip()
+        elif line.startswith("data:") and name:
+            events.append((name, json.loads(line[len("data:") :].strip())))
+    return events
+
+
+def stream_of(client, url: str, message: str, token: str, **payload) -> list[tuple[str, dict]]:
+    """One streamed turn, fully read, as `(event, data)` pairs."""
+    body = {"message": message, "speak": False, **payload}
+    with client.stream(
+        "POST", url, json=body, headers=auth(token)
+    ) as response:
+        response.raise_for_status()
+        return sse_events(response)
+
+
+def deltas_of(events: list[tuple[str, dict]]) -> list[str]:
+    return [data["text"] for name, data in events if name == "delta"]
+
+
+def done_of(events: list[tuple[str, dict]]) -> dict:
+    for name, data in events:
+        if name == "done":
+            return data
+    return {}
 
 
 STUDENT = {
@@ -215,31 +256,68 @@ with client:
     # provider call, and "just add a key and it works" was a guess. A local stub
     # answers as the provider instead, which also proves a distress disclosure is
     # still routed to the reviewed safety reply rather than to the model.
-    import json
     import threading
     from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
     from app.config import get_settings  # noqa: PLC0415
 
     provider_calls: list[dict] = []
+    # `stream` answers as a model that supports streaming, `json` as one that ignores
+    # the flag and replies with an ordinary body, `cut` stops the connection in the
+    # middle of a reply. All three exist because the product promise is about what the
+    # student sees in each of them, and only the first is the happy path.
+    stub_mode = {"mode": "stream"}
 
     class StubProvider(BaseHTTPRequestHandler):
         def do_POST(self):  # noqa: N802
             length = int(self.headers.get("Content-Length", 0))
-            provider_calls.append(
-                {
-                    "body": json.loads(self.rfile.read(length)),
-                    "auth": self.headers.get("Authorization", ""),
-                }
-            )
-            payload = json.dumps(
-                {"choices": [{"message": {"role": "assistant", "content": "Tell me more about that."}}]}
-            ).encode()
+            body = json.loads(self.rfile.read(length))
+            provider_calls.append({"body": body, "auth": self.headers.get("Authorization", "")})
+            wants_stream = bool(body.get("stream")) and stub_mode["mode"] != "json"
+
+            if not wants_stream:
+                payload = json.dumps(
+                    {"choices": [{"message": {"role": "assistant", "content": "Tell me more about that."}}]}
+                ).encode()
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(payload)))
+                self.end_headers()
+                self.wfile.write(payload)
+                return
+
+            def frame(piece: str) -> bytes:
+                return (
+                    "data: "
+                    + json.dumps({"choices": [{"delta": {"content": piece}}]})
+                    + "\n\n"
+                ).encode()
+
+            if stub_mode["mode"] == "cut":
+                # HTTP/1.1 chunked, one honest fragment, then a chunk that is announced
+                # longer than anything that follows it: what a proxy dying mid-reply
+                # looks like to a client that has already shown the child some words.
+                self.protocol_version = "HTTP/1.1"
+                self.send_response(200)
+                self.send_header("Content-Type", "text/event-stream")
+                self.send_header("Transfer-Encoding", "chunked")
+                self.send_header("Connection", "close")
+                self.end_headers()
+                first = frame("Tell me ")
+                self.wfile.write(b"%x\r\n" % len(first) + first + b"\r\n")
+                self.wfile.write(b"10\r\nabc")
+                self.wfile.flush()
+                self.close_connection = True
+                return
+
             self.send_response(200)
-            self.send_header("Content-Type", "application/json")
-            self.send_header("Content-Length", str(len(payload)))
+            self.send_header("Content-Type", "text/event-stream")
             self.end_headers()
-            self.wfile.write(payload)
+            for piece in ("Tell me ", "more about ", "that."):
+                self.wfile.write(frame(piece))
+                self.wfile.flush()
+            self.wfile.write(b"data: [DONE]\n\n")
+            self.wfile.flush()
 
         def log_message(self, *args):
             pass
@@ -326,9 +404,285 @@ with client:
             and fell_back.get("reply", {}).get("demo_generated") is True,
             str(fell_back)[:200],
         )
+
+        # ---- the same provider, streamed.
+        settings.ai_base_url = f"http://127.0.0.1:{stub.server_address[1]}/v1"
+        stream_url = f"/api/conversations/{session_id}/messages/stream"
+
+        events = stream_of(
+            client, stream_url, "I like sketching maps of imaginary places", student_token
+        )
+        names = [name for name, _ in events]
+        check(
+            "a streamed turn asks the provider for a stream",
+            provider_calls[-1]["body"].get("stream") is True,
+            str(provider_calls[-1]["body"])[:120],
+        )
+        check(
+            "and answers in the order the contract promises: meta, deltas, done",
+            names[0] == "meta"
+            and names[-1] == "done"
+            and set(names[1:-1]) == {"delta"}
+            and len(names) >= 5,
+            str(names),
+        )
+        check(
+            "the model's own fragments are what arrives",
+            "".join(deltas_of(events)) == "Tell me more about that.",
+            repr("".join(deltas_of(events))),
+        )
+        done = done_of(events)
+        check(
+            "the reply the stream stores is the reply it showed",
+            done.get("reply", {}).get("content") == "Tell me more about that."
+            and done.get("provider") == "openai"
+            and done.get("reply", {}).get("demo_generated") is False,
+            str(done)[:200],
+        )
+
+        # A provider that ignores the `stream` flag must not change the shape of the
+        # conversation: the answer still comes as deltas and still ends with `done`, it
+        # just arrives in one piece.
+        stub_mode["mode"] = "json"
+        events = stream_of(client, stream_url, "I like taking engines apart to see inside", student_token)
+        whole = deltas_of(events)
+        done = done_of(events)
+        check(
+            "a provider that cannot stream still gives one delta carrying the whole reply",
+            len(whole) == 1 and whole[0] == done.get("reply", {}).get("content"),
+            f"{len(whole)} deltas",
+        )
+        check(
+            "and the built-in guide's part in it is labelled, not hidden",
+            done.get("reply", {}).get("demo_generated") is True
+            and [name for name, _ in events] == ["meta", "delta", "done"],
+            str([name for name, _ in events]),
+        )
+
+        # A provider that stops in the middle of a reply, after words have already
+        # reached the screen, must not finish the sentence with a scripted one.
+        stub_mode["mode"] = "cut"
+        transcript_before = client.get(
+            f"/api/conversations/{session_id}/messages", headers=auth(student_token)
+        ).json()
+        events = stream_of(client, stream_url, "I like watching how bridges are built", student_token)
+        names = [name for name, _ in events]
+        error = next((data for name, data in events if name == "error"), {})
+        check(
+            "a reply cut off mid-stream ends with an error and never a false done",
+            names[0] == "meta" and "delta" in names and "done" not in names and names[-1] == "error",
+            str(names),
+        )
+        check(
+            "and it says so in a sentence that tells the family nothing was lost",
+            error.get("code") == "cut_short" and "lost" in str(error.get("message", "")).lower(),
+            str(error)[:200],
+        )
+        transcript_after = client.get(
+            f"/api/conversations/{session_id}/messages", headers=auth(student_token)
+        ).json()
+        new_rows = transcript_after[len(transcript_before) :]
+        check(
+            "only one assistant row is written for a cut-off stream",
+            sum(1 for m in new_rows if m["role"] == "assistant") == 1,
+            str([m["role"] for m in new_rows]),
+        )
+        check(
+            "it holds the words the child actually read, not a scripted finish",
+            any(m["role"] == "assistant" and m["content"] == "Tell me" for m in new_rows),
+            str([m["content"][:40] for m in new_rows]),
+        )
+        stub_mode["mode"] = "stream"
+
+        # A disclosure still gets the reviewed reply over a stream, in more than one
+        # piece and with the same support flag the screen draws the helpline card from.
+        notes_before = sum(
+            1
+            for row in client.get("/api/journey/events", headers=auth(student_token)).json()
+            if row["kind"] == "safety_note"
+        )
+        events = stream_of(
+            client, stream_url, "Please do not tell anyone, my uncle hits me at home", student_token
+        )
+        safety_done = done_of(events)
+        safety_text = (safety_done.get("reply") or {}).get("content", "").lower()
+        check(
+            "a streamed disclosure is answered by the reviewed reply, not the model",
+            ("1098" in safety_text or "trusted adult" in safety_text)
+            and safety_done.get("needs_support") is True,
+            safety_text[:200],
+        )
+        check(
+            "and a streamed disclosure streams in pieces, so it reads as a reply rather than a block",
+            len(deltas_of(events)) >= 2 and safety_done.get("reply", {}).get("demo_generated") is True,
+            str(deltas_of(events))[:160],
+        )
+        notes_after = sum(
+            1
+            for row in client.get("/api/journey/events", headers=auth(student_token)).json()
+            if row["kind"] == "safety_note"
+        )
+        check(
+            "the safety note is recorded for a streamed turn too, once",
+            notes_after == notes_before + 1,
+            f"{notes_before} then {notes_after}",
+        )
     finally:
         stub.shutdown()
         use_demo_provider()
+
+    section("Streaming the built-in guide's reply")
+    # The deployment most families actually get has no model behind it. A stream that
+    # only works with credentials configured would be a feature nobody using this build
+    # can see, so the scripted guide answers in pieces too, at the same pace a reader
+    # can follow.
+    stream_session = client.post(
+        "/api/conversations", json={"kind": "chat"}, headers=auth(student_token)
+    ).json()["id"]
+    stream_url = f"/api/conversations/{stream_session}/messages/stream"
+    events = stream_of(
+        client, stream_url, "Mujhe drawing aur naye cheezein banana pasand hai", student_token
+    )
+    names = [name for name, _ in events]
+    pieces = deltas_of(events)
+    done = done_of(events)
+    check(
+        "the built-in guide streams in more than one fragment",
+        len(pieces) >= 2 and names[0] == "meta" and names[-1] == "done",
+        str(names),
+    )
+    check(
+        "its fragments join back into exactly the reply that is stored",
+        "".join(pieces) == done.get("reply", {}).get("content"),
+        repr("".join(pieces))[:160],
+    )
+    check(
+        "a streamed demo reply is labelled the same way an answered one is",
+        done.get("provider") == "demo" and done.get("reply", {}).get("demo_generated") is True,
+        str(done)[:160],
+    )
+    check(
+        "and the done body is the body the non-streaming route returns",
+        {
+            "reply",
+            "stage",
+            "audio_url",
+            "audio_error",
+            "detected_themes",
+            "provider",
+            "needs_support",
+            "language",
+            "profile_updates",
+        }
+        <= set(done),
+        str(sorted(done)),
+    )
+    check(
+        "meta names the student's own message, not one invented for the reply",
+        events[0][1].get("session_id") == stream_session
+        and isinstance(events[0][1].get("message_id"), int),
+        str(events[0][1]),
+    )
+
+    transcript = client.get(
+        f"/api/conversations/{stream_session}/messages", headers=auth(student_token)
+    ).json()
+    check(
+        "one stream writes one assistant row, at the end",
+        sum(1 for m in transcript if m["role"] == "assistant") == 2
+        and sum(1 for m in transcript if m["role"] == "user") == 1,
+        str([m["role"] for m in transcript]),
+    )
+    check(
+        "the stored reply is the complete one, not its first fragment",
+        [m for m in transcript if m["role"] == "assistant"][-1]["content"]
+        == done["reply"]["content"],
+    )
+
+    section("What a stream is not allowed to answer")
+    # A second student, so "not yours" means a real second account rather than a
+    # made-up id nobody could have owned.
+    other = client.post("/api/auth/onboarding", json={**STUDENT, "display_name": "Meera"})
+    other_token = other.json()["token"]
+    with client.stream(
+        "POST", stream_url, json={"message": "hello?"}, headers=auth(other_token)
+    ) as response:
+        foreign_status, foreign_body = response.status_code, response.read()
+    check(
+        "a stream refuses a conversation that is not the caller's",
+        foreign_status == 404 and b"event:" not in foreign_body,
+        f"{foreign_status} {foreign_body[:120]!r}",
+    )
+    # The jar has to be emptied first, for the same reason the `/me` check empties it:
+    # an onboarding above handed this client a session cookie, and a client holding one
+    # is a signed-in browser rather than the stranger this check is naming.
+    client.cookies.clear()
+    with client.stream("POST", stream_url, json={"message": "hello?"}) as response:
+        anon_status, anon_body = response.status_code, response.read()
+    check(
+        "a stream with no session at all answers nothing",
+        anon_status == 401 and b"event:" not in anon_body,
+        f"{anon_status} {anon_body[:120]!r}",
+    )
+
+    # The consent gate lives where a conversation is created: a voice session needs
+    # microphone permission, and there is deliberately no way to stream into a
+    # conversation that never got it. Refusing at creation is the leak-proof half of
+    # this pair — an unconsented session is one that cannot exist.
+    quiet = client.post(
+        "/api/auth/onboarding",
+        json={**STUDENT, "display_name": "No Voice Two", "consent_voice": False},
+    )
+    quiet_token = quiet.json()["token"]
+    with client.stream(
+        "POST",
+        "/api/conversations/999999/messages/stream",
+        json={"message": "hello?"},
+        headers=auth(quiet_token),
+    ) as response:
+        unconsented_status = response.status_code
+        response.read()
+    voice_start = client.post("/api/conversations", json={"kind": "voice"}, headers=auth(quiet_token))
+    check(
+        "a voice conversation without microphone consent cannot be opened, streamed or otherwise",
+        voice_start.status_code == 403 and unconsented_status == 404,
+        f"start {voice_start.status_code}, stream {unconsented_status}",
+    )
+    check(
+        "and text chat stays open for the same student",
+        client.post("/api/conversations", json={"kind": "chat"}, headers=auth(quiet_token)).status_code
+        == 201,
+    )
+
+    # A stream that answered nothing at all would still be honest; a stream that
+    # answered a conversation the caller does not own would be a leak. Each guard the
+    # non-streaming route runs, this address has to refuse in exactly the same way.
+    with client.stream(
+        "POST", stream_url, json={"message": "   "}, headers=auth(student_token)
+    ) as response:
+        blank_status = response.status_code
+        blank_body = response.read()
+    check(
+        "a stream refuses an empty message the same way a send does",
+        blank_status == 422 and b"event:" not in blank_body,
+        f"{blank_status} {blank_body[:120]!r}",
+    )
+
+    ended = client.post(f"/api/conversations/{stream_session}/end", headers=auth(student_token))
+    with client.stream(
+        "POST", stream_url, json={"message": "one more thing"}, headers=auth(student_token)
+    ) as response:
+        ended_status, ended_body = response.status_code, response.read()
+    check(
+        "a stream refuses a conversation that has ended",
+        ended.status_code == 200 and ended_status == 409 and b"event:" not in ended_body,
+        f"{ended_status} {ended_body[:120]!r}",
+    )
+    check(
+        "and the ended conversation's transcript is left alone",
+        client.get(f"/api/conversations/{stream_session}/messages", headers=auth(student_token)).status_code
+        == 200,
+    )
 
     r = client.get("/api/recommendations", headers=auth(student_token))
     recs = r.json()
