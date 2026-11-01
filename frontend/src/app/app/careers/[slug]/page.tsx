@@ -234,7 +234,7 @@ export default function CareerDetail() {
     >
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
         {/* Main column */}
-        <div className="space-y-5">
+        <div className="min-w-0 space-y-5">
           {career.needs_verification ? (
             <div className="flex items-start gap-2.5 rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-muted">
               <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
@@ -356,7 +356,7 @@ export default function CareerDetail() {
         </div>
 
         {/* Sidebar */}
-        <aside className="space-y-5">
+        <aside className="min-w-0 space-y-5">
           <Card className="space-y-4">
             <div>
               <p className="text-xs font-medium uppercase tracking-wide text-muted">{t("Interest themes")}</p>
@@ -414,10 +414,10 @@ export default function CareerDetail() {
                     href={`/app/careers/${r.slug}`}
                     variant="ghost"
                     size="sm"
-                    className="flex h-auto w-full flex-col items-start gap-1 rounded-xl bg-canvas/60 px-3 py-2.5 text-left hover:bg-canvas"
+                    className="flex h-auto w-full flex-col gap-1 rounded-xl bg-canvas/60 px-3 py-2.5 text-left hover:bg-canvas"
                   >
-                    <span className="font-semibold text-ink">{t(r.title)}</span>
-                    <Badge className={cn("pointer-events-none", categoryTint(r.category))}>{r.category}</Badge>
+                    <span className="min-w-0 font-semibold text-ink">{t(r.title)}</span>
+                    <Badge className={cn("pointer-events-none self-start", categoryTint(r.category))}>{r.category}</Badge>
                   </LinkButton>
                 ))}
               </div>
