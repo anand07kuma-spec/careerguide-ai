@@ -8,7 +8,9 @@ in five unguarded answers, so the claim under design is that *no server holds it
 the transcript lives in the browser and rides along with each turn. That is only worth
 anything if it is measured, so section 3 counts every row of every table before and after
 a whole sitting, and section 3 then searches those same tables for a sentence only the
-transcript ever carried.
+transcript ever carried. That needle is minted per run rather than written down here,
+because the search covers the seeded catalogue too and any fixed short string can collide
+with whatever timestamp or hash that run happened to generate.
 
 The second is the limit. "Limit to 5 questions" is proved by walking a sitting turn by turn
 and by handing the service bodies that try to talk past it — a transcript with six answers
@@ -43,6 +45,7 @@ import sys
 import tempfile
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from uuid import uuid4
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -120,6 +123,24 @@ SENTINEL = "Bridgeview School, 42 Orange Lane, Kavya Mishra"
 # A job no seeded career or exam row could contain, so searching for it searches for
 # what this suite typed rather than for the word "Doctor" in the catalogue.
 ROLE_SENTINEL = "Clocktower Acoustics Tuner 4413"
+
+# `tables_holding()` reads every row of every table, so a needle has to be something that
+# row cannot possibly already contain. The probe used to be the hand-picked "4471", and it
+# reported leaks that were not leaks. Nothing in the seeded catalogue holds those four
+# digits; what collides is this run's own randomness. The 736 rows the suite writes share
+# 37 `created_at` stamps, and 300 of a million microsecond values read as `4471xx`, `x4471x`
+# or `xx4471`, so one unlucky stamp hands a whole batch of catalogue rows to the scan as if
+# it were the student. The hash columns add another 244 four-character windows. Together
+# that is roughly one run in seventy. So each run mints its own tokens from `uuid4`, which
+# no timestamp stamps and no seeder writes.
+#
+# One token, however, would prove nothing on its own. `LEAK_PROBE` is typed into a
+# transcript and must be absent everywhere; `KEPT_PROBE` is written into the one row this
+# suite keeps on purpose and must be present. Without the second, a scan that came back
+# empty could not tell a clean database from a scanner that finds nothing at all — it would
+# pass for the wrong reason.
+LEAK_PROBE = f"zq{uuid4().hex[:8]}"
+KEPT_PROBE = f"zq{uuid4().hex[:8]}"
 
 
 def line(kind: str, text: str) -> dict:
@@ -533,7 +554,7 @@ with TestClient(app) as client:
             "education": [{"class_level": "class-10", "school": "Sentinel Vidyalaya 9132",
                            "year": "2025", "result": "82%"}],
             "skills": [{"name": "Sketching", "level": "comfortable"}],
-            "projects": [{"title": "Model ship", "detail": "Riya Sharma, 98765-43210", "year": "2026"}],
+            "projects": [{"title": "Model ship", "detail": f"Riya Sharma, 98765-43210 {KEPT_PROBE}", "year": "2026"}],
         }
         saved = client.post("/api/resume", json=cv, headers=one["auth"])
         assert saved.status_code == 200, saved.text[:200]
@@ -542,7 +563,8 @@ with TestClient(app) as client:
         recorded = json.dumps(calls)
         check("nothing from the CV on the same account rides along",
               "Sentinel Vidyalaya" not in recorded and "98765-43210" not in recorded
-              and "Riya Sharma" not in recorded and "Sketching" not in recorded, recorded[:200])
+              and "Riya Sharma" not in recorded and "Sketching" not in recorded
+              and KEPT_PROBE not in recorded, recorded[:200])
         check("…nor does the account's own name", "Riya" not in recorded, recorded[:200])
         # This row is the one thing this suite writes on purpose, to have something to
         # keep out of the provider request. Everything after here is measured against it.
@@ -671,7 +693,7 @@ with TestClient(app) as client:
         replies_from_stub.append(reply_of(feedback="Nice.", question="How was your day?"))
         ask({"role": "Doctor", "history": [
             line("interviewer", "Tell me about yourself"),
-            line("candidate", "Secret Sentence That Must Not Be Logged 4471"),
+            line("candidate", f"Secret Sentence That Must Not Be Logged {LEAK_PROBE}"),
         ]}, one["auth"])
         check("a working turn logs nothing about it at all",
               log_records == [], log_records[:3])
@@ -696,12 +718,23 @@ with TestClient(app) as client:
     grown = {name: (after_cv[name], final[name]) for name in final if final[name] != after_cv.get(name)}
     check("every turn of every sitting left the row count where the CV had left it",
           grown == {}, grown)
+    # The guard on the scan below. A sentence that was never sent could not be stored either,
+    # so without this the next check would pass even if the fixture stopped typing one.
+    check("…and the sentence that scan looks for really was put in front of the provider",
+          LEAK_PROBE in json.dumps(calls), [len(calls), LEAK_PROBE])
     check("…including anything a student said in an interview",
-          tables_holding("model ships from scrap") == [] and tables_holding("4471") == [],
-          [tables_holding("model ships from scrap"), tables_holding("4471")])
+          tables_holding("model ships from scrap") == [] and tables_holding(LEAK_PROBE) == [],
+          [tables_holding("model ships from scrap"), tables_holding(LEAK_PROBE)])
+    # … and the same scan does see a student's words when this app did keep them. One row is
+    # written on purpose, the CV, so the empty scan above is read as a result rather than as a
+    # blind scanner. That row is also what the delete below is measured against.
+    check("…and the scan is not blind: it finds the token in the one row this suite kept",
+          tables_holding(KEPT_PROBE) == ["resumes"], tables_holding(KEPT_PROBE))
     gone = client.delete("/api/users/me", headers=one["auth"]).json()
     check("the erasure route reports nothing for an interview, because nothing was kept",
           not any("interview" in key for key in gone["removed"]), str(gone["removed"])[:200])
+    check("…and the row that proved the scan works is the row erasure removed",
+          tables_holding(KEPT_PROBE) == [], tables_holding(KEPT_PROBE))
 
 print(f"\n{len(PASS)} passed, {len(FAIL)} failed")
 if FAIL:
