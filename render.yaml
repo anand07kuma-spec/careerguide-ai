@@ -89,6 +89,25 @@ services:
       - key: AI_BASE_URL
         value: https://api.groq.com/openai/v1
 
+      # --- What one account may spend on it --------------------------------------------
+      # Per-minute rules refill, so they cannot be the thing that stops a bill. This is
+      # the ceiling that has an end: guide replies per account per day, counted in the
+      # Redis below when there is one and in each worker when there is not. Sixty is two
+      # questions an hour for twelve hours, so the only account that meets it is a script,
+      # a stuck retry, or somebody else holding a session — and an unlimited plan meets it
+      # too, because the ceiling is about the bill, not about the plan. `0` removes it.
+      - key: AI_DAILY_MESSAGE_LIMIT
+        value: "60"
+      # After this many consecutive provider failures inside the window the guide answers
+      # from its own script for the cooldown without asking, and says so on screen. Without
+      # it, every child pays a 45-second timeout for a provider that is already down.
+      - key: AI_BREAKER_FAILURES
+        value: "5"
+      - key: AI_BREAKER_WINDOW_SECONDS
+        value: "60"
+      - key: AI_BREAKER_COOLDOWN_SECONDS
+        value: "120"
+
       # --- The voice that speaks -------------------------------------------------------
       # Microsoft's Edge read-aloud endpoint answers 403 to datacenter egress IPs, so a
       # host like this needs gemini or azure; `auto` would try Edge first.

@@ -18,9 +18,10 @@
 #   postgres the database. Required here, and this is the stack that finally answers the
 #            question the SQLite default has been leaving open: what happens under real
 #            concurrent writes.
-#   redis    the rate-limit counters. See `RATE_LIMIT_REDIS_URL` below — it is wired, and
-#            without it the api container would be running limits that are per-process
-#            while this file is telling you the process count.
+#   redis    the counters. See `RATE_LIMIT_REDIS_URL` below — it is wired, and without it
+#            the api container would be running limits that are per-process while this
+#            file is telling you the process count. Three numbers live there, not one: the
+#            per-minute rules, one account's day of AI replies, and the provider breaker.
 
 name: careerguide
 
