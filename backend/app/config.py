@@ -153,6 +153,36 @@ class Settings(BaseSettings):
     ai_model: str = ""
     ai_base_url: str = "https://api.openai.com/v1"
 
+    # --- What one account may spend on the provider --------------------------------
+    # The conversation is the only surface in this app with no natural end, and every turn
+    # of it is a call somebody pays for. A per-minute rule cannot help: a loop that asks
+    # twice a minute for six hours is *inside* every rule in `middleware/rate_limit.py` and
+    # is still a bill. This is the ceiling that has an end, and it is counted in the same
+    # store as the throttle so several warm workers answer to one number (see
+    # `services/ai_budget.py`, including why the day it counts is the student's, not UTC's).
+    #
+    # Sixty is chosen to be far above what a person types in a day — it is two questions an
+    # hour, every hour, for twelve hours — so the only accounts that ever meet it are
+    # scripts, stuck retries, or somebody else's session token. It is not a plan allowance:
+    # an unlimited plan still meets this ceiling, because the ceiling is about the bill, not
+    # about what the plan promised, and the sentence a student reads says so. `0` removes the
+    # ceiling entirely, which is what a deployment running only the built-in guide wants.
+    ai_daily_message_limit: int = 60
+    # --- Circuit breaker around the provider ----------------------------------------
+    # How many failures in a row count as "the provider is not answering", how long it
+    # takes to forget a failure that came alone, and how long the guide then keeps its own
+    # counsel. A provider that is down is not a reason to keep asking it, once per student,
+    # all night: each attempt is a 45-second timeout in front of a child, and on some
+    # providers a 429 of its own that costs money to receive.
+    #
+    # The state lives in the same store as the counters, so with a Redis one failed
+    # provider cools the whole deployment down, and with none every worker decides for
+    # itself — which is the same trade this app already makes about the throttle, and is
+    # reported the same way on `/app/admin/settings`.
+    ai_breaker_failures: int = 5
+    ai_breaker_window_seconds: int = 60
+    ai_breaker_cooldown_seconds: int = 120
+
     # Text-to-speech voices. Hindi and English. The same Microsoft neural voice
     # ids work on both transports below.
     tts_voice_hi: str = "hi-IN-SwaraNeural"
@@ -304,16 +334,24 @@ class Settings(BaseSettings):
     # pace rather than for "once, then think about it" like the roadmap: a student who is
     # mid-answer must not be the one who pays for the bucket.
     rate_limit_interview: str = "12 per minute"
-    # Where the counters live. Blank — the default, and what every deployment so far
-    # uses — means this process's own memory, which is honest for one instance and a
-    # soft ceiling on serverless hosting (see `app/middleware/rate_limit.py`).
+    # Where the counters live. Blank means this process's own memory, which is honest for
+    # one instance and a soft ceiling on serverless hosting: several warm containers means
+    # several buckets, and the published limit is multiplied quietly (see
+    # `app/middleware/rate_limit.py` for the whole story, including what was measured).
     #
-    # Set it to a Redis URL (`redis://redis:6379/0`) when the API runs as more than one
-    # worker or more than one container: without it, four workers mean four buckets, so
-    # "20 per minute" quietly becomes 80 and a shared school IP gets a different answer
-    # depending on which worker its next request lands on. This is the one place in the
-    # app that talks to Redis, and the throttle is why — nothing here needs a queue or a
-    # cache, and adding a service that no code connects to would be a dependency on air.
+    # Set it to a Redis URL (`redis://redis:6379/0`, `rediss://` for TLS) when the API runs
+    # as more than one worker or more than one container. Without it, four workers mean four
+    # buckets, so "20 per minute" quietly becomes 80 and a shared school IP gets a different
+    # answer depending on which worker its next request lands on. This is the one place in
+    # the app that talks to Redis, and two things live there rather than one: the throttle,
+    # and the per-account daily AI budget in `app/services/ai_budget.py`, which has to be a
+    # shared number for exactly the same reason or one student spends the daily ceiling once
+    # per warm container. Nothing here needs a queue or a cache, and adding a service that no
+    # code connects to would be a dependency on air.
+    #
+    # Saying which of the two is *actually* running is not left to this comment: the process
+    # pings the store at startup and logs one line naming it, or names the fallback and logs
+    # it as a warning, and `/app/admin/settings` shows the same answer live.
     rate_limit_redis_url: str = ""
 
     # --- School and counsellor portals -------------------------------------------

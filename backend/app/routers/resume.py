@@ -29,7 +29,7 @@ from ..schemas import (
     ResumeSuggestionOut,
 )
 from ..security import get_current_user, require_student
-from ..services import resume_suggest
+from ..services import ai_budget, resume_suggest
 from ..services.language import detect as detect_language
 
 router = APIRouter(prefix="/api/resume", tags=["resume"])
@@ -107,6 +107,10 @@ async def suggest_for_resume(
     # portal counsellor writing one for a client is a different feature with its
     # own audit trail.
     require_student(user)
+    # The per-account daily ceiling, on the same grounds as `/api/ai/mock-interview`: this
+    # is the third place a student's click buys a call to the provider, and a ceiling that
+    # only the chat answered to would be a ceiling with a door in it.
+    ai_budget.guard(user.id, payload.target_role)
     language = payload.language or detect_language(payload.target_role)
     result = await resume_suggest.suggest(db, payload.target_role.strip(), language)
     return ResumeSuggestionOut(

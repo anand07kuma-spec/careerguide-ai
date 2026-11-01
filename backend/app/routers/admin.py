@@ -66,7 +66,7 @@ from sqlalchemy.orm import Session
 from ..config import get_settings
 from ..database import get_db
 from ..middleware.cors import browser_origins
-from ..middleware.rate_limit import admin_limit
+from ..middleware.rate_limit import admin_limit, counters_are_shared
 from ..models import (
     Assessment,
     AuditEvent,
@@ -111,7 +111,7 @@ from ..schemas import (
     AuditPageOut,
 )
 from ..security import get_admin_user
-from ..services import audit
+from ..services import ai_breaker, audit
 
 router = APIRouter(
     prefix="/api/admin",
@@ -994,6 +994,10 @@ def deployment() -> AdminDeploymentOut:
     # the file path is never included: the URL holds a password.
     scheme = s.database_url.split("://", 1)[0] if "://" in s.database_url else ""
     engine = scheme.split("+", 1)[0].strip().lower() or "not configured"
+    # Read once, for the three fields below. The breaker is asked rather than inferred from
+    # the settings because "the provider has failed five times" is a fact about the last
+    # minute of this deployment, which no environment variable knows.
+    breaker = ai_breaker.state()
     return AdminDeploymentOut(
         app_name=s.app_name,
         ai_provider=s.ai_provider,
@@ -1026,6 +1030,11 @@ def deployment() -> AdminDeploymentOut:
         rate_limit_lead=s.rate_limit_lead,
         rate_limit_org=s.rate_limit_org,
         rate_limit_shared_storage=bool(s.rate_limit_redis_url.strip()),
+        rate_limit_counters_shared=counters_are_shared(),
+        ai_daily_message_limit=s.ai_daily_message_limit,
+        ai_breaker_open=bool(breaker["open"]),
+        ai_breaker_failures=int(breaker["failures"]),
+        ai_breaker_seconds_left=int(breaker["seconds_left"]),
         database_engine=engine,
         db_auto_setup=s.db_auto_setup,
         plan_limits_enforced=s.plan_limits_enforced,

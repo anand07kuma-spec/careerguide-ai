@@ -2124,6 +2124,22 @@ class AdminDeploymentOut(BaseModel):
     # deployment that was set up for one worker and quietly scaled to four is a
     # deployment whose published limits are four times what the page says.
     rate_limit_shared_storage: bool
+    # Whether the counters are shared *right now*, which is the same answer only while the
+    # Redis is answering. A deployment that set `RATE_LIMIT_REDIS_URL` and whose Redis then
+    # went away keeps serving, on per-process buckets — which is exactly the state an
+    # operator has to be able to see without reading a log line they may have already
+    # rotated away. The two booleans next to each other are the difference between a
+    # configuration and a fact.
+    rate_limit_counters_shared: bool
+    # The two AI-cost guards, one ceiling and one breaker, both counted in the store above:
+    # how many guide replies one account may ask for today, and whether the provider is
+    # currently being left alone because it has not been answering. `ai_breaker_seconds_left`
+    # is the remaining cooldown, so "the guide sounds scripted" is a checkable statement
+    # rather than an impression.
+    ai_daily_message_limit: int
+    ai_breaker_open: bool
+    ai_breaker_failures: int
+    ai_breaker_seconds_left: int
     # Which engine this process writes to, and whether it creates tables on boot. Both
     # belong on this screen for the same reason: which database the dashboard is counting
     # is a fact about the deployment an operator should not have to read a file to find.
