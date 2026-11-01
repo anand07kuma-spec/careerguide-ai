@@ -157,13 +157,24 @@ const stripComments = (src) =>
 const joinSplitLiterals = (src) => src.replace(/"\s*\+\s*\n\s*"/g, "");
 
 const IGNORED = "hi-coverage:ignore";
+const IGNORED_START = "hi-coverage:ignore-start";
+const IGNORED_END = "hi-coverage:ignore-end";
 
 // Drop what the code marks: a marker on its own line takes the line after it with it
-// (that is how a JSX child gets excused), and a marker carried on a line takes that line.
+// (that is how a JSX child gets excused), a marker carried on a line takes that line,
+// and a start/end pair takes the block between them. The pair exists for the one piece
+// of copy in this app that is written into a string rather than rendered as JSX —
+// `<noscript>` in `app/layout.tsx`, which is English and Hindi at the same time on
+// purpose, because choosing between them is a thing JavaScript does and this is the
+// copy for when JavaScript is not available.
 const dropIgnored = (src) => {
   const out = [];
   const lines = src.split("\n");
   for (let i = 0; i < lines.length; i++) {
+    if (lines[i].includes(IGNORED_START)) {
+      while (i < lines.length && !lines[i].includes(IGNORED_END)) i++;
+      continue;
+    }
     const marked = lines[i].includes(IGNORED);
     if (marked && lines[i].trim() !== `// ${IGNORED}` && !lines[i].trim().startsWith("{/*")) {
       continue;

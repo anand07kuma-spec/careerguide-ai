@@ -1,14 +1,17 @@
 "use client";
 
 import { AlertTriangle, Briefcase, MessagesSquare, ShieldCheck } from "lucide-react";
+import dynamic from "next/dynamic";
+import { useSyncExternalStore } from "react";
 import Link from "next/link";
-import { RadarChart } from "./RadarChart";
+import { ScoreTable } from "./ScoreTable";
 import { RoadmapSection } from "./RoadmapSection";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { LinkButton } from "@/components/ui/button";
 import { ProgressBar } from "@/components/ui/feedback";
 import { useT, useTf } from "@/lib/i18n";
+import { useLite } from "@/lib/lite";
 import type { AssessmentResult, DimensionTrait } from "@/lib/assessments";
 import { cn } from "@/lib/utils";
 
@@ -22,6 +25,61 @@ import { cn } from "@/lib/utils";
  * the same claim as from five, and the reader cannot tell the difference without being
  * told.
  */
+
+/** The whole drawing library, behind one `import()` that this screen only ever makes
+ * when it is about to put a shape on the wall. Recharts is 344 KB of the ~1 MB this
+ * route could carry, and six numbers do not need a library to be read — so the
+ * default for a screen that has not decided yet is the table, and the chart is what
+ * arrives afterwards when the connection has been allowed to pay for it. */
+const RadarChart = dynamic(() => import("./RadarChart").then((module) => module.RadarChart), {
+  ssr: false,
+  // Nothing: the table below is already on the wall and stays there until the
+  // chunk lands. A spinner here would replace information with a wait.
+  loading: () => null,
+});
+
+/**
+ * `false` for the server's HTML and the hydration render, `true` from the next one on.
+ *
+ * The standard way to ask React when it is safe to have rendered something the server
+ * could not have rendered, without a `setState` inside an effect. There is no store to
+ * subscribe to — the answer only ever goes one way, once, per page — so `subscribe`
+ * holds the door and lets go of it.
+ */
+const noStore = () => () => {};
+function useAfterHydration(): boolean {
+  return useSyncExternalStore(
+    noStore,
+    () => true,
+    () => false,
+  );
+}
+
+/**
+ * The shape, or its numbers, depending on what this device asked for.
+ *
+ * `useLite()` cannot answer during the first render — the choice lives in this
+ * browser's storage and React is not allowed to read it before hydration, or the
+ * server's HTML and the client's disagree. So the table is what every screen shows
+ * first, and the chart replaces it on a device that wants one. That order is not a
+ * compromise worth apologising for: the numbers arrive first either way — they are in
+ * the server's HTML, which is the one thing a phone on a bad link is certain to get —
+ * and a Lite device never asks for the library at all, which is the whole point.
+ *
+ * The chart is behind `useAfterHydration()` rather than only behind `lite` because a
+ * single `useState` set inside an effect would be a render React has to do twice for
+ * no reason; `useSyncExternalStore` with a store that never changes is how the same
+ * answer is given without a cascading setState.
+ */
+function ShapeView({ points, lite }: { points: RadarPointLike[]; lite: boolean }) {
+  if (!useAfterHydration() || lite) return <ScoreTable data={points} />;
+  return <RadarChart data={points} />;
+}
+
+/** The rows the shape is drawn from, and the rows the table prints — one type,
+ * declared where the chart lives so the two views cannot grow different ideas of
+ * what a point holds. */
+type RadarPointLike = { label: string; score: number; answered: number; total: number };
 
 const BAND_TONES: Record<string, "neutral" | "brand" | "teal" | "success" | "warning"> = {
   light: "neutral",
@@ -47,6 +105,7 @@ export function ResultSummary({
 }) {
   const t = useT();
   const tf = useTf();
+  const lite = useLite();
 
   const scored = result.traits.filter((entry) => entry.score !== null);
   const unscored = result.traits.filter((entry) => entry.score === null);
@@ -88,13 +147,16 @@ export function ResultSummary({
           description={
             scored.length < 3
               ? t("Not enough areas are scored yet for the six-sided shape, so each area is listed on its own.")
-              : t("One line per area. Longer means more of your strongest answers fell in that area.")
+              : lite
+                ? t("One row per area. The first number is the score out of 100, the second says how many answers it came from.")
+                : t("One line per area. Longer means more of your strongest answers fell in that area.")
           }
         />
         <div className="mt-4">
           {scored.length >= 3 ? (
-            <RadarChart
-              data={scored.map((entry) => ({
+            <ShapeView
+              lite={lite}
+              points={scored.map((entry) => ({
                 label: entry.name,
                 score: entry.score ?? 0,
                 answered: entry.answered,

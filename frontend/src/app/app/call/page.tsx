@@ -24,6 +24,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { api, ApiError, BACKEND_URL, isOffline } from "@/lib/api";
 import { useT, useTf } from "@/lib/i18n";
+import { useLite } from "@/lib/lite";
 import { useSession } from "@/lib/session";
 import { cn } from "@/lib/utils";
 import { THEME_LABELS, type ConversationInfo, type ThemeKey } from "@/lib/types";
@@ -124,6 +125,7 @@ const FALLBACK_GREETING: Record<string, string> = {
 export default function VoiceCallPage() {
   const t = useT();
   const tf = useTf();
+  const lite = useLite();
   const { settings, user, isStudent } = useSession();
   const language = settings.language || user?.preferred_language || "hinglish";
   // Which language this call is actually running in right now. The guide
@@ -331,8 +333,15 @@ export default function VoiceCallPage() {
   }, [beginListening, clearSilenceTimer, go, sendTurn, settings.continuous_conversation, stt]);
 
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [captions]);
+    // The one piece of motion this screen drives from JavaScript, so the CSS gate in
+    // Lite mode cannot reach it: a new caption line every second asking the handset to
+    // animate a scroll down the transcript is the least useful work a slow phone can be
+    // given. `auto` still lands at the bottom — it just gets there in one step.
+    scrollRef.current?.scrollTo({
+      top: scrollRef.current.scrollHeight,
+      behavior: lite ? "auto" : "smooth",
+    });
+  }, [captions, lite]);
 
   useEffect(
     () => () => {

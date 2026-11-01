@@ -111,6 +111,33 @@ html[data-reduced-motion="true"] *::after {
   scroll-behavior: auto !important;
 }
 
+/* Lite mode flattens motion the same way the accessibility switch does, and
+   means it: the switch asks for a calmer interface, Lite asks for a cheaper one,
+   and on a six-year-old handset a keyframe that is running at
+   `0.001ms × infinite` is still a thing the compositor is being asked to do on
+   every frame. So the loops are switched off here rather than sped up, and the
+   two pictures that exist only to look friendly are taken away — the only parts
+   of Lite this file can do on its own. The chart, the route prefetches and the
+   streamed reply are decided in JavaScript, which is where those questions are
+   asked. */
+html[data-lite="true"] *,
+html[data-lite="true"] *::before,
+html[data-lite="true"] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  transition-delay: 0s !important;
+  scroll-behavior: auto !important;
+}
+
+html[data-lite="true"] :is([data-decorative], .cg-wave-bar, .cg-signal::after) {
+  animation: none !important;
+}
+
+html[data-lite="true"] [data-decorative] {
+  display: none !important;
+}
+
 html[data-high-contrast="true"] {
   --color-muted: #334155;
   --color-line: #94a3b8;

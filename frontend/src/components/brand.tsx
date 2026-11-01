@@ -92,7 +92,13 @@ export function GuideAvatar({
         ring,
         className,
       )}
+      // Twice, and meaning it: `aria-hidden` is the promise to a screen reader that
+      // no fact lives here, and `data-decorative` is the same promise to a phone on a
+      // slow link — `globals.css` takes this picture away in Lite mode, where the
+      // words below it on the call screen and the ring's own colour are the things
+      // that actually say whether the microphone is open.
       aria-hidden
+      data-decorative
     >
       <svg viewBox="0 0 60 60" className="h-3/5 w-3/5">
         <rect x="14" y="20" width="32" height="28" rx="11" fill="#0B1730" stroke="#60A5FA" strokeWidth="1.5" />

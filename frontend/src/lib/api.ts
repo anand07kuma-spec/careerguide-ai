@@ -5,8 +5,11 @@
  * can read, write or hand to anything else. The one value this file does hold is a session
  * string for the length of one page load — see `setAuthToken` — and it exists only because
  * some browsers refuse to keep a cookie across two origins, which this deployment is.
- * Nothing here is written to `localStorage`, `sessionStorage` or any other store a script
- * could reach.
+ * Nothing that identifies a person, a session or a token is written to `localStorage`,
+ * `sessionStorage` or any other store a script could reach. The single exception is one
+ * boolean (`careerguide.stream-slow`) saying that a streamed reply took a while to start
+ * on this device; `streamTurn` below explains why that one is worth keeping across a
+ * reload, and it is the whole of what this file stores.
  */
 
 import type { ZodType } from "zod";
@@ -195,6 +198,27 @@ export function isOffline(error: unknown): boolean {
 }
 
 /**
+ * The request got no answer at all, which is two different failures wearing one coat.
+ *
+ * `navigator.onLine` is false only when this device has no route out — no Wi-Fi, no
+ * data — which is the case a class-10 student on a shared handset can act on, and the
+ * one the brief asked to be named instead of left spinning. Everything else stays the
+ * existing sentence, because a device with full bars and a dead server means the
+ * trouble is ours, and saying "you are offline" to that would be the app blaming the
+ * child for its own outage.
+ */
+function unreachable(): ApiError {
+  if (typeof navigator !== "undefined" && navigator.onLine === false) {
+    return new ApiError("You are offline — this page will load when you reconnect.", 0);
+  }
+  return new ApiError(
+    "Cannot reach the CareerGuide AI server right now. It may be starting up or " +
+      "temporarily offline — please try again in a moment.",
+    0,
+  );
+}
+
+/**
  * The session this page load was handed, or null.
  *
  * A cookie is normally enough, and this is the fallback for the browsers where it is not:
@@ -231,11 +255,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
       credentials: "include",
     });
   } catch {
-    throw new ApiError(
-      "Cannot reach the CareerGuide AI server right now. It may be starting up or " +
-        "temporarily offline — please try again in a moment.",
-      0,
-    );
+    throw unreachable();
   }
 
   if (response.status === 204) return undefined as T;
@@ -403,6 +423,59 @@ function askAgainWorthwhile(status: number, detail: string): boolean {
 }
 
 /**
+ * The two-second rule, and why it is written down rather than acted on mid-turn.
+ *
+ * In Lite mode a turn is streamed, and streaming is the right answer on every link
+ * that can carry it. On a link that cannot, the first fragment lands late and the
+ * rest dribbles: the student watches a sentence being typed out at the speed their
+ * own network decides, and a connection that is *that* bad usually drops the stream
+ * before the last frame. The one-piece route asks once, waits, and gets the whole
+ * reply in a single round trip.
+ *
+ * The rule cannot fire inside the turn it measures, and that is not laziness — it is
+ * the same fact that keeps a dead stream from being asked again. The streaming route
+ * writes the student's message to the transcript *before* the guide starts answering,
+ * so abandoning a stream that is merely slow would put the question on the record
+ * twice and spend a second one of the day's questions. So a slow first fragment is
+ * recorded, the turn in progress is left to finish, and the next send goes to the
+ * one-piece address instead. A fragment that lands inside the budget clears the
+ * memory, because this link was better a minute ago and may well be better now.
+ *
+ * It lives in `localStorage` — the first thing this module has ever written there —
+ * because the question it answers ("is streaming worth trying on this device
+ * tonight?") outlives the tab, and a student who reloads onto the same bad link
+ * should not pay for the experiment twice. It is a boolean. No session, no token and
+ * nothing a person said is in it.
+ */
+const FIRST_TOKEN_BUDGET_MS = 2000;
+const SLOW_STREAM_KEY = "careerguide.stream-slow";
+
+/** `null` until this browser has been asked, which happens on the first send. */
+let slowStream: boolean | null = null;
+
+function slowStreamRemembered(): boolean {
+  if (slowStream === null) {
+    try {
+      slowStream = window.localStorage.getItem(SLOW_STREAM_KEY) === "true";
+    } catch {
+      slowStream = false;
+    }
+  }
+  return slowStream;
+}
+
+function rememberSlowStream(next: boolean) {
+  if (slowStream === next) return;
+  slowStream = next;
+  try {
+    if (next) window.localStorage.setItem(SLOW_STREAM_KEY, "true");
+    else window.localStorage.removeItem(SLOW_STREAM_KEY);
+  } catch {
+    /* private mode: the rule then applies to this tab only, which is the honest minimum */
+  }
+}
+
+/**
  * One turn, asked of the streaming address, with every fragment handed to `onDelta` as
  * it lands.
  *
@@ -413,15 +486,24 @@ function askAgainWorthwhile(status: number, detail: string): boolean {
  * twice. So a stream that never opened falls back to `postTurn`, a stream that stopped
  * after some words keeps them, and a stream that stopped before any keeps what the
  * server said about it.
+ *
+ * `liteMode` is the only thing that lets the two-second rule apply: on the full
+ * interface a slow first fragment is the student's own connection doing what it is doing,
+ * and the streaming reply is still faster to read than the buffered one. Lite mode is the
+ * case where the app has been told to spend less.
  */
 async function streamTurn(
   sessionId: number,
   message: string,
   speak: boolean,
   planOf: number | null | undefined,
-  onDelta: (fragment: string) => void
+  onDelta: (fragment: string) => void,
+  liteMode = false
 ): Promise<StreamedReply> {
   const body = turnBody(message, speak, planOf);
+  if (liteMode && slowStreamRemembered()) {
+    return { kind: "complete", reply: await postTurn(sessionId, body) };
+  }
   let response: Response;
   try {
     response = await fetch(`${apiBase()}/api/conversations/${sessionId}/messages/stream`, {
@@ -465,12 +547,21 @@ async function streamTurn(
   let finished: ChatReply | null = null;
   let stopped = "";
   let cutShort = false;
+  // Measured from the moment the question left, so a server that thought for a second
+  // and a link that carried the bytes for a second are both inside the budget the
+  // student actually waited for.
+  const askedAt = Date.now();
+  let firstFragment = true;
   try {
     for await (const frame of eventFrames(response.body)) {
       const fields = frameFields(frame.data);
       if (frame.event === "delta") {
         const piece = typeof fields?.text === "string" ? fields.text : "";
         if (piece) {
+          if (firstFragment) {
+            firstFragment = false;
+            if (liteMode) rememberSlowStream(Date.now() - askedAt > FIRST_TOKEN_BUDGET_MS);
+          }
           content += piece;
           onDelta(piece);
         }
@@ -534,11 +625,7 @@ async function binary(path: string): Promise<Blob> {
       credentials: "include",
     });
   } catch {
-    throw new ApiError(
-      "Cannot reach the CareerGuide AI server right now. It may be starting up or " +
-        "temporarily offline — please try again in a moment.",
-      0,
-    );
+    throw unreachable();
   }
 
   if (!response.ok) {
@@ -718,6 +805,11 @@ export const api = {
    * A stream this client could not open at all falls back to `sendMessage` and answers in
    * one piece; the route that answers in one piece is never removed, because a browser
    * that cannot hold a stream must still be able to ask a question.
+   *
+   * `lite` is what the two-second rule above is decided against: a screen in Lite mode
+   * that has already watched a first fragment take longer than two seconds asks the next
+   * turn of the one-piece route instead, without being told — the words on the screen are
+   * the same either way, only later and all at once.
    */
   streamMessage: (
     sessionId: number,
@@ -725,7 +817,8 @@ export const api = {
     speak: boolean,
     planOf: number | null | undefined,
     onDelta: (fragment: string) => void,
-  ) => streamTurn(sessionId, message, speak, planOf, onDelta),
+    lite = false,
+  ) => streamTurn(sessionId, message, speak, planOf, onDelta, lite),
   messages: (sessionId: number) => request<ChatMessage[]>(`/api/conversations/${sessionId}/messages`),
   endConversation: (sessionId: number) =>
     request<ConversationInfo>(`/api/conversations/${sessionId}/end`, { method: "POST" }),

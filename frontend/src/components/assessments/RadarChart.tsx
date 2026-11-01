@@ -10,6 +10,7 @@ import {
   Tooltip,
 } from "recharts";
 import { useT } from "@/lib/i18n";
+import { ScoreTable } from "./ScoreTable";
 
 /**
  * The result shape: one spoke per area, 0 at the centre and 100 at the edge.
@@ -86,28 +87,10 @@ export function RadarChart({
         </ResponsiveContainer>
       </div>
 
-      {/* The accessible copy of the same figures. */}
-      <table className="sr-only">
-        <caption>{t("Scores from 0 to 100, one row per area")}</caption>
-        <thead>
-          <tr>
-            <th scope="col">{t("Area")}</th>
-            <th scope="col">{t("Score")}</th>
-            <th scope="col">{t("Answers behind it")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.map((point) => (
-            <tr key={point.label}>
-              <th scope="row">{point.label}</th>
-              <td>{point.score}</td>
-              <td>
-                {point.answered}/{point.total}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      {/* The accessible copy of the same figures, and in Lite mode the only copy —
+          see `ScoreTable.tsx`, which is the same rows so that the two can never
+          say different things about one set of answers. */}
+      <ScoreTable data={data} className="sr-only" />
 
       <p className="mt-2 text-center text-xs text-muted">
         {t("0 at the centre, 100 at the edge. Fewer answers make a shorter, less reliable spoke.")}
