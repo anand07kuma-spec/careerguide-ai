@@ -213,42 +213,64 @@ export default async function CareersPage({ searchParams }: { searchParams: Page
             </p>
           </Card>
         ) : (
-          groups.map(([name, items]) => (
-            <section key={name} className="mt-10">
-              <h2 className="text-xl font-bold tracking-tight text-heading sm:text-2xl">{name}</h2>
-              <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                {items.map((career) => (
-                  <Card key={career.slug} className="flex flex-col p-5">
-                    <h3 className="text-base font-semibold text-heading">
-                      <a
-                        href={`/careers/${career.slug}${lang === "hi" ? "?lang=hi" : ""}`}
-                        className="hover:text-brand hover:underline hover:underline-offset-2"
-                      >
-                        {t(career.title)}
-                      </a>
-                    </h3>
-                    <p className="mt-2 flex-1 text-sm leading-relaxed text-muted">{career.summary}</p>
-                    <p className="mt-3 text-xs text-muted">
-                      {career.interest_themes.length > 0 ? (
-                        <span className="mr-2">
-                          {t("Interests:")}{" "}
-                          {career.interest_themes
-                            .slice(0, 3)
-                            .map((theme) =>
-                              // The catalogue stores the snake_case key; the app
-                              // screens already have the label map, and using it
-                              // here is what stops `helping_others` leaking onto a
-                              // public page — and what makes the Hindi label exist.
-                              t(THEME_LABELS[theme as ThemeKey] ?? theme),
-                            )
-                            .join(", ")}
-                        </span>
-                      ) : null}
-                      <span>{tf("Open from class {n}", { n: career.min_class })}</span>
-                    </p>
-                  </Card>
-                ))}
-              </div>
+          groups.map(([name, items], groupIndex) => (
+            <section key={name} className="mt-6">
+              {/* A native disclosure keeps every profile in the HTML for crawlers
+                  and no-JS readers, while the phone sees a short directory instead
+                  of a 20,000px wall. The first group starts open. */}
+              <details open={groupIndex === 0} className="group overflow-hidden rounded-2xl border border-line bg-surface">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3.5 sm:px-5 [&::-webkit-details-marker]:hidden">
+                  <h2 className="text-lg font-bold tracking-tight text-heading sm:text-xl">{name}</h2>
+                  <span className="flex shrink-0 items-center gap-2 text-xs font-medium text-muted">
+                    {tf("{n} profiles", { n: items.length })}
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="h-4 w-4 transition-transform group-open:rotate-180"
+                      aria-hidden
+                    >
+                      <path d="m6 9 6 6 6-6" />
+                    </svg>
+                  </span>
+                </summary>
+                <div className="grid gap-4 border-t border-line p-4 sm:grid-cols-2 sm:p-5">
+                  {items.map((career) => (
+                    <Card key={career.slug} className="flex flex-col p-5">
+                      <h3 className="text-base font-semibold text-heading">
+                        <a
+                          href={`/careers/${career.slug}${lang === "hi" ? "?lang=hi" : ""}`}
+                          className="hover:text-brand hover:underline hover:underline-offset-2"
+                        >
+                          {t(career.title)}
+                        </a>
+                      </h3>
+                      <p className="mt-2 flex-1 text-sm leading-relaxed text-muted">{career.summary}</p>
+                      <p className="mt-3 text-xs text-muted">
+                        {career.interest_themes.length > 0 ? (
+                          <span className="mr-2">
+                            {t("Interests:")}{" "}
+                            {career.interest_themes
+                              .slice(0, 3)
+                              .map((theme) =>
+                                // The catalogue stores the snake_case key; the app
+                                // screens already have the label map, and using it
+                                // here is what stops `helping_others` leaking onto a
+                                // public page — and what makes the Hindi label exist.
+                                t(THEME_LABELS[theme as ThemeKey] ?? theme),
+                              )
+                              .join(", ")}
+                          </span>
+                        ) : null}
+                        <span>{tf("Open from class {n}", { n: career.min_class })}</span>
+                      </p>
+                    </Card>
+                  ))}
+                </div>
+              </details>
             </section>
           ))
         )}

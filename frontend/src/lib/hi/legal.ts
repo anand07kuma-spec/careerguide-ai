@@ -415,4 +415,11 @@ export const HI: Record<string, string> = {
     "यह ऐप विदेश में पढ़ाई की एजेंसी नहीं है, किसी संस्थान की भर्ती एजेंट नहीं है, और न कोई पंजीकृत परवासी सलाहकार। यह किसी के लिए किसी विश्वविद्यालय में आवेदन नहीं करता, दस्तावेज़ अपने पास नहीं रखता, किसी सीट की पेशकश नहीं ला सकता, और वीज़ा, परवास या किसी देश के क़ानून के बारे में सलाह नहीं देता। इन पेजों से भेजी गई पूछताछ योजना के बारे में बातचीत माँगती है; यह आवेदन नहीं है, और इसे भेजने से कोई नतीजा तय नहीं होता।",
   "The two things to do before spending money on any of this are the two nobody can do for you: read the institution’s own website, and read the official visa and exam bodies for the country concerned. A page here is a starting point for that reading, never a replacement for it.":
     "इस सब पर पैसा ख़र्च करने से पहले दो काम आपको ख़ुद करने हैं, और वे कोई आपके लिए नहीं कर सकता: संस्थान की अपनी वेबसाइट पढ़िए, और संबंधित देश के आधिकारिक वीज़ा व परीक्षा निकाय पढ़िए। यहाँ का कोई पेज उस पढ़ाई की शुरुआत है, उसका विकल्प कभी नहीं।",
+  "What is true right now": "अभी क्या सच है",
+  "Built, and not switched on": "बना है, चालू नहीं किया गया",
+  "No payment has been taken on this deployment, and there is no refund button in the app.": "इस डिप्लॉयमेंट पर कोई भुगतान नहीं लिया गया है, और ऐप में कोई रिफ़ंड बटन नहीं है।",
+  "What is free, and on every plan": "क्या मुफ़्त है, और हर प्लान में",
+  "A refund is owed in these cases, written against what the app actually records:": "इन मामलों में रिफ़ंड बनता है, ऐप के असली रिकॉर्ड के हिसाब से:",
+  "Renewing, ending a period, and cancelling": "नवीनीकरण, अवधि समाप्ति और रद्द करना",
+  "The refund policy states what is owed, and how it is asked for:": "रिफ़ंड नीति बताती है क्या बनता है, और कैसे माँगा जाता है:",
 };

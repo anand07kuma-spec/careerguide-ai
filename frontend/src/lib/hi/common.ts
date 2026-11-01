@@ -229,4 +229,5 @@ export const HI: Record<string, string> = {
   "Physical activity and sports": "शारीरिक गतिविधि और खेल",
   "Nature and scientific curiosity": "प्रकृति और विज्ञान की जिज्ञासा",
   "Organization and leadership": "व्यवस्था और नेतृत्व",
+  "CareerGuide AI logo": "CareerGuide AI लोगो",
 };

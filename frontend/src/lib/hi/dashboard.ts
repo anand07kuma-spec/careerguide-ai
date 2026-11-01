@@ -84,4 +84,6 @@ export const HI: Record<string, string> = {
     "आप बने-बनाया डेमो गाइड इस्तेमाल कर रहे हैं, इसलिए जब तक सर्वर पर AI key नहीं लगेगी जवाब पहले से लिखे नमूनों से आएँगे। फिर भी यह खोजने में मदद करता है।",
   "Talk to your guide": "अपने गाइड से बात करें",
   "Answer interest questions": "रुचि वाले सवाल के जवाब दें",
+  "No directions yet": "अभी कोई दिशा नहीं",
+  "Loading your saved careers…": "आपके सेव किए करियर लाए जा रहे हैं…",
 };
