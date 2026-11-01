@@ -3,6 +3,7 @@
 import { useCallback } from "react";
 import {
   BadgeCheck,
+  ChevronDown,
   ExternalLink,
   GraduationCap,
   Info,
@@ -84,42 +85,55 @@ function ExamCardView({ exam }: { exam: ExamCard }) {
   return (
     <Card className="flex flex-col">
       <div className="flex flex-wrap items-start justify-between gap-2">
-        <h3 className="text-base font-semibold leading-tight text-ink">{exam.name}</h3>
+        <h3 className="min-w-0 break-words text-base font-semibold leading-snug text-heading">{exam.name}</h3>
         <Badge tone="brand">{t(exam.authority)}</Badge>
       </div>
 
       <dl className="mt-3 space-y-2 text-sm leading-relaxed">
         <div>
           <dt className="font-medium text-ink">{t("What it is for")}</dt>
-          <dd className="text-muted">{t(exam.description)}</dd>
+          <dd className="break-words text-muted">{t(exam.description)}</dd>
         </div>
-        <div>
-          <dt className="font-medium text-ink">{t("Careers it opens")}</dt>
-          <dd className="text-muted">{t(exam.careers)}</dd>
-        </div>
-        <div>
-          <dt className="font-medium text-ink">{t("When students usually notice it")}</dt>
-          <dd className="text-muted">{t(exam.timeline)}</dd>
-        </div>
-        <div>
-          <dt className="font-medium text-ink">{t("In class 9 or 10 now — costs nothing")}</dt>
-          <dd className="text-muted">{t(exam.preparation)}</dd>
-        </div>
-
-        {/* Only ever present when a person read it off a source and named that source. */}
-        {exam.exam_date ? (
-          <div>
-            <dt className="font-medium text-ink">{t("Date, as recorded")}</dt>
-            <dd className="text-muted">{t(exam.exam_date)}</dd>
-          </div>
-        ) : null}
-        {exam.fee_note ? (
-          <div>
-            <dt className="font-medium text-ink">{t("Fee, as recorded")}</dt>
-            <dd className="text-muted">{t(exam.fee_note)}</dd>
-          </div>
-        ) : null}
       </dl>
+
+      <details className="group mt-3 rounded-xl border border-line bg-canvas/60 px-3 py-2">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-sm font-medium text-brand-dark [&::-webkit-details-marker]:hidden">
+          {t("Careers, timing & early prep")}
+          <ChevronDown className="h-4 w-4 shrink-0 transition-transform group-open:rotate-180" aria-hidden />
+        </summary>
+        <dl className="mt-2 space-y-2 pb-1 text-sm leading-relaxed">
+          <div>
+            <dt className="font-medium text-ink">{t("Careers it opens")}</dt>
+            <dd className="break-words text-muted">{t(exam.careers)}</dd>
+          </div>
+          <div>
+            <dt className="font-medium text-ink">{t("When students usually notice it")}</dt>
+            <dd className="break-words text-muted">{t(exam.timeline)}</dd>
+          </div>
+          <div>
+            <dt className="font-medium text-ink">{t("In class 9 or 10 now — costs nothing")}</dt>
+            <dd className="break-words text-muted">{t(exam.preparation)}</dd>
+          </div>
+        </dl>
+      </details>
+
+      {/* Only ever present when a person read it off a source and named that source. */}
+      {exam.exam_date || exam.fee_note ? (
+        <dl className="mt-3 space-y-2 text-sm leading-relaxed">
+          {exam.exam_date ? (
+            <div>
+              <dt className="font-medium text-ink">{t("Date, as recorded")}</dt>
+              <dd className="break-words text-muted">{t(exam.exam_date)}</dd>
+            </div>
+          ) : null}
+          {exam.fee_note ? (
+            <div>
+              <dt className="font-medium text-ink">{t("Fee, as recorded")}</dt>
+              <dd className="break-words text-muted">{t(exam.fee_note)}</dd>
+            </div>
+          ) : null}
+        </dl>
+      ) : null}
 
       {hasFigure && exam.source_url ? (
         <div className="mt-3 rounded-xl border border-success/25 bg-success-mist px-3 py-2.5">
