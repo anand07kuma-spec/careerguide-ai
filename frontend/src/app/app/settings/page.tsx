@@ -693,29 +693,22 @@ export default function SettingsScreen() {
     >
       <div className="max-w-3xl space-y-5">
         {/* ------------------------------------------------------------- Identity */}
-        <Card className="flex flex-wrap items-center gap-4">
-          <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-brand text-lg font-semibold text-white">
-            {initials(user?.display_name)}
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-base font-semibold text-ink">{user?.display_name}</p>
-            <p className="mt-0.5 truncate text-sm text-muted">
-              {isStudent
-                ? [classLabel(profile?.class_level) ?? "Class not set", languageLabel].join(" · ")
-                : "Parent account · sees only what a child shares"}
-            </p>
+        <Card className="space-y-4">
+          <div className="flex items-center gap-4">
+            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-brand text-lg font-semibold text-white">
+              {initials(user?.display_name)}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-base font-semibold text-heading break-words">{user?.display_name}</p>
+              <p className="mt-0.5 text-xs leading-relaxed text-muted">
+                {isStudent
+                  ? [classLabel(profile?.class_level) ?? "Class not set", languageLabel].join(" · ")
+                  : "Parent account · sees only what a child shares"}
+              </p>
+            </div>
           </div>
           <div className="flex flex-wrap gap-2">
-            {isStudent ? (
-              <LinkButton href="/app" variant="outline" size="sm">
-                Dashboard
-              </LinkButton>
-            ) : (
-              <LinkButton href="/parent" variant="outline" size="sm">
-                Parent dashboard
-              </LinkButton>
-            )}
-            <Button variant="ghost" size="sm" onClick={() => setSection("device")}>
+            <Button variant="outline" size="sm" onClick={() => setSection("device")}>
               <Smartphone className="h-4 w-4" aria-hidden />
               This device
             </Button>
@@ -726,7 +719,7 @@ export default function SettingsScreen() {
         <Card className="divide-y divide-line overflow-hidden p-0">
           <SettingsRow
             icon={LanguagesIcon}
-            tone="bg-brand-mist text-brand-dark"
+            tone="bg-slate-100 text-slate-600"
             title="Language and voice"
             value={`${languageLabel} · ${
               settings?.speak_responses ? t("reads replies aloud") : t("silent")
@@ -738,7 +731,7 @@ export default function SettingsScreen() {
           {isStudent ? (
             <SettingsRow
               icon={UserRound}
-              tone="bg-teal-mist text-teal"
+              tone="bg-slate-100 text-slate-600"
               title="My profile"
               value={`${classLabel(profile?.class_level) ?? t("Class not set")} · ${tf(
                 "{count} interests",
@@ -749,7 +742,7 @@ export default function SettingsScreen() {
           ) : (
             <SettingsRow
               icon={UserRound}
-              tone="bg-teal-mist text-teal"
+              tone="bg-slate-100 text-slate-600"
               title="My account"
               value="A parent account holds no class, age or interests"
               onClick={() => setSection("profile")}
@@ -757,7 +750,7 @@ export default function SettingsScreen() {
           )}
           <SettingsRow
             icon={Mail}
-            tone="bg-brand-mist text-brand-dark"
+            tone="bg-slate-100 text-slate-600"
             title="Account and email sign-in"
             value={
               clerk.state === "loading"
@@ -772,7 +765,7 @@ export default function SettingsScreen() {
           />
           <SettingsRow
             icon={EyeOff}
-            tone="bg-brand-mist text-brand-dark"
+            tone="bg-slate-100 text-slate-600"
             title="Privacy, consent and display"
             value={
               consent.state === "loading"
@@ -787,7 +780,7 @@ export default function SettingsScreen() {
           {isStudent ? (
             <SettingsRow
               icon={Link2}
-              tone="bg-success-mist text-success"
+              tone="bg-slate-100 text-slate-600"
               title="Family access"
               value={
                 guardians.state === "loading"
@@ -801,7 +794,7 @@ export default function SettingsScreen() {
           ) : null}
           <SettingsRow
             icon={Smartphone}
-            tone="bg-brand-mist text-brand-dark"
+            tone="bg-slate-100 text-slate-600"
             title="This device"
             value="No login — this browser is what remembers your work"
             onClick={() => setSection("device")}

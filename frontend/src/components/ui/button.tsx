@@ -10,12 +10,12 @@ type Size = "sm" | "md" | "lg" | "icon";
 
 const VARIANTS: Record<Variant, string> = {
   primary:
-    "bg-brand text-white shadow-sm hover:bg-brand-dark active:translate-y-px disabled:hover:bg-brand",
+    "bg-brand text-white hover:bg-brand-dark active:translate-y-px disabled:hover:bg-brand",
   secondary:
-    "bg-navy text-white shadow-sm hover:bg-navy-600 active:translate-y-px",
+    "bg-navy text-white hover:bg-navy-600 active:translate-y-px",
   ghost: "bg-transparent text-ink hover:bg-brand-mist/60",
-  danger: "bg-danger text-white shadow-sm hover:bg-red-700 active:translate-y-px",
-  success: "bg-success text-white shadow-sm hover:bg-green-700 active:translate-y-px",
+  danger: "bg-danger text-white hover:bg-red-700 active:translate-y-px",
+  success: "bg-success text-white hover:bg-green-700 active:translate-y-px",
   outline:
     "bg-surface text-ink border border-line hover:border-brand-light hover:bg-canvas",
 };
@@ -29,12 +29,12 @@ const VARIANTS: Record<Variant, string> = {
  * fixed so a second line has somewhere to go.
  */
 const BASE =
-  "inline-flex select-none items-center justify-center text-center font-medium transition-colors";
+  "inline-flex select-none items-center justify-center text-center font-medium tracking-[-0.01em] transition-colors";
 
 const SIZES: Record<Size, string> = {
   sm: "min-h-9 px-3 py-2 text-sm gap-1.5 rounded-xl",
   md: "min-h-11 px-4 py-2.5 text-sm gap-2 rounded-xl",
-  lg: "min-h-13 px-6 py-3 text-base gap-2.5 rounded-2xl",
+  lg: "min-h-13 px-6 py-3 text-base gap-2.5 rounded-xl",
   icon: "h-10 w-10 shrink-0 justify-center rounded-full",
 };
 

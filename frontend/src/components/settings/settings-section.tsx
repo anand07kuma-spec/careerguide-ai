@@ -48,7 +48,7 @@ export function SettingsRow({
       </span>
       <span className="min-w-0 flex-1">
         <span className="block text-sm font-semibold text-ink">{t(title)}</span>
-        <span className="mt-0.5 block truncate text-xs text-muted">
+        <span className="mt-0.5 block text-xs leading-relaxed text-muted">
           {/* A state line is English source text like any other label, so it goes
             * through the dictionary; JSX values are left to their own devices. */}
           {typeof value === "string" ? t(value) : value}
@@ -75,7 +75,7 @@ export function SettingsRow({
 export function SubHeading({ children }: { children: ReactNode }) {
   const t = useT();
   return (
-    <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+    <p className="text-xs font-semibold text-muted">
       {typeof children === "string" ? t(children) : children}
     </p>
   );

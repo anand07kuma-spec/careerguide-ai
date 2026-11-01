@@ -5,7 +5,7 @@ import { useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 export function Card({ className, ...rest }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("cg-card p-5", className)} {...rest} />;
+  return <div className={cn("cg-card p-5 sm:p-6", className)} {...rest} />;
 }
 
 export function CardHeader({
@@ -28,7 +28,7 @@ export function CardHeader({
     <div className={cn("flex flex-col items-start gap-3 sm:flex-row sm:justify-between", className)}>
       <div className="flex min-w-0 items-start gap-3">
         {icon ? (
-          <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-mist text-brand-dark">
+          <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
             {icon}
           </span>
         ) : null}

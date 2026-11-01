@@ -141,11 +141,11 @@ export function EmptyState({
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-center rounded-2xl border border-dashed border-line bg-surface/60 px-6 py-12 text-center",
+        "flex flex-col items-center justify-center rounded-card border border-line bg-surface px-6 py-12 text-center",
         className,
       )}
     >
-      <span className="mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-brand-mist text-brand-dark">
+      <span className="mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 text-slate-600">
         <Icon className="h-5 w-5" aria-hidden />
       </span>
       <p className="text-sm font-semibold text-ink">{t(title)}</p>
@@ -180,7 +180,7 @@ export function ErrorState({
     <div
       role="alert"
       className={cn(
-        "flex flex-col items-center justify-center rounded-2xl border border-danger/25 bg-danger-mist/50 px-6 py-10 text-center",
+        "flex flex-col items-center justify-center rounded-card border border-line bg-surface px-6 py-10 text-center",
         className,
       )}
     >
@@ -261,17 +261,14 @@ export function Stat({
   /** Makes the tile a question the student can ask about its own number. */
   onClick?: () => void;
 }) {
-  const accent = {
-    brand: "text-brand-dark",
-    teal: "text-teal",
-    success: "text-success",
-    warning: "text-amber-600",
-  }[tone];
+  // Numbers read as ink; only a warning keeps a colour, because it is the one
+  // state a family should notice without reading the label.
+  const accent = tone === "warning" ? "text-amber-600" : "text-heading";
   const t = useT();
   const body = (
     <>
-      <p className="text-xs font-medium uppercase leading-relaxed tracking-wide text-muted break-words">{t(label)}</p>
-      <p className={cn("mt-1.5 text-2xl font-semibold leading-none", accent)}>{value}</p>
+      <p className="text-xs font-medium leading-relaxed text-muted break-words">{t(label)}</p>
+      <p className={cn("mt-1.5 text-2xl font-semibold leading-none tracking-tight", accent)}>{value}</p>
       {hint ? <p className="mt-2 text-xs leading-relaxed text-muted">{hint}</p> : null}
       {footer}
     </>
