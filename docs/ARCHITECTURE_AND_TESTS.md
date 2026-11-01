@@ -1367,6 +1367,31 @@ with the line saying they are the same for every student, all in Hindi. A live `
 this screen has therefore not been run; the payload it would send is what the suite asserts. After the walk, a
 scan of all **41** tables in `careerguide.db` found **zero** rows containing any sentence typed into it.
 
+**On 2026-11-01, that scan stopped reporting leaks that were not leaks.** Its last check searches every row of
+every table for the sentence the suite typed into a transcript, and until today it searched for a hand-picked
+four-digit string. Nothing in the seeded catalogue holds those four digits — which is why the run went red now
+and then rather than every time — but every row a run leaves behind carries a `created_at`, 300 of a million
+microsecond values read `4471xx`, `x4471x` or `xx4471`, and those **736** rows share only **37** distinct stamps;
+the run's hash columns add **244** more four-character windows. Measured on the database one run leaves behind,
+that is roughly **one run in seventy** handing a batch of university rows to the scan as a child's own words.
+Twelve consecutive runs of the unfixed file printed **126 passed, 0 failed**, and a one-in-seventy flake at the
+end of a privacy suite is precisely what a green handful of runs hides.
+
+The needle is minted per run from `uuid4` now, so it cannot collide with a timestamp or a hash. Two tokens, not
+one, because absence alone proves nothing: the sentence typed into the transcript must come back **absent**, and
+the one row this suite writes on purpose — a CV saved through `/api/resume` — must come back **present**, since a
+scan that finds nothing looks exactly like a scan that cannot find anything. That second token is read before
+`DELETE /api/users/me` and again after it, so one value carries both the scanner's honesty and the erasure claim.
+Three checks joined: that the sentence really did reach the stand-in provider, that the scan finds the token in
+the `resumes` row, and that erasure took that row with it. `interview_test.py` now prints **129 passed, 0
+failed**, and twenty consecutive runs each printed exactly that.
+
+**Proven to fail, three ways, on a copy of the file.** Take the token out of the sentence the suite types and the
+new guard goes red while the leak scan quietly passes — which is the whole point, because that is the run that
+used to pass for the wrong reason. Take it out of the CV and the positive control goes red. Point the leak scan
+at a value that *is* persisted, as a real leak would, and the leak check goes red. Each of the three printed
+**128 passed, 1 failed**, and each time the failed label was the one that mutation was written to break.
+
 **Walked in a browser on the running pair** (`frontend` :3000, `backend` :8100, the local device account):
 `/study-abroad/australia` shows two green badges and 35 grey ones and the count line reads "37 shown · 2 with
 a detail somebody has read off a source"; `/study-abroad/ireland` shows **10 green and 6 grey** after the
