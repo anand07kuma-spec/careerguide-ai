@@ -13,7 +13,7 @@
 # dependency does need it, that layer goes in the builder stage below rather than in
 # the runtime image.
 
-FROM python:3.12-slim AS builder
+FROM python:3.15-slim AS builder
 
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PIP_NO_CACHE_DIR=1
@@ -26,7 +26,7 @@ COPY requirements.txt ./
 RUN python -m pip install --prefix=/install -r requirements.txt
 
 
-FROM python:3.12-slim
+FROM python:3.15-slim
 
 # The three variables that stop this image from writing where it should not have to:
 # no bytecode on a read-only filesystem, no buffered logs sitting in a container that
