@@ -166,6 +166,8 @@ export const HI: Record<string, string> = {
   "Explorable from class {n}": "कक्षा {n} से इसे देखना शुरू कर सकते हैं",
   "Showing 1 career": "1 करियर दिख रहा है",
   "Showing {n} careers": "{n} करियर दिख रहे हैं",
+  "Show more careers": "और करियर दिखाएँ",
+  "Back to dashboard": "डैशबोर्ड पर वापस जाएँ",
   "with your filters": "आपके फ़िल्टर के साथ",
 
   // Career detail page

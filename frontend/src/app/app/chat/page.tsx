@@ -579,7 +579,7 @@ function ChatThread() {
                 }
               }}
               label="Read replies aloud"
-              description="The server's speech service reads replies aloud over the internet, with your browser's own voice as a fallback. Settings names the exact service."
+              description="Replies are read aloud; your browser's own voice is the fallback."
             />
           </div>
           <div className="flex items-center gap-2">
@@ -629,7 +629,7 @@ function ChatThread() {
                     {message.role === "assistant" ? (
                       <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                         {message.demo_generated ? (
-                          <Badge tone="warning">Demo guide answer</Badge>
+                          <Badge tone="warning">{t("Demo guide answer")}</Badge>
                         ) : null}
                         {message.themes?.length
                           ? message.themes.map((theme) => (
@@ -705,7 +705,8 @@ function ChatThread() {
                   }
                 }}
                 rows={1}
-                placeholder={t("Type your answer… (Enter sends, Shift+Enter makes a new line)")}
+                placeholder={t("Type your answer…")}
+                title={t("Type your answer… (Enter sends, Shift+Enter makes a new line)")}
                 aria-label={t("Message to your guide")}
                 className="cg-scrollbar max-h-32 min-h-[46px] flex-1 resize-none rounded-card border border-line bg-surface px-3.5 py-2.5 text-sm text-ink outline-none placeholder:text-muted/70 focus:border-brand focus:ring-2 focus:ring-brand-mist"
               />

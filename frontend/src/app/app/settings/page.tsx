@@ -687,7 +687,7 @@ export default function SettingsScreen() {
       description="Each line opens one part of this account. Everything here is yours to change."
       badge={
         <Badge tone="brand" icon={<ShieldCheck className="h-3.5 w-3.5" aria-hidden />}>
-          {isStudent ? "Student account" : "Parent account"}
+          {isStudent ? t("Student account") : t("Parent account")}
         </Badge>
       }
     >
@@ -702,15 +702,15 @@ export default function SettingsScreen() {
               <p className="text-base font-semibold text-heading break-words">{user?.display_name}</p>
               <p className="mt-0.5 text-xs leading-relaxed text-muted">
                 {isStudent
-                  ? [classLabel(profile?.class_level) ?? "Class not set", languageLabel].join(" · ")
-                  : "Parent account · sees only what a child shares"}
+                  ? [classLabel(profile?.class_level) ?? t("Class not set"), languageLabel].join(" · ")
+                  : t("Parent account · sees only what a child shares")}
               </p>
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" size="sm" onClick={() => setSection("device")}>
               <Smartphone className="h-4 w-4" aria-hidden />
-              This device
+              {t("This device")}
             </Button>
           </div>
         </Card>
@@ -811,37 +811,43 @@ export default function SettingsScreen() {
         </Card>
 
         {/* ---------------------------------------------------------- This device */}
-        <Card className="flex flex-wrap items-center justify-between gap-3">
+        <Card className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-ink">There is nothing to sign out of</p>
+            <p className="text-sm font-semibold text-heading">{t("There is nothing to sign out of")}</p>
             <p className="mt-0.5 text-xs leading-relaxed text-muted">
-              This browser is the account, so just close the tab — everything will be waiting next
-              time you open it from here. Use start over only if somebody else will use this device.
+              {t(
+                "This browser is the account, so just close the tab — everything will be waiting next time you open it from here. Use start over only if somebody else will use this device.",
+              )}
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button variant="ghost" size="sm" onClick={() => setSection("device")}>
               <Info className="h-4 w-4" aria-hidden />
-              How this works
+              {t("How this works")}
             </Button>
             <Button variant="secondary" size="sm" onClick={() => setResetModal(true)}>
               <RotateCcw className="h-4 w-4" aria-hidden />
-              Start over
+              {t("Start over")}
             </Button>
           </div>
         </Card>
 
         {/* ------------------------------------------------------ Delete the account */}
-        <Card className="flex flex-wrap items-center justify-between gap-3 border-danger/30 bg-danger-mist/30">
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-ink">{t("Delete this account")}</p>
-            <p className="mt-0.5 text-xs leading-relaxed text-muted">
-              {t(
-                "Erases what this account holds on the server — the messages, the assessments and their answers, the reports, the plans, the saved careers, the resume you wrote, the settings and every session on every device. Not everything goes: the dialog lists, before you press anything, exactly which few records stay and why.",
-              )}
-            </p>
+        <Card className="flex flex-col gap-3 border-danger/25 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-start gap-3">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-danger-mist text-danger">
+              <Trash2 className="h-4 w-4" aria-hidden />
+            </span>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-heading">{t("Delete this account")}</p>
+              <p className="mt-0.5 text-xs leading-relaxed text-muted">
+                {t(
+                  "Erases what this account holds on the server — the messages, the assessments and their answers, the reports, the plans, the saved careers, the resume you wrote, the settings and every session on every device. Not everything goes: the dialog lists, before you press anything, exactly which few records stay and why.",
+                )}
+              </p>
+            </div>
           </div>
-          <Button variant="danger" size="sm" onClick={() => setEraseModal(true)}>
+          <Button variant="danger" size="sm" className="shrink-0 self-start sm:self-auto" onClick={() => setEraseModal(true)}>
             <Trash2 className="h-4 w-4" aria-hidden />
             {t("Delete account")}
           </Button>

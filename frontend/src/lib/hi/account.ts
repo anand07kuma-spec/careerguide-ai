@@ -59,6 +59,13 @@ export const HI: Record<string, string> = {
   "Family access": "परिवार की पहुँच",
   "This device": "यह डिवाइस",
   "About this build": "इस बिल्ड के बारे में",
+  "Student account": "विद्यार्थी खाता",
+  "Parent account · sees only what a child shares":
+    "अभिभावक खाता · सिर्फ़ वही दिखता है जो बच्चा साझा करे",
+  "There is nothing to sign out of": "साइन आउट करने के लिए कुछ नहीं है",
+  "This browser is the account, so just close the tab — everything will be waiting next time you open it from here. Use start over only if somebody else will use this device.":
+    "यही ब्राउज़र आपका अकाउंट है, इसलिए टैब बंद कर दें — अगली बार यहाँ से खोलने पर सब कुछ वैसा ही मिलेगा। नए सिरे से शुरू करना तभी चुनें जब यह डिवाइस कोई और इस्तेमाल करने वाला हो।",
+  "How this works": "यह कैसे काम करता है",
   "reads replies aloud": "जवाब बोलकर सुनाता है",
   silent: "चुप",
   "hands-free on": "हैंड्स-फ्री चालू",

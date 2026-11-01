@@ -199,6 +199,11 @@ export function AppShell({ children }: { children: ReactNode }) {
     );
   }
 
+  // The call is a focused, full-screen mode. Its own navy chrome replaces the
+  // shell's header, sidebar and bottom bar, which would otherwise print the brand
+  // twice and sit on top of the call composer.
+  if (pathname === "/app/call") return <>{children}</>;
+
   // A student tapping Parent Dashboard is bounced straight back to /app, because
   // that route is guarded for parents — so it is not offered to them. A parent
   // keeps the family pages; the student pages read a child's private answers,
