@@ -1338,6 +1338,36 @@ check(
     config["rate_limit_admin"] == get_settings().rate_limit_admin == "5 per minute",
     config["rate_limit_admin"],
 )
+# The next three checks are the whole reason this screen exists for an operator at 2 a.m.
+# Whether the limits are shared is a fact about the running process, not about the
+# environment: a URL that is configured but does not answer leaves the counters in memory, so
+# the boolean has to follow the store rather than the setting. And the URL itself cannot be
+# printed, because a Redis address is allowed to carry its password in it.
+check(
+    "this run configured no Redis, so the screen says the counters are per-process",
+    config["rate_limit_counters_shared"] is False,
+    config["rate_limit_counters_shared"],
+)
+check(
+    "…and it says that as a boolean rather than as the URL, which can hold a password",
+    "rate_limit_redis_url" not in config and "redis://" not in deployment.text,
+    sorted(name for name in config if "redis" in name.lower()),
+)
+check(
+    "the day's AI ceiling is printed as the number this process enforces",
+    config["ai_daily_message_limit"] == get_settings().ai_daily_message_limit == 60,
+    config["ai_daily_message_limit"],
+)
+check(
+    "the provider breaker is printed in the state a healthy week is in: closed, nothing counted",
+    config["ai_breaker_open"] is False
+    and config["ai_breaker_failures"] == 0
+    and config["ai_breaker_seconds_left"] == 0,
+    {
+        name: config[name]
+        for name in ("ai_breaker_open", "ai_breaker_failures", "ai_breaker_seconds_left")
+    },
+)
 check(
     "and the screen says it is not editable, rather than showing controls",
     config["editable"] is False,

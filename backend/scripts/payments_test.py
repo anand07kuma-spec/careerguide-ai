@@ -1,7 +1,7 @@
 """Test the money paths: prices, signatures, webhooks, and what a plan does and does not unlock.
 
 Payments are the riskiest thing in this app, for a reason that has nothing to do with
-money: the accounts are children. So every check here is aimed at one of four failures —
+money: the accounts are children. So every check here is aimed at one of five failures —
 
 * a plan unlocked by a request rather than by a payment (a body naming its own price,
   its own user, or a signature nobody computed);
@@ -9,7 +9,11 @@ money: the accounts are children. So every check here is aimed at one of four fa
 * a limit that silences a child who is disclosing harm, or that takes away data they
   already made;
 * money changing what a child is *told* — the recommendation output is compared before
-  and after a plan change, and it has to be identical.
+  and after a plan change, and it has to be identical;
+* a ceiling about the bill dressed up as a pay wall, or a pay wall hidden inside a bill.
+  `AI_DAILY_MESSAGE_LIMIT` and the plan's daily chats refuse the same click for opposite
+  reasons, so the section on them checks that neither one spends the other's count, and that
+  the sentence a family reads names the right one.
 
 Nothing here touches Razorpay. The provider is replaced by a stub that records what the
 server asked for, so the amounts, the auth and the notes are all readable from this side,
@@ -56,7 +60,13 @@ from app.config import get_settings  # noqa: E402
 from app.database import SessionLocal  # noqa: E402
 from app.main import app  # noqa: E402
 from app.models import Guardianship, Payment, Subscription, User  # noqa: E402
-from app.services import assessment_bank, entitlements, plans, razorpay  # noqa: E402
+from app.services import (  # noqa: E402
+    ai_budget,
+    assessment_bank,
+    entitlements,
+    plans,
+    razorpay,
+)
 from app.services.recommender import build_recommendations  # noqa: E402
 
 PASS, FAIL = [], []
@@ -766,6 +776,102 @@ listed = client.get("/api/reports/pdf", headers=auth(token_f))
 check("moving to Free does not hide a report already made", listed.status_code == 200 and len(listed.json()) == 1)
 again_doc = client.get(listed.json()[0]["download_path"], headers=auth(token_f))
 check("and the file is still theirs to download", again_doc.status_code == 200 and again_doc.content[:4] == b"%PDF")
+
+# ------------------------------------------------------------------ the other ceiling
+section("The day's AI budget, and the plan limit it sits beside")
+
+# Two guards refuse a chat turn, and a family cannot tell them apart from the button they
+# pressed. `entitlements.guard_chat` answers "your plan bought today's conversations" — a
+# commercial line, off until pricing goes live, and it points at `/pricing`.
+# `ai_budget.guard` answers "this account has already asked the provider enough for one day"
+# — a line about the bill, on by default, and it points at nothing to buy. Confusing them is
+# a money bug in both directions: a child told to pay for a ceiling that is about cost, or a
+# ceiling about cost hidden behind a pay wall nobody set.
+#
+# So the checks below are about the seam. The plan guard runs first, which is the only reason
+# the second one is cheap: an account refused on plan grounds never reaches the money counter,
+# and a paid plan discovers that the money ceiling is not what it bought.
+env(PLAN_LIMITS_ENFORCED="true", FREE_DAILY_CHATS="9", AI_DAILY_MESSAGE_LIMIT="3")
+
+paid_token, paid_user = signup("Meera")
+paid_session = new_conversation(paid_token)
+with SessionLocal() as db:
+    entitlements.set_plan(db, paid_user, "pro_monthly", source="granted",
+                          expires_at=datetime.now(timezone.utc) + timedelta(days=30))
+    db.commit()
+check("this student is on a plan that has bought every chat of the day",
+      client.get("/api/payments/me", headers=auth(paid_token)).json()["plan"]["plan_code"] == "pro_monthly")
+
+paid_asks = [say(paid_token, paid_session, f"Which stream suits class 10, question {n}?") for n in range(1, 5)]
+paid_codes = [ask.status_code for ask in paid_asks]
+check("an unlimited plan still meets the day's AI ceiling: three asks answered, the fourth refused",
+      paid_codes == [200, 200, 200, 429], str(paid_codes))
+check("…and the refusal is a 429, never the plan's 402, because nothing here is for sale",
+      paid_asks[3].status_code == 429, str(paid_asks[3].status_code))
+check("…so it names no price and offers no /pricing link",
+      "/pricing" not in paid_asks[3].json()["detail"]
+      and "₹" not in paid_asks[3].json()["detail"],
+      paid_asks[3].json()["detail"])
+check("…and it is the budget's own fixed sentence, the one the chat screen renders verbatim",
+      paid_asks[3].json()["detail"] == ai_budget.refusal_sentence(3),
+      paid_asks[3].json()["detail"][:160])
+check("…still a sentence a family can read", human(paid_asks[3].json()["detail"]),
+      paid_asks[3].json()["detail"])
+paid_usage = client.get("/api/payments/me", headers=auth(paid_token)).json()["usage"]
+check("…and the plan was never the thing that refused: a paid account reports no chat count at all",
+      paid_usage["plan_code"] == "pro_monthly" and paid_usage["chats_today"] is None,
+      str(paid_usage))
+
+# The other side of the seam: a refusal on plan grounds is refused *before* the money counter
+# is asked for anything, so a family that keeps pressing send against a pay wall has not spent
+# a rupes' worth of provider calls doing it.
+env(PLAN_LIMITS_ENFORCED="true", FREE_DAILY_CHATS="2", AI_DAILY_MESSAGE_LIMIT="60")
+free_token, free_user = signup("Sana")
+free_session = new_conversation(free_token)
+for turn in range(1, 5):
+    answer = say(free_token, free_session, f"Tell me about design careers, question {turn}?")
+check("the plan's refusal is the one that lands first", answer.status_code == 402, str(answer.status_code))
+check("and it is the pay wall's own words", "/pricing" in answer.json()["detail"], answer.json()["detail"])
+check("…which means the money counter never saw the two asks it refused",
+      ai_budget.spent_today(free_user) == 2, str(ai_budget.spent_today(free_user)))
+check("…and the plan's count agrees with it: two delivered, two stored",
+      client.get("/api/payments/me", headers=auth(free_token)).json()["usage"]["chats_today"] == 2)
+
+# Both ceilings shut at once, which is the configuration where a safety reply could plausibly
+# be lost: the money guard is the last thing standing between a frightened child and the
+# reviewed sentence, and it is the one that steps aside.
+env(PLAN_LIMITS_ENFORCED="true", FREE_DAILY_CHATS="9", AI_DAILY_MESSAGE_LIMIT="2")
+shut_token, shut_user = signup("Arjun")
+shut_session = new_conversation(shut_token)
+say(shut_token, shut_session, "Which college has the best workshop?")
+say(shut_token, shut_session, "What about fees?")
+shut_out = say(shut_token, shut_session, "And after class 12?")
+check("this account is out of day's budget while its plan still has room",
+      shut_out.status_code == 429, f"{shut_out.status_code} {shut_out.text[:120]}")
+spent_before = ai_budget.spent_today(shut_user)
+saved = say(shut_token, shut_session, DISTRESS)
+check("a disclosure is answered with both ceilings shut", saved.status_code == 200, saved.text[:200])
+check("and gets the reviewed safety reply",
+      "safety" in saved.json()["reply"]["content"].lower()
+      or "trusted adult" in saved.json()["reply"]["content"].lower(),
+      saved.json()["reply"]["content"][:160])
+check("…the money counter did not move, because a disclosure is never a bill",
+      ai_budget.spent_today(shut_user) == spent_before,
+      f"{ai_budget.spent_today(shut_user)} vs {spent_before}")
+check("…and the plan still counted it honestly, because the chat really was delivered",
+      client.get("/api/payments/me", headers=auth(shut_token)).json()["usage"]["chats_today"] == 3,
+      str(client.get("/api/payments/me", headers=auth(shut_token)).json()["usage"]))
+after_shut = say(shut_token, shut_session, "One more ordinary question?")
+check("the next ordinary question goes back to being refused, and by the same sentence",
+      after_shut.status_code == 429
+      and after_shut.json().get("detail") == ai_budget.refusal_sentence(2)
+      and after_shut.headers.get("retry-after", "").isdigit(),
+      f"{after_shut.status_code} retry-after={after_shut.headers.get('retry-after')}")
+
+env(PLAN_LIMITS_ENFORCED="true", FREE_DAILY_CHATS="2", FREE_ASSESSMENT_TOTAL="1",
+    AI_DAILY_MESSAGE_LIMIT=None)
+check("the day's AI ceiling is back to the shipped number for the sections below",
+      get_settings().ai_daily_message_limit == 60, str(get_settings().ai_daily_message_limit))
 
 # ------------------------------------------------------------------ family + fairness
 section("One family, one plan — and money that cannot change an answer")

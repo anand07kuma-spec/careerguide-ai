@@ -64,7 +64,12 @@ from app.config import Settings, get_settings  # noqa: E402
 from app.database import SessionLocal  # noqa: E402
 from app.main import app  # noqa: E402
 from app.models import Career, Result, User  # noqa: E402
-from app.services import assessment_bank, roadmap, scoring  # noqa: E402
+from app.services import (  # noqa: E402
+    ai_budget,
+    assessment_bank,
+    roadmap,
+    scoring,
+)
 from app.services.themes import THEMES  # noqa: E402
 
 PASS, FAIL = [], []
@@ -878,6 +883,51 @@ with TestClient(app) as client:
           client.post(f"/api/conversations/{thread}/messages", headers=ph,
                       json={"message": "What does my child's plan say?",
                             "plan_of": kept["result_id"]}).status_code == 403)
+
+    section("9b. the day's ceiling reaches this button as far as it reaches the chat")
+    # The ✨ press buys exactly what a chat turn buys — one call to the provider — and a
+    # page left open and pressed slowly sits inside every per-minute rule this app has. So
+    # the number that does not refill in sixty seconds has to cover this route too, with
+    # the same sentence and the same side-effect rule: nothing stored, nothing sent.
+    #
+    # Section 9 already spent part of this account's day on the chat, which is what the
+    # ceiling is set from: one more reply than has already been asked for, rather than an
+    # assumed zero that would make the first press a refusal and prove nothing.
+    saved_limit = settings.ai_daily_message_limit
+    limit = ai_budget.spent_today(one["id"]) + 1
+    settings.ai_daily_message_limit = limit
+    try:
+        calls_before = len(calls)
+        plan_before = json.dumps(stored(result_id), sort_keys=True)
+        last_allowed = client.post(f"{RESULT_URL}/{result_id}/roadmap", headers=one["auth"])
+        check("the day's last allowed reply is served here like anywhere else",
+              last_allowed.status_code == 200, last_allowed.text[:200])
+        spent = client.post(f"{RESULT_URL}/{result_id}/roadmap", headers=one["auth"])
+        check("…and the press after it is refused, not silently answered with the old plan",
+              spent.status_code == 429, spent.text[:200])
+        check("…with the one sentence the chat's exhausted accounts read, not a second wording",
+              spent.json()["detail"] == ai_budget.refusal_sentence(limit), spent.json()["detail"][:160])
+        check("…with a real Retry-After rather than a number nobody can act on",
+              int(spent.headers["retry-after"]) >= 60, spent.headers.get("retry-after"))
+        check("…and the plan on the page is byte-for-byte the one they had before the refusal",
+              json.dumps(stored(result_id), sort_keys=True) == plan_before)
+        check("…and the refusal sent nothing to a provider", len(calls) == calls_before, len(calls))
+        check("…and the refused attempt is still counted, which is the only shape that cannot "
+              "over-spend when two warm workers see the same student at the same instant",
+              ai_budget.spent_today(one["id"]) == limit + 1, ai_budget.spent_today(one["id"]))
+        refused_chat = say("So what should I do this week?")
+        check("the same exhausted account is refused in the chat by the same number, in the "
+              "same words — which is the point of one counter across four doors rather than "
+              "four counters",
+              refused_chat["status"] == 429
+              and refused_chat["body"].get("detail") == spent.json()["detail"],
+              [refused_chat["status"], str(refused_chat["body"])[:160]])
+        ordinary_read = client.get(f"{RESULT_URL}/{result_id}", headers=one["auth"])
+        check("reading a finished plan is not what ran out, so the page still loads",
+              ordinary_read.status_code == 200
+              and ordinary_read.json()["roadmap"]["source"] in {"rules", "openai"})
+    finally:
+        settings.ai_daily_message_limit = saved_limit
 
     section("10. erasure takes the plan with it")
     gone = client.delete("/api/users/me", headers=two["auth"])

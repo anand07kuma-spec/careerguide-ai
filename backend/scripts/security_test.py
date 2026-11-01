@@ -20,7 +20,17 @@ twenty-one, and it checks the things a hardening pass usually gets wrong:
   * a "validated" endpoint that validated the fields a friendly UI always fills in
     and ignored the ones a hostile caller picks — length, shape, extra keys;
   * a bearer token that is trusted in shape but leaked into a log, a cache key, or
-    an error message on the way.
+    an error message on the way;
+  * a day's budget for one account and a circuit breaker around the provider, which are the
+    two ceilings a per-minute rule cannot give: sixty seconds always comes back round, so
+    the money question needs a number that rolls over at the student's own midnight, and the
+    outage question needs the provider to stop being asked — with the rule that a refusal
+    leaves the child's transcript alone.
+
+The throttles are on for the whole of it except the last section, which switches them off
+through the flag slowapi itself reads — a day's ceiling of twenty is not reachable inside a
+minute otherwise — and the minute rules that steps over are proven in the seven sections
+before it.
 
 The frontend half of this work — the Content-Security-Policy and the other four
 response headers — cannot be checked from here, and this file does not pretend to
@@ -41,7 +51,9 @@ import pathlib
 import re
 import sys
 import tempfile
+import time
 import types
+from datetime import datetime, timezone
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -94,8 +106,10 @@ from app.middleware.rate_limit import (  # noqa: E402
     READ_LIMIT_MESSAGE,
     _read_exempt,
     client_identity,
+    counters_are_shared,
     limiter,
     read_identity,
+    shared_store,
 )
 from app.schemas import (  # noqa: E402
     GuestIn,
@@ -104,6 +118,18 @@ from app.schemas import (  # noqa: E402
     ShortText,
 )
 from app.security import TOKEN_SHAPE  # noqa: E402
+
+# Section 8 spends one account's day of AI replies and breaks an AI provider on purpose, so
+# it reads the three things those guards are built out of: the counter store the throttle
+# already uses, the two services sitting on top of it, and the database the transcript is
+# written into — because "this refusal wrote nothing" is only worth anything said about
+# rows, and rows are not something the API is asked about.
+from limits.storage import MemoryStorage, RedisStorage  # noqa: E402
+from sqlalchemy import func, select  # noqa: E402
+
+from app.database import SessionLocal  # noqa: E402
+from app.models import Message  # noqa: E402
+from app.services import ai_budget, ai_breaker, ai_provider, entitlements  # noqa: E402
 
 PASS, FAIL = [], []
 
@@ -910,6 +936,540 @@ check(
     "…and the bucket is filled again the moment the store comes back",
     [client.get("/api/journey", headers=READ_AUTH).status_code for _ in range(2)]
     == [429, 429],
+)
+
+# ---------------------------------------------- 8. what one account may spend, and what stops asking
+print("\n[8] What one account may spend, and what happens when the provider stops")
+
+# Every rule above answers "are you sending faster than a person types", and sixty seconds
+# always comes back round. Two numbers do not come back round: how many replies one account
+# may buy in a day, and how many times in a row the provider is allowed to not answer before
+# it stops being asked. This section runs both of them over the wire, and then runs the same
+# asks against the two possible counter stores to show the decision does not depend on which
+# one is holding it.
+#
+# The per-minute throttle is switched off for the whole section — not hidden, and not by
+# editing any rule: `limiter.enabled` is the public flag slowapi reads on every request, and
+# the one `throttle_reads` reads too, so one assignment takes the minute buckets out of the
+# way of twenty-one sends that would otherwise be refused at the third. What that costs in
+# coverage is stated rather than glossed: the day's budget is proven here on its own, and the
+# minute rules are proven in the six sections above. `ai_budget` never consults the flag — it
+# counts through `shared_store()` directly, which is the thing being tested.
+limiter.enabled = False
+
+SAVED = {
+    name: os.environ.get(name)
+    for name in (
+        "AI_DAILY_MESSAGE_LIMIT",
+        "AI_PROVIDER",
+        "AI_API_KEY",
+        "AI_BASE_URL",
+        "AI_BREAKER_FAILURES",
+        "AI_BREAKER_WINDOW_SECONDS",
+        "AI_BREAKER_COOLDOWN_SECONDS",
+    )
+}
+
+
+def env(**values: str | None) -> None:
+    """Change the environment and make the cached settings read it again.
+
+    `get_settings` is `lru_cache`d; every guard calls it per request instead of holding a
+    copy, so dropping the cache is the whole of the work. A name of `None` removes the
+    variable, which is how a setting is put back to its shipped default.
+    """
+    for key, value in values.items():
+        if value is None:
+            os.environ.pop(key.upper(), None)
+        else:
+            os.environ[key.upper()] = value
+    get_settings.cache_clear()
+
+
+def rows(session_id: int) -> int:
+    """How many transcript rows a conversation holds, read from the database.
+
+    Not asked of the API: a refusal that quietly stored the student's question looks exactly
+    like one that did not, from the client side. The claim worth making is about rows.
+    """
+    with SessionLocal() as db:
+        return int(
+            db.scalar(
+                select(func.count())
+                .select_from(Message)
+                .where(Message.session_id == session_id)
+            )
+        )
+
+
+# --- 8a. which store is holding the numbers
+REDIS_URL = os.environ.get("RATE_LIMIT_REDIS_URL", "").strip()
+store = shared_store()
+check(
+    "the day's budget and the breaker count in the throttle's own store, not a second one",
+    store is limiter._storage,
+)
+if REDIS_URL:
+    check(
+        "with RATE_LIMIT_REDIS_URL set the counters are reported as shared",
+        counters_are_shared() is True,
+    )
+    check("…and the store holding them is the Redis one", isinstance(store, RedisStorage), type(store).__name__)
+else:
+    check(
+        "with no Redis configured the counters are this process's own",
+        counters_are_shared() is False,
+    )
+    check(
+        "…and the budget counts in the same memory store as the throttle, so a deployment "
+        "that has not set the URL behaves exactly as it did before this existed",
+        isinstance(store, MemoryStorage),
+        type(store).__name__,
+    )
+
+# --- 8b. the day's budget
+env(AI_DAILY_MESSAGE_LIMIT="20")
+day = client.post(
+    "/api/auth/onboarding",
+    json={**ONBOARD, "display_name": "Anya", "class_level": "class-11"},
+)
+check("a student for the budget checks can be onboarded", day.status_code == 200, day.text[:200])
+head_c = {"authorization": f"Bearer {day.json()['token']}"}
+user_c = day.json()["user"]["id"]
+sid_c = client.post("/api/conversations", json={"kind": "chat"}, headers=head_c).json()["id"]
+# An opening line from the guide is stored when the conversation is made, so the transcript is
+# measured as a difference rather than against zero.
+start_rows = rows(sid_c)
+check("their conversation opens with only the guide's own first line", start_rows == 1, start_rows)
+
+codes = []
+refusal = None
+for ask in range(1, 22):
+    reply = client.post(
+        f"/api/conversations/{sid_c}/messages",
+        json={"message": f"Which stream fits me, question {ask}?"},
+        headers=head_c,
+    )
+    codes.append(reply.status_code)
+    if ask == 20:
+        rows_at_twenty = rows(sid_c)
+    if ask == 21:
+        refusal = reply
+
+check("the twentieth reply of the day is served", codes[19] == 200, codes)
+check("the twenty-first is refused", refusal is not None and refusal.status_code == 429, codes[-1])
+check(
+    "…and twenty asks of the same rule never once produced a server error",
+    not any(code >= 500 for code in codes),
+    codes,
+)
+check(
+    "the counter and the transcript agree: twenty asks left twenty questions and twenty answers",
+    rows_at_twenty == start_rows + 40,
+    f"{rows_at_twenty} rows, started at {start_rows}",
+)
+check(
+    "a refusal adds no row to the transcript, so a child's history is not a wall of refusals",
+    rows(sid_c) == rows_at_twenty,
+    f"{rows(sid_c)} after {rows_at_twenty} before",
+)
+sentence = str((refusal.json().get("detail") if refusal else "") or "")
+check(
+    "the refusal is the one fixed sentence, with the day's own number in it",
+    sentence == ai_budget.refusal_sentence(20),
+    sentence[:160],
+)
+check(
+    "…and it names the reset as midnight in the student's own day rather than a countdown",
+    "midnight" in sentence and "your time" in sentence,
+    sentence[:160],
+)
+check(
+    "…and it says what is still open, not what has been taken away",
+    "stays saved" in sentence and "still open" in sentence,
+    sentence[:160],
+)
+check(
+    "…and it is not a plan wall: no price, no upgrade, nothing a child reads as a debt",
+    not any(word in sentence.lower() for word in ("pay", "plan", "upgrade", "subscribe", "₹")),
+    sentence[:160],
+)
+# The header is the wait until *their* local midnight, which is the number the sentence
+# promises. `RATE_LIMIT_CHAT=2 per minute` would have said 60, so a 60 here would mean the
+# ceiling was being enforced by the wrong rule.
+_now = datetime.now(timezone.utc)
+_to_midnight = max(60, int((entitlements.day_boundaries(_now)[1] - _now).total_seconds()) + 60)
+after = refusal.headers.get("retry-after", "") if refusal else ""
+check(
+    "the refusal's Retry-After is the wait until the student's day ends, not a minute",
+    after.isdigit() and int(after) == _to_midnight,
+    f"{after} vs {_to_midnight}",
+)
+check(
+    "the refusal is counted: the counter stopped at the ceiling and did not climb past it",
+    ai_budget.spent_today(user_c) == 21,
+    ai_budget.spent_today(user_c),
+)
+
+# The other two addresses that buy a reply, and the streaming one. A ceiling the chat alone
+# answered to would be a ceiling with a door in it, and the stream is the door somebody would
+# find: it is the address the app actually uses.
+stream_refused = client.post(
+    f"/api/conversations/{sid_c}/messages/stream",
+    json={"message": "and what about teaching?"},
+    headers=head_c,
+)
+check(
+    "the streaming address answers a spent account with a status, not an empty stream",
+    stream_refused.status_code == 429
+    and not stream_refused.text.startswith("event: meta"),
+    f"{stream_refused.status_code} {stream_refused.text[:120]}",
+)
+interview_refused = client.post(
+    "/api/ai/mock-interview", json={"role": "bank clerk", "history": []}, headers=head_c
+)
+check(
+    "a practice-interview turn is refused by the same ceiling",
+    interview_refused.status_code == 429,
+    f"{interview_refused.status_code} {interview_refused.text[:120]}",
+)
+resume_refused = client.post(
+    "/api/ai/resume-suggest", json={"target_role": "bank clerk"}, headers=head_c
+)
+check(
+    "…and so is a resume suggestion",
+    resume_refused.status_code == 429,
+    f"{resume_refused.status_code} {resume_refused.text[:120]}",
+)
+check(
+    "…and neither of them wrote anything either",
+    rows(sid_c) == rows_at_twenty,
+    rows(sid_c),
+)
+
+# The case the ceiling must never reach: a message that reads as a disclosure is answered
+# whatever the counter says, and answering it from the script costs nothing, so refusing it
+# would be the worst bug in the file.
+spent_before = ai_budget.spent_today(user_c)
+disclosure = client.post(
+    f"/api/conversations/{sid_c}/messages",
+    json={"message": "someone at home beats me and I do not know what to do"},
+    headers=head_c,
+)
+check(
+    "an exhausted account is still answered when the words read as a disclosure",
+    disclosure.status_code == 200,
+    f"{disclosure.status_code} {disclosure.text[:160]}",
+)
+check(
+    "…and that reply is free, because the guard lets it through before it counts anything",
+    ai_budget.spent_today(user_c) == spent_before,
+    f"{ai_budget.spent_today(user_c)} vs {spent_before}",
+)
+check(
+    "…and it arrives flagged for support, which is the whole reason it was never a budget case",
+    disclosure.json().get("needs_support") is True,
+    disclosure.json().get("needs_support"),
+)
+check(
+    "one account's ceiling is not a classroom's: another student still has their day",
+    client.post(
+        f"/api/conversations/{sid_b}/messages",
+        json={"message": "what about engineering"},
+        headers=head_b,
+    ).status_code
+    == 200,
+)
+
+env(AI_DAILY_MESSAGE_LIMIT="0")
+check(
+    "AI_DAILY_MESSAGE_LIMIT=0 removes the ceiling, for a deployment that wants only the "
+    "per-minute rule and says so in the environment rather than in the code",
+    client.post(
+        f"/api/conversations/{sid_c}/messages",
+        json={"message": "question after the ceiling was lifted"},
+        headers=head_c,
+    ).status_code
+    == 200,
+)
+env(AI_DAILY_MESSAGE_LIMIT="20")
+
+# A counter that cannot be reached is a weaker guard, never an outage in front of a student —
+# the same judgement `throttle_reads` and slowapi's own fallback make, proved on the budget.
+broken_budget_store = ai_budget.shared_store
+ai_budget.shared_store = lambda: (_ for _ in ()).throw(ConnectionError("redis is down"))
+try:
+    outage = client.post(
+        f"/api/conversations/{sid_c}/messages",
+        json={"message": "asked while the counter is unreachable"},
+        headers=head_c,
+    )
+finally:
+    ai_budget.shared_store = broken_budget_store
+check(
+    "with the budget counter unreachable the question is answered, not failed",
+    outage.status_code == 200,
+    f"{outage.status_code} {outage.text[:120]}",
+)
+
+# --- 8c. the circuit breaker
+# Port 9 is the discard port: nothing listens on it, so every call fails in the same instant
+# with a connection error and the suite neither waits forty-five seconds nor reaches the
+# internet. That is what makes it possible to break a configured provider repeatedly on
+# purpose, which is the only way this half of the section can be tested at all.
+env(
+    AI_DAILY_MESSAGE_LIMIT="200",
+    AI_PROVIDER="openai_compatible",
+    AI_API_KEY="sk-a-string-that-opens-nothing",
+    AI_BASE_URL="http://127.0.0.1:9/v1",
+    AI_BREAKER_FAILURES="3",
+    AI_BREAKER_WINDOW_SECONDS="60",
+    AI_BREAKER_COOLDOWN_SECONDS="3",
+)
+ai_breaker.note_success()
+check("the breaker starts closed", ai_breaker.is_open() is False, ai_breaker.state())
+
+asked = ai_provider._openai_compatible_respond
+streak = []
+for ask in range(1, 4):
+    out = client.post(
+        f"/api/conversations/{sid_b}/messages",
+        json={"message": f"asked while the provider is down, {ask}"},
+        headers=head_b,
+    )
+    streak.append((out.status_code, out.json().get("provider"), out.json()["reply"]["demo_generated"]))
+check(
+    "a student never sees the provider's failure: all three asks are answered",
+    [row[0] for row in streak] == [200, 200, 200],
+    streak,
+)
+check(
+    "…and each of the three is labelled as the built-in guide's words, not the model's",
+    all(row[1] == "demo" and row[2] is True for row in streak),
+    streak,
+)
+check(
+    "the third failure in a row opens the breaker",
+    ai_breaker.is_open() is True,
+    ai_breaker.state(),
+)
+open_state = ai_breaker.state()
+check(
+    "…and it resets the streak underneath the cooldown, so the count is failures since the last reply",
+    open_state["failures"] == 0 and open_state["trips_after"] == 3,
+    open_state,
+)
+check(
+    "…and it reports the wait it just started",
+    0 < open_state["seconds_left"] <= 3,
+    open_state,
+)
+
+
+async def _never_ask(*_a, **_k):
+    raise AssertionError("the provider was asked while the breaker was open")
+
+
+ai_provider._openai_compatible_respond = _never_ask
+not_asked, cooled_body = False, {}
+try:
+    cooled = client.post(
+        f"/api/conversations/{sid_b}/messages",
+        json={"message": "asked while the breaker is cooling"},
+        headers=head_b,
+    )
+    not_asked = cooled.status_code == 200
+    cooled_body = cooled.json() if not_asked else {}
+except AssertionError as exc:
+    # Reaching this line means the route did ask the provider, which is the thing the check
+    # is about: the assertion the stub throws is turned into a failed check rather than a
+    # stack trace, so the run finishes and says which of its claims did not hold.
+    not_asked, cooled_body = False, {"why": str(exc)}
+finally:
+    ai_provider._openai_compatible_respond = asked
+check(
+    "while the breaker is open the provider is not called at all — no forty-five-second "
+    "wait for the child, no request for the outage to page somebody over",
+    not_asked,
+    cooled_body,
+)
+check(
+    "…and the reply still arrives, still from the script, even though this deployment names "
+    "a real provider — which is what the deployment screen's breaker row is for",
+    cooled_body.get("provider") == "demo"
+    and cooled_body.get("reply", {}).get("demo_generated") is True,
+    cooled_body.get("provider"),
+)
+left = ai_breaker.state()["seconds_left"]
+for _ in range(4):
+    ai_breaker.note_failure()
+check(
+    "failures during a cooldown do not lengthen it: a provider that stays broken is retried "
+    "on schedule rather than pushed further away by its own outage",
+    ai_breaker.state()["seconds_left"] <= left,
+    f"{ai_breaker.state()['seconds_left']} vs {left}",
+)
+time.sleep(3.2)
+check("the breaker closes when the cooldown ends", ai_breaker.is_open() is False, ai_breaker.state())
+
+
+async def _answered(*_a, **_k):
+    """A provider that came back: the shape `_openai_compatible_respond` returns."""
+    return ai_provider.GuideReply(
+        text="Nursing needs biology in class 11. Ask your school about the subjects.",
+        stage=1,
+        themes=[],
+        provider="openai_compatible",
+        demo_generated=False,
+    )
+
+
+ai_provider._openai_compatible_respond = _answered
+try:
+    back = client.post(
+        f"/api/conversations/{sid_b}/messages",
+        json={"message": "asked after the provider came back"},
+        headers=head_b,
+    )
+finally:
+    ai_provider._openai_compatible_respond = asked
+check(
+    "after the cooldown the provider is asked again, and its answer is the one the child reads",
+    back.status_code == 200 and back.json().get("provider") == "openai_compatible"
+    and back.json()["reply"]["demo_generated"] is False,
+    f"{back.status_code} {back.json().get('provider')}",
+)
+check(
+    "…and one reply that came through ends the streak, so a flaky provider is never taken "
+    "out of service for an afternoon",
+    ai_breaker.is_open() is False and ai_breaker.state()["failures"] == 0,
+    ai_breaker.state(),
+)
+ai_breaker.note_failure()
+check(
+    "a single failure on its own does not open it again",
+    ai_breaker.is_open() is False and ai_breaker.state()["failures"] == 1,
+    ai_breaker.state(),
+)
+
+# The breaker's own store going away answers the same way the budget's does: report closed,
+# keep serving. A Redis that is restarting must not become a deployment that has decided on
+# its own that the provider is broken.
+broken_breaker_store = ai_breaker.shared_store
+ai_breaker.shared_store = lambda: (_ for _ in ()).throw(ConnectionError("redis is down"))
+try:
+    breaker_outage = client.post(
+        f"/api/conversations/{sid_b}/messages",
+        json={"message": "asked while the breaker cannot count"},
+        headers=head_b,
+    )
+    blind = ai_breaker.is_open()
+finally:
+    ai_breaker.shared_store = broken_breaker_store
+check(
+    "with the breaker's counter unreachable the message is still answered",
+    breaker_outage.status_code == 200,
+    f"{breaker_outage.status_code} {breaker_outage.text[:120]}",
+)
+check(
+    "…and an uncountable provider is assumed to be working, not taken out of service",
+    blind is False,
+    blind,
+)
+
+# --- 8d. the same asks, against each possible store
+def _budget_sequence(holder, limit: int = 4) -> list[bool]:
+    """Allow/refuse for six asks of one day against one store, in order."""
+    key = "ai-budget:900001:20260101T183000Z"
+    holder.clear(key)
+    return [holder.incr(key, 3600) <= limit for _ in range(6)]
+
+
+def _breaker_sequence(holder, trips: int = 3) -> list[bool]:
+    """Whether the breaker is open after each of five failures against one store."""
+    holder.clear(ai_breaker.FAILS)
+    holder.clear(ai_breaker.OPEN)
+    seen = []
+    for _ in range(5):
+        holder.incr(ai_breaker.FAILS, 60)
+        if int(holder.get(ai_breaker.FAILS)) >= trips:
+            holder.incr(ai_breaker.OPEN, 30)
+            seen.append(True)
+        else:
+            seen.append(int(holder.get(ai_breaker.OPEN)) > 0)
+    return seen
+
+
+if REDIS_URL:
+    try:
+        counter_a = RedisStorage(REDIS_URL, key_prefix="LIMITS")
+        counter_b = RedisStorage(REDIS_URL, key_prefix="LIMITS")
+    except Exception as exc:
+        print(
+            f"  [SKIP] RATE_LIMIT_REDIS_URL points at {rate_limit_module._host_of(REDIS_URL)}, "
+            f"which did not answer ({type(exc).__name__}) — the shared-store half was not run "
+            "against a Redis for real"
+        )
+        counter_a = counter_b = None
+    if counter_a is not None:
+        budget = _budget_sequence(counter_a)
+        budget_again = _budget_sequence(counter_b)
+        budget_memory = _budget_sequence(MemoryStorage())
+        expected = [True, True, True, True, False, False]
+        check(
+            "one Redis database gives one ceiling: a second connection to it refuses the "
+            "same fifth ask, which is the whole claim about serverless workers",
+            budget == budget_again == expected,
+            f"{budget} vs {budget_again}",
+        )
+        check(
+            "…and the memory store answers the identical sequence to the identical asks, so "
+            "setting the URL changes where the number lives and not what it decides",
+            budget_memory == budget,
+            f"{budget_memory} vs {budget}",
+        )
+        check(
+            "the breaker opens on the same count in either store",
+            _breaker_sequence(counter_a) == _breaker_sequence(MemoryStorage())
+            == [False, False, True, True, True],
+            _breaker_sequence(counter_a),
+        )
+        counter_a.clear(ai_breaker.FAILS)
+        counter_a.clear(ai_breaker.OPEN)
+else:
+    # The honest half of the sentence: what this run proved is the memory store's behaviour,
+    # which is what a deployment without the URL actually uses. The Redis path is checked by
+    # the same two sequence helpers above, and running them needs a Redis of your own.
+    print(
+        "  [SKIP] no RATE_LIMIT_REDIS_URL in this shell, so the shared-store checks were not "
+        "run against a Redis — set one and this section proves two connections give the same "
+        "ceiling; the memory decisions above are the ones this process served"
+    )
+    check(
+        "the memory store alone still gives the ceiling the rules say, four allowed and the "
+        "fifth refused, which is what the checks over the wire above were counting",
+        _budget_sequence(MemoryStorage()) == [True, True, True, True, False, False]
+        and _budget_sequence(shared_store()) == [True, True, True, True, False, False],
+    )
+
+# --- put this process back as the rest of the suite expects it
+# Each patch above was undone in the `finally` of the check it belongs to; what is left is
+# the breaker's own counters, the environment, and the minute rules.
+ai_breaker.note_success()
+for _name, _value in SAVED.items():
+    if _value is None:
+        os.environ.pop(_name, None)
+    else:
+        os.environ[_name] = _value
+get_settings.cache_clear()
+limiter.enabled = True
+check(
+    "the per-minute throttles are switched back on, and the shipped AI settings are back",
+    limiter.enabled is True
+    and get_settings().ai_daily_message_limit == 60
+    and get_settings().ai_provider == "demo"
+    and get_settings().ai_breaker_failures == 5,
+    {name: os.environ.get(name) for name in ("AI_DAILY_MESSAGE_LIMIT", "AI_PROVIDER")},
 )
 
 print("\n" + "=" * 72)
