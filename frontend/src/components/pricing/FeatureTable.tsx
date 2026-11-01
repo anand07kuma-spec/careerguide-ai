@@ -17,7 +17,8 @@ import type { FeatureRow, PricingPlan } from "@/lib/types";
  *
  * On a phone the columns scroll sideways while the row labels stay, because four
  * plans squeezed into 375px would either wrap every word or shrink the type below
- * what a parent can read.
+ * what a parent can read. `contain-paint` is load-bearing: without it Chrome adds
+ * the table's hidden width to the whole page's horizontal scroll.
  */
 
 function Cell({ value }: { value: boolean | string | undefined }) {
@@ -53,7 +54,7 @@ export function FeatureTable({
   const t = useT();
 
   return (
-    <div className="cg-scrollbar overflow-x-auto rounded-card border border-line bg-surface">
+    <div className="cg-scrollbar contain-paint overflow-x-auto rounded-card border border-line bg-surface">
       <table className="w-full min-w-[42rem] border-collapse text-sm">
         <caption className="sr-only">
           {t("What each plan includes")}

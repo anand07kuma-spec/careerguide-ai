@@ -460,7 +460,7 @@ export function Screen({
       <div className="mb-5 flex flex-wrap items-start justify-between gap-3 print:hidden sm:mb-7">
         <div className="min-w-0">
           {badge ? <div className="mb-2">{badge}</div> : null}
-          <h1 className="text-xl font-semibold tracking-tight text-ink sm:text-2xl">{t(title)}</h1>
+          <h1 className="text-xl font-semibold tracking-tight text-heading sm:text-2xl">{t(title)}</h1>
           {description ? (
             <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-muted">
               {typeof description === "string" ? t(description) : description}
