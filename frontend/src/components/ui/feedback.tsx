@@ -110,6 +110,84 @@ export function DashboardSkeleton() {
   );
 }
 
+/**
+ * The signed-in frame, drawn in grey, before anybody knows which screen is coming.
+ *
+ * `src/app/app/loading.tsx` renders this. It is the same measurement as `AppShell` —
+ * a 264px navy column, the phone's header bar, the thumb bar across the bottom — so
+ * the page that arrives does not move underneath the student, which on a low-end
+ * handset over a slow link is the difference between "it is loading" and "it broke".
+ *
+ * The frame only, deliberately: `/app/settings` and `/app/careers` do not have the
+ * same content, and a shell that guessed the wrong one would be a promise the app
+ * has no way to keep. `DashboardSkeleton` above knows what it is waiting for; this
+ * one does not, and says nothing beyond the shape it actually shares with every
+ * signed-in screen.
+ *
+ * `aria-hidden` for the same reason: the shapes mean nothing to anyone listening.
+ */
+export function AppShellSkeleton() {
+  return (
+    <div
+      aria-hidden
+      className="min-h-dvh bg-canvas lg:grid lg:grid-cols-[264px_minmax(0,1fr)]"
+    >
+      {/* The sidebar: wordmark, four section headings and the rows under them, at
+          the real rows' height so nothing jumps when the links replace them. */}
+      <div className="hidden h-dvh flex-col bg-navy/5 px-4 py-5 lg:flex">
+        <Skeleton className="mb-6 h-7 w-40 rounded-lg bg-slate-200/60" />
+        {Array.from({ length: 3 }, (_, group) => (
+          <div key={group} className="mb-5">
+            <Skeleton className="mb-2.5 ml-3 h-3 w-20 rounded-md bg-slate-200/60" />
+            {Array.from({ length: 3 }, (_, row) => (
+              <Skeleton key={row} className="mb-1 h-10 w-full rounded-xl bg-slate-200/60" />
+            ))}
+          </div>
+        ))}
+        <Skeleton className="mt-auto h-14 w-full rounded-xl bg-slate-200/60" />
+      </div>
+
+      <div className="flex min-w-0 flex-col">
+        {/* The phone's header, which is the one thing a student's thumb is
+            already looking for. */}
+        <div className="flex items-center gap-3 border-b border-line px-4 py-3 lg:hidden">
+          <Skeleton className="h-9 w-20 rounded-xl bg-slate-200/60" />
+          <Skeleton className="h-5 w-24 rounded-lg bg-slate-200/60" />
+          <Skeleton className="ml-auto h-9 w-9 rounded-full bg-slate-200/60" />
+        </div>
+
+        <div className="mx-auto w-full max-w-6xl space-y-5 px-4 py-6 sm:px-6 sm:py-8">
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-24 rounded-md bg-slate-200/60" />
+            <Skeleton className="h-7 w-48 rounded-lg" />
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            {Array.from({ length: 3 }, (_, i) => (
+              <Skeleton key={i} className="h-[104px]" />
+            ))}
+          </div>
+          <Skeleton className="h-[220px] rounded-card" />
+        </div>
+      </div>
+
+      {/* The bottom bar, with its five slots — including the raised one in the
+          middle that is the AI Call. */}
+      <div className="fixed inset-x-0 bottom-0 border-t border-line bg-surface/95 px-2 py-2 lg:hidden">
+        <div className="mx-auto flex max-w-lg items-center justify-between">
+          {Array.from({ length: 5 }, (_, i) => (
+            <div key={i} className="flex flex-1 flex-col items-center gap-1.5">
+              <Skeleton
+                className={cn("rounded-full bg-slate-200/60", i === 2 ? "h-11 w-11" : "h-8 w-8")}
+              />
+              <Skeleton className="h-2.5 w-10 rounded-sm bg-slate-200/60" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function LoadingPanel({ label = "Loading" }: { label?: string }) {
   const t = useT();
   return (

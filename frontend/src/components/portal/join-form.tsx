@@ -115,8 +115,17 @@ export function JoinForm({
               ) : null}
             </div>
             {logoUrl ? (
+              // `alt=""` already says the picture carries nothing a person needs: the
+              // portal's own name is the heading above it. Lite mode takes it away on the
+              // strength of that, because this is the only image in the app that arrives
+              // over the network, and it arrives from somebody else's host.
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={logoUrl} alt="" className="h-12 w-auto max-w-[160px] rounded-xl object-contain" />
+              <img
+                src={logoUrl}
+                alt=""
+                data-decorative
+                className="h-12 w-auto max-w-[160px] rounded-xl object-contain"
+              />
             ) : null}
             {branding.state === "error" && !branding.data ? (
               <p className="text-sm text-muted">

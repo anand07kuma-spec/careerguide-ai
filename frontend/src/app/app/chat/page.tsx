@@ -28,7 +28,9 @@ import { useToast } from "@/components/ui/toast";
 import { BACKEND_URL, api, isOffline } from "@/lib/api";
 import type { RoadmapPlan } from "@/lib/assessments";
 import { useSession } from "@/lib/session";
+import { forgetConversation, publishConversation } from "@/lib/offline";
 import { useT, useTf, useUiLang } from "@/lib/i18n";
+import { useLite } from "@/lib/lite";
 import { classLabel, cn } from "@/lib/utils";
 import { THEME_LABELS, type ChatMessage, type ConversationInfo, type ThemeKey } from "@/lib/types";
 import {
@@ -86,6 +88,10 @@ function ChatThread() {
   const { toast } = useToast();
   const t = useT();
   const tf = useTf();
+  // Only ever passed down to `streamMessage`, which decides the next turn's route with
+  // it. Nothing on this screen looks different in Lite mode, and that is the point: the
+  // answer arrives in the same bubbles either way, one piece at a time or all at once.
+  const lite = useLite();
   const player = useAudioPlayer();
 
   const [session, setSession] = useState<ConversationInfo | null>(null);
@@ -247,6 +253,22 @@ function ChatThread() {
     scrollToEnd();
   }, [messages, sending, scrollToEnd]);
 
+  // The offline copy follows the thread rather than a timer: it is handed to the worker
+  // once a turn is finished, and `publishConversation` turns into a deletion by itself
+  // the moment the student has history switched off, so the device keeps following the
+  // switch and not the last moment it happened to be on.
+  //
+  // A bubble that is still being written is not handed over. Half an answer read next
+  // week by whoever picks the phone up is a worse thing to find there than no answer.
+  useEffect(() => {
+    if (sending || !session || messages.length === 0) return;
+    publishConversation(
+      { id: session.id, kind: session.kind, stage: session.stage },
+      messages.map(({ role, content, created_at }) => ({ role, content, created_at })),
+      settings.save_history
+    );
+  }, [sending, session, messages, settings.save_history]);
+
   // The player object is a new literal every render, so depending on `player`
   // itself would stop the voice mid-sentence. `stop` is stable, so this only
   // ever fires when the screen unmounts.
@@ -315,7 +337,8 @@ function ChatThread() {
           trimmed,
           speakOn,
           pinned ? planId : null,
-          putFragment
+          putFragment,
+          lite
         );
 
         if (answer.kind === "failed") {
@@ -407,7 +430,7 @@ function ChatThread() {
         setSending(false);
       }
     },
-    [dictation, language, pinned, planId, player, reload, sending, session, speakOn, t, tf],
+    [dictation, language, lite, pinned, planId, player, reload, sending, session, speakOn, t, tf],
   );
 
   /** Asking again from under the bubble whose answer stopped partway. */
@@ -446,6 +469,8 @@ function ChatThread() {
       if (session) {
         try {
           await api.endConversation(session.id);
+          // Left means left: the thread this device was holding is the one just closed.
+          forgetConversation();
         } catch {
           // The new chat still opens; only the old thread's status is unsure, and
           // that much is worth saying rather than swallowing.
@@ -467,6 +492,7 @@ function ChatThread() {
     cancelBrowserTts();
     try {
       await api.endConversation(session.id);
+      forgetConversation();
       toast(t("Conversation closed. Your progress is on the Journey page."), "success");
       setSession(null);
       setMessages([]);
@@ -480,6 +506,7 @@ function ChatThread() {
     if (!session) return;
     try {
       await api.clearConversation(session.id);
+      forgetConversation();
       setMessages([]);
       setNotice(t("Earlier messages were deleted from the server."));
       toast(t("Messages deleted."), "success");

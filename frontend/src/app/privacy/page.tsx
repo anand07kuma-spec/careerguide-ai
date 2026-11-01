@@ -182,6 +182,18 @@ const COOKIE_KEYS = [
     key: "careerguide.consent",
     body: "The answer given to the storage notice — accepted, rejected, or managed — so the site does not ask again on every visit.",
   },
+  {
+    key: "careerguide.theme",
+    body: "Which colours this device asked for — light, dark, or following the device's own setting.",
+  },
+  {
+    key: "careerguide.lite",
+    body: "Whether this device asked for the lighter interface, the one that drops animations and charts so a page arrives on a slow connection. With nothing stored here the app judges from the connection itself, once, when a screen opens.",
+  },
+  {
+    key: "careerguide.stream-slow",
+    body: "One switch saying that on this connection a reply took longer than two seconds to begin arriving in pieces, so the next one is asked for all at once instead. Nothing you said is in it.",
+  },
 ];
 
 /**
@@ -514,7 +526,7 @@ export default function PrivacyPage() {
         </p>
         <p>
           {t(
-            "Besides that cookie, it stores three small values in this browser’s own localStorage, which behave like the app’s memory of who you are on this device:",
+            "Besides that cookie, it stores a small number of values in this browser’s own localStorage, which behave like the app’s memory of who you are on this device and of how you asked it to look and behave:",
           )}
         </p>
         <ul className="space-y-2">
@@ -526,7 +538,12 @@ export default function PrivacyPage() {
         </ul>
         <p>
           {t(
-            "Clearing this site’s data in the browser removes the three values above. The session cookie lives against the address that wrote it, which on this deployment is the API’s own host, so clearing it can take one extra step there — and either way the result is the same: the app can no longer find this student’s progress, which is the trade-off the introduction describes.",
+            "One more thing can be kept in this browser, outside localStorage and outside the reach of page code: on a device that has been asked to work without a connection, the app holds a copy of your own last saved conversation, along with the career pages you last read, in the browser’s own storage, so that both open again when the internet does not. The copy is keyed to the same device id listed above, which is why another student who picks up this phone is not handed your conversation. It exists only while the switch that saves history is on, and it goes when you press Start over, delete your history, end or clear the conversation, switch saving off in Settings, or press Forget on the offline screen — and clearing this site’s data in the browser clears it too.",
+          )}
+        </p>
+        <p>
+          {t(
+            "Clearing this site’s data in the browser removes every value above. The session cookie lives against the address that wrote it, which on this deployment is the API’s own host, so clearing it can take one extra step there — and either way the result is the same: the app can no longer find this student’s progress, which is the trade-off the introduction describes.",
           )}
         </p>
         <p>

@@ -74,7 +74,7 @@ export default function TermsPage() {
         </p>
         <p>
           {t(
-            "If these terms do not work for you, close the tab. Nothing else has to be undone: the site keeps no email, phone or password that would have to be cancelled, and clearing its data removes the four values it stored in this browser. What clearing does not touch is what the server gathered about the student during the conversation — that is what Settings → Delete account erases, and it is the one step that removes those rows rather than only throwing away the key to them.",
+            "If these terms do not work for you, close the tab. Nothing else has to be undone: the site keeps no email, phone or password that would have to be cancelled, and clearing its data removes what it stored in this browser — the handful of values the privacy policy lists, and the offline copy of your own conversation, if this device was ever asked to work without a connection. What clearing does not touch is what the server gathered about the student during the conversation — that is what Settings → Delete account erases, and it is the one step that removes those rows rather than only throwing away the key to them.",
           )}
         </p>
         <p>

@@ -31,6 +31,7 @@ import {
 import { Wordmark } from "@/components/brand";
 import { api } from "@/lib/api";
 import { useT } from "@/lib/i18n";
+import { useLite } from "@/lib/lite";
 import { useSession } from "@/lib/session";
 import { classLabel, cn, initials } from "@/lib/utils";
 import { useResource } from "@/lib/use-resource";
@@ -156,6 +157,13 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const t = useT();
   const { status, user, profile, isParent } = useSession();
+  // Lite stops this shell from asking the server for the pages it merely points at.
+  // The sidebar is on screen from the first moment and holds nine to twenty links,
+  // so on the connection this mode is for, "prefetch what is visible" is a queue of
+  // downloads in front of the page the student actually opened. `undefined` everywhere
+  // else, which is Next's own answer and not a downgrade of the full interface.
+  const lite = useLite();
+  const prefetchMode = lite ? false : undefined;
   const [drawerOpen, setDrawerOpen] = useState(false);
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const openButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -241,7 +249,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const sidebar = (
     <nav aria-label={t("Main")} className="flex h-full flex-col bg-navy text-white/80">
       <div className="px-5 py-5">
-        <Link href="/" className="block">
+        <Link href="/" prefetch={prefetchMode} className="block">
           <Wordmark tone="white" />
         </Link>
       </div>
@@ -263,6 +271,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                     <li key={item.href}>
                       <Link
                         href={item.href}
+                        prefetch={prefetchMode}
                         onClick={() => closeDrawer(false)}
                         aria-current={active ? "page" : undefined}
                         className={cn(
@@ -357,6 +366,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                   <li key={item.href}>
                     <Link
                       href={item.href}
+                      prefetch={prefetchMode}
                       onClick={() => closeDrawer(false)}
                       aria-current={active ? "page" : undefined}
                       className={cn(
@@ -414,6 +424,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <Wordmark compact />
           <Link
             href="/app/settings"
+            prefetch={prefetchMode}
             aria-label={t("Profile and settings")}
             className="ml-auto flex h-9 w-9 items-center justify-center rounded-full bg-brand text-xs font-semibold text-white"
           >
@@ -452,6 +463,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               <li key={item.href} className="flex-1">
                 <Link
                   href={item.href}
+                  prefetch={prefetchMode}
                   aria-current={active ? "page" : undefined}
                   className={cn(
                     "flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition-colors",

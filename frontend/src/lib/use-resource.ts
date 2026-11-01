@@ -16,6 +16,10 @@ export function messageFor(error: unknown): string {
   // parse — is interface copy and belongs in the reader's language. A message from the API
   // is content, and `translate` answers with the input when the dictionary has no such key,
   // so the two travel through the same lookup.
+  //
+  // "You are offline" and "we cannot reach our server" are chosen by `unreachable()` in
+  // `lib/api.ts`, where the request actually failed, so every screen that shows this
+  // string — and every screen that shows `error.message` straight — tells the same story.
   if (error instanceof ApiError) return translate(error.message);
   if (error instanceof Error) return translate(error.message);
   return translate("Something went wrong.");

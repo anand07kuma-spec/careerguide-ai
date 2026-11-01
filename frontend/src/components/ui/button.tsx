@@ -3,6 +3,7 @@
 import { forwardRef, type AnchorHTMLAttributes, type ButtonHTMLAttributes, type ReactNode } from "react";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
+import { useLite } from "@/lib/lite";
 import { cn } from "@/lib/utils";
 
 type Variant = "primary" | "secondary" | "ghost" | "danger" | "success" | "outline";
@@ -106,6 +107,7 @@ export function LinkButton({
   className?: string;
   children: ReactNode;
 } & Omit<AnchorHTMLAttributes<HTMLAnchorElement>, "href">) {
+  const lite = useLite();
   const external = /^https?:\/\//.test(href);
   const className2 = buttonClasses(variant, size, className);
   if (external) {
@@ -116,7 +118,12 @@ export function LinkButton({
     );
   }
   return (
-    <Link href={href} className={className2} {...rest}>
+    // Lite turns prefetching off, and this is the one place to say it: almost every
+    // navigational button in the app is built here, and a dashboard that draws eight
+    // of them spends its first seconds asking the server for eight pages the student
+    // has not clicked. `undefined` keeps Next's own answer for everyone else, so
+    // this does not make the full interface slower to reach a page.
+    <Link href={href} prefetch={lite ? false : undefined} className={className2} {...rest}>
       {children}
     </Link>
   );

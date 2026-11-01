@@ -90,6 +90,13 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      # `public/sw.js` is served verbatim and no compiler ever reads it, so the two
+      # copies of the privacy list it holds — here and `src/lib/site.ts` — are checked
+      # against each other instead. This is the step that lets `sw.js` say in its own
+      # header that a drift fails the build rather than merely should.
+      - name: Offline paths
+        run: node scripts/offline-paths.mjs
+
       - name: Production build
         env:
           NEXT_PUBLIC_BACKEND_URL: http://localhost:8000

@@ -11,6 +11,7 @@ import {
 } from "react";
 import { api, ApiError, isOffline, setAuthToken } from "./api";
 import { deviceId, rotateDeviceId } from "./device";
+import { forgetConversation } from "./offline";
 import type { GuestResult, OnboardingPayload, Session, Settings, StudentProfile, User } from "./types";
 
 type Status = "loading" | "new-device" | "ready" | "offline";
@@ -203,6 +204,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     } catch {
       setAuthToken(null);
     }
+    // The offline copy goes with the account, before the id that keys it changes —
+    // after `rotateDeviceId()` this browser could no longer name the entry it is
+    // holding, and "we forgot you" that leaves a conversation behind is not forgetting.
+    forgetConversation();
     // Revoking the session is not enough: the device id would still be recognised on
     // the next page load and the same student would silently come back.
     setAuthToken(null);

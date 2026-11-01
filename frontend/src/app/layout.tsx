@@ -148,6 +148,43 @@ const SITE_SCHEMAS = [
  */
 const THEME_PREPAINT = `try{var c=null;try{c=localStorage.getItem("careerguide.theme")}catch(e){c=null}var d=!!window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches;document.documentElement.dataset.theme=c==="dark"||(c==="system"&&d)?"dark":"light"}catch(e){}`;
 
+/**
+ * Lite mode, decided the same way, in the same place.
+ *
+ * `careerguide.lite` is repeated as a literal here for the reason the comment
+ * above gives for the theme: this runs before `src/lib/lite.ts` exists as a
+ * module, and the two halves have to agree or the attribute flips under the first
+ * paint. The one thing this script adds over `theme.ts` is that it asks the
+ * browser about the link — `saveData`, then `effectiveType` — because a first
+ * visit has no stored choice to read, and a phone that arrives on `2g` should not
+ * spend its first three seconds downloading an animation it will never finish.
+ */
+const LITE_PREPAINT = `try{var c=null;try{c=localStorage.getItem("careerguide.lite")}catch(e){c=null}var n=navigator.connection||null;var s=!!n&&(n.saveData===true||["slow-2g","2g","3g"].indexOf(n.effectiveType||"")>-1);document.documentElement.dataset.lite=c==="lite"||((c===null||c==="auto")&&s)?"true":"false"}catch(e){}`;
+
+/**
+ * What a visitor with JavaScript switched off is told.
+ *
+ * Written once, in both languages, because there is no script left to pick one:
+ * the interface language lives in `localStorage`, which is a thing JavaScript does.
+ * Two sentences do the work — what will not happen, and what still will. The
+ * public pages of this site are server-rendered on purpose, so promising that
+ * nothing at all loads would be a lie, and a student on a shared handset whose
+ * family browser runs without script is better told that the careers list still
+ * reads than handed a blank page.
+ */
+/* hi-coverage:ignore-start */
+const NOSCRIPT_HTML = `
+<div style="margin:0 auto;max-width:36rem;padding:28px 20px 8px;font:15px/1.65 system-ui,-apple-system,'Segoe UI',Roboto,'Noto Sans',sans-serif;color:#12203a">
+  <p style="margin:0 0 10px;font-weight:600">This part of CareerGuide AI needs JavaScript to work.</p>
+  <p style="margin:0 0 6px;color:#4a5a75">The conversation with your guide, your study plans and the careers you save are all built in the browser, so while JavaScript is off these buttons do nothing. The public pages &mdash; the career list, the pricing, this policy &mdash; still open and read without it.</p>
+  <p style="margin:0 0 18px;color:#4a5a75">To carry on: switch JavaScript on for this site, then reload this page.</p>
+  <hr style="border:0;border-top:1px solid #dbe4f5;margin:0 0 18px" />
+  <p style="margin:0 0 10px;font-weight:600">कैरियरगाइड एआई का यह हिस्सा चलने के लिए JavaScript चाहता है।</p>
+  <p style="margin:0 0 6px;color:#4a5a75">गाइड से बातचीत, आपकी पढ़ाई के प्लान और सहेजे गए करियर — सब ब्राउज़र में बनते हैं, इसलिए JavaScript बंद रहते इन बटनों से कुछ नहीं होगा। सार्वजनिक पन्ने — करियर की सूची, कीमत, यह नीति — बिना JavaScript भी खुलते हैं और पढ़े जा सकते हैं।</p>
+  <p style="margin:0;color:#4a5a75">आगे बढ़ने के लिए: इस साइट के लिए JavaScript चालू करें, फिर यह पन्ना दोबारा खोलें।</p>
+</div>`;
+/* hi-coverage:ignore-end */
+
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html
@@ -155,8 +192,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       data-reduced-motion="false"
       data-high-contrast="false"
-      // The theme below is written onto this element before React exists, so its
-      // `data-theme` attribute is not something hydration should complain about.
+      data-lite="false"
+      // The theme and the interface weight below are written onto this element
+      // before React exists, so their `data-*` attributes are not something
+      // hydration should complain about.
       suppressHydrationWarning
     >
       <body className="flex min-h-full flex-col">
@@ -168,6 +207,17 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             client boundary — the same reason `request-lang.ts` re-states the
             language key. */}
         <script dangerouslySetInnerHTML={{ __html: THEME_PREPAINT }} />
+        {/* The same for Lite: `src/lib/lite.ts` is the half inside React, and this
+            is the half that decides the first paint. The `data-lite` attribute it
+            writes is what `globals.css` flattens motion and hides the decorative
+            pictures against, so a handset on `2g` never animates a frame before
+            it is asked whether it wants to. */}
+        <script dangerouslySetInnerHTML={{ __html: LITE_PREPAINT }} />
+        {/* First thing in the body, because a visitor with no script gets nothing
+            after it: the app's own markup is built by JavaScript, so this is the
+            only sentence such a person reads. Written out in both languages for
+            the reason in the comment above — there is no script left to choose. */}
+        <noscript dangerouslySetInnerHTML={{ __html: NOSCRIPT_HTML }} />
         <ServiceWorkerRegistration />
         <JsonLd data={SITE_SCHEMAS} />
         {/* Clerk only wraps the tree when this deployment has a publishable key.

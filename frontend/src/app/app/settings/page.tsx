@@ -10,6 +10,7 @@ import {
   Copy,
   Download,
   EyeOff,
+  Feather,
   Info,
   KeyRound,
   Languages as LanguagesIcon,
@@ -20,7 +21,9 @@ import {
   Moon,
   RotateCcw,
   ShieldCheck,
+  Signal,
   Smartphone,
+  Sparkles,
   Sun,
   Trash2,
   UserRound,
@@ -39,6 +42,8 @@ import { useToast } from "@/components/ui/toast";
 import { api, ApiError } from "@/lib/api";
 import { clerkEnabled } from "@/lib/clerk";
 import { setUiLang, useT, useTf, useUiLang } from "@/lib/i18n";
+import { setLiteChoice, useLite, useLiteChoice } from "@/lib/lite";
+import { forgetConversation } from "@/lib/offline";
 import { useSession } from "@/lib/session";
 import { setThemeChoice, useThemeChoice } from "@/lib/theme";
 import type {
@@ -263,6 +268,11 @@ export default function SettingsScreen() {
   const tf = useTf();
   const uiLang = useUiLang();
   const themeChoice = useThemeChoice();
+  // The stored choice and the answer it resolves to, because the sentence under
+  // the control has to be able to say "Automatic found a slow link" — which is
+  // Automatic's result, not Automatic's setting.
+  const liteChoice = useLiteChoice();
+  const lite = useLite();
 
   const [voices, setVoices] = useState<Resource<VoiceInfo>>(initial);
   const [health, setHealth] = useState<Resource<Health>>(initial);
@@ -568,6 +578,10 @@ export default function SettingsScreen() {
     }
     setClearingHistory(false);
     setHistoryModal(false);
+    // The server has the messages back; this handset keeps a copy it was handed for
+    // offline reading, and "Delete history" that left it there would be a delete that
+    // only went halfway. The worker holds one conversation, so one call clears it.
+    forgetConversation();
     await loadConversations();
     toast(
       failures === 0
@@ -1250,7 +1264,14 @@ export default function SettingsScreen() {
             <div className="space-y-3 rounded-2xl bg-canvas p-4">
               <Toggle
                 checked={settings?.save_history ?? false}
-                onChange={(next) => void patchSettings({ save_history: next })}
+                onChange={(next) => {
+                  // Switching this off takes the offline copy with it. What this
+                  // handset holds has to follow the switch and not the last moment
+                  // the switch happened to be on, or the sentence below would be a
+                  // promise the app broke the second it was made.
+                  if (!next) forgetConversation();
+                  void patchSettings({ save_history: next });
+                }}
                 // `Toggle` takes `t()` over the `label` and `description` it is given, so these
                 // two lines reach the dictionary already — the `=>` in `onChange` above hides
                 label="Save my conversation history"
@@ -1301,6 +1322,53 @@ export default function SettingsScreen() {
                 <p className="text-xs leading-relaxed text-muted">
                   {t(
                     "This changes light and dark on this device only, and it stays as you left it. System follows whatever your phone or browser is set to, including when it changes by itself in the evening.",
+                  )}
+                </p>
+              </div>
+              {/* The fourth control on this device, and the only one of the four that is
+                  about the network rather than the screen. It is here, beside the theme,
+                  because the connection a handset has is a fact about tonight and about
+                  this phone — not about the student, whose two children may be sitting on
+                  opposite sides of that line. Nothing is sent, so both answers can be kept. */}
+              <div className="space-y-2 border-t border-line pt-3.5">
+                <p className="flex items-center gap-1.5 text-sm font-medium text-ink">
+                  <Feather className="h-4 w-4 text-brand-dark" aria-hidden />
+                  {t("Lite mode")}
+                </p>
+                <PillGroup
+                  items={[
+                    { value: "auto", label: "Automatic", icon: <Signal className="h-4 w-4" aria-hidden /> },
+                    { value: "lite", label: "Lite", icon: <Feather className="h-4 w-4" aria-hidden /> },
+                    { value: "full", label: "Full", icon: <Sparkles className="h-4 w-4" aria-hidden /> },
+                  ]}
+                  value={liteChoice}
+                  onChange={(next) =>
+                    setLiteChoice(next === "lite" || next === "full" ? next : "auto")
+                  }
+                />
+                {/* Four sentences, because the honest answer differs depending on who
+                    decided: Automatic reports what it found, and a hand-picked Lite or
+                    Full says what it will keep doing even when the link changes. */}
+                <p className="text-xs leading-relaxed text-muted">
+                  {liteChoice === "auto"
+                    ? lite
+                      ? t(
+                          "Automatic found a slow connection on this device, or a request to save data, so the app is keeping itself light.",
+                        )
+                      : t(
+                          "Automatic found a quick connection on this device, so nothing is switched off. Pick Lite yourself if you want it on anyway.",
+                        )
+                    : liteChoice === "lite"
+                      ? t(
+                          "Animations, charts, pictures that are only for looking at, and pages you have not opened yet are all switched off. Where a chart was, the same numbers are written out as a list.",
+                        )
+                      : t(
+                          "Everything this app can show is switched on, even if this device's connection is slow.",
+                        )}
+                </p>
+                <p className="text-xs leading-relaxed text-muted">
+                  {t(
+                    "This choice lives on this device and is remembered. Once you pick Lite or Full, Automatic does not quietly put you back.",
                   )}
                 </p>
               </div>

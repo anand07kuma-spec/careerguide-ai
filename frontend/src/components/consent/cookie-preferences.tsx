@@ -35,7 +35,7 @@ export function CookiePreferences({ open, onClose }: { open: boolean; onClose: (
     necessary: {
       label: "Necessary",
       body: t(
-        "A random student id, a session token and your language choice, kept in this browser. The app cannot run without them, so this one cannot be switched off.",
+        "A random student id and the cookie that keeps this browser signed in. The app cannot run without them, so this one cannot be switched off.",
       ),
     },
     analytics: {
@@ -57,7 +57,7 @@ export function CookiePreferences({ open, onClose }: { open: boolean; onClose: (
     functional: {
       label: "Functional",
       body: t(
-        "Preferences that remember how the app behaves for you. Today the only one it keeps is the interface language, which is already counted under Necessary.",
+        "Preferences that remember how the app looks and behaves for you: the language, the light or dark colours, the lighter interface for a slow connection and the answer you give this panel. They are kept whichever answer you give here, because they are what the page you come back to is drawn from, and none of them leaves this browser. The privacy policy lists every one, including a switch that records only that a reply here began slowly.",
       ),
     },
   };
@@ -97,7 +97,7 @@ export function CookiePreferences({ open, onClose }: { open: boolean; onClose: (
         ))}
         <p className="text-xs leading-relaxed text-muted">
           {t(
-            "The values this site keeps for itself are not cookies — they sit in your own browser's storage, and clearing the site's data removes them. If analytics is switched on for this deployment and you accept it, Google's and Clarity's own scripts add cookies of theirs to this browser, and switching the answer off removes those. On a deployment where the optional email sign-in is switched on, Clerk's library keeps its own session values here too, and only for the students who use it.",
+            "Most of what this site keeps for itself is not a cookie — it sits in your own browser's storage, and clearing the site's data removes it. The one cookie it does write is the sign-in one the privacy policy names. Clearing removes the offline copy too: on a device that was asked to work without a connection this browser holds your own last saved conversation and the career pages you last read, so they open with no network, and that copy is keyed to this browser's own student id and also goes when you press Start over, delete your history, or switch saving history off in Settings. If analytics is switched on for this deployment and you accept it, Google's and Clarity's own scripts add cookies of theirs to this browser, and switching the answer off removes those. On a deployment where the optional email sign-in is switched on, Clerk's library keeps its own session values here too, and only for the students who use it.",
           )}{" "}
           <Link className="text-brand underline-offset-2 hover:underline" href="/privacy#cookies">
             {t("Read the privacy policy")}

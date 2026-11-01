@@ -303,6 +303,14 @@ export const HI: Record<string, string> = {
   // server has no key here and passes through in the words the server chose.
   "Cannot reach the CareerGuide AI server right now. It may be starting up or temporarily offline — please try again in a moment.":
     "इस वक़्त CareerGuide AI सर्वर से बात नहीं हो पा रही है। हो सकता है वह अभी चल रहा हो या कुछ पलों के लिए बंद हो — एक मिनट बाद फिर कोशिश करें।",
+  "You are offline — this page will load when you reconnect.":
+    "आप ऑफ़लाइन हैं — यह पेज आप जुड़ते ही खुल जाएगा।",
+  // `app/error.tsx` — the one screen a student sees when a page threw rather than
+  // when the link failed. Says what did *not* happen to their work, because that is
+  // the thing a child on a shared phone is actually afraid of.
+  "This page could not open.": "यह पेज नहीं खुल सका।",
+  "Nothing has been lost and nothing has been cleared. Press the button below, or open another page from the menu.":
+    "कुछ नहीं खोया है और कुछ नहीं मिटाया गया है। नीचे बटन दबाएँ, या मेन्यू से कोई और पेज खोलें।",
   "The answers came back in a form this screen does not understand. Nothing was lost — please reload.":
     "जवाब ऐसे रूप में आए जो यह स्क्रीन समझ नहीं सकी। कुछ नहीं खोया — पेज दोबारा लोड करें।",
   "The plan could not be changed. Nothing was lost.": "प्लान बदला नहीं जा सका। कुछ नहीं खोया।",
