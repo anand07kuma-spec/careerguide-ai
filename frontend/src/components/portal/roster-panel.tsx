@@ -1,14 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { ShieldCheck, UserRound, X } from "lucide-react";
+import { ChevronDown, ShieldCheck, UserRound, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Modal } from "@/components/ui/modal";
 import { Select } from "@/components/ui/field";
 import { api, ApiError } from "@/lib/api";
-import { useT } from "@/lib/i18n";
+import { useT, useTf } from "@/lib/i18n";
 import { ROLE_WORDS } from "@/lib/portal";
 import type { MemberAdminRow, MemberStatus } from "@/lib/types";
 
@@ -18,6 +18,7 @@ const STATUS_TONE: Record<MemberStatus, "neutral" | "success" | "warning"> = {
   revoked: "neutral",
 };
 
+/** Closed enums the server writes, so the words are the app's own and are translated. */
 const STATUS_WORD: Record<MemberStatus, string> = {
   active: "Joined",
   invited: "Waiting to join",
@@ -32,6 +33,12 @@ const STATUS_WORD: Record<MemberStatus, string> = {
  * is gone. It shows nothing else: no answers and no report exist for a person who has not
  * accepted, and the row keeps the school's own label rather than the name the child later
  * chooses.
+ *
+ * The rows are one divided list rather than a card each, and the picker that assigns a
+ * counsellor is folded behind a `details` whose summary still prints who is assigned — a
+ * thirty-student roster was otherwise thirty nested boxes and thirty copies of the same
+ * sentence. That sentence is said once, above the list, where it cannot be folded away:
+ * what a counsellor may read is the student's own choice, not the assignment's.
  */
 export function RosterPanel({
   slug,
@@ -45,6 +52,7 @@ export function RosterPanel({
   onChanged: () => void;
 }) {
   const t = useT();
+  const tf = useTf();
   const [busy, setBusy] = useState<number | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
   const [confirming, setConfirming] = useState<MemberAdminRow | null>(null);
@@ -54,6 +62,10 @@ export function RosterPanel({
   // back, so the picker is left blank rather than showing the wrong adult as assigned.
   const labels = new Set(counsellors.map((row) => row.display_label ?? ""));
   const labelsAreUnique = labels.size === counsellors.length;
+
+  const isClient = (row: MemberAdminRow) => row.org_role === "student" || row.org_role === "parent";
+  const canAssign = (row: MemberAdminRow) => canManage && row.status === "active" && isClient(row);
+  const anyAssignable = canManage && members.some(canAssign);
 
   async function assign(row: MemberAdminRow, value: string) {
     setBusy(row.id);
@@ -85,7 +97,7 @@ export function RosterPanel({
 
   if (members.length === 0) {
     return (
-      <Card className="py-10 text-center text-sm text-muted">
+      <Card className="py-10 text-center text-sm leading-relaxed text-muted">
         {t("Nobody is on this roster yet.")}
       </Card>
     );
@@ -99,87 +111,108 @@ export function RosterPanel({
         </p>
       ) : null}
 
-      {members.map((row) => {
-        const assigned = labelsAreUnique
-          ? counsellors.find((c) => (c.display_label ?? null) === row.assigned_counsellor_label)
-          : undefined;
-        const canAssign = canManage && row.status === "active" && (row.org_role === "student" || row.org_role === "parent");
-        return (
-          <Card key={row.id} className="space-y-3 p-4">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="flex items-center gap-2 text-sm font-semibold text-ink">
-                  <UserRound className="h-4 w-4 shrink-0 text-muted" aria-hidden />
-                  {row.display_label || t("A member with no label")}
-                </p>
-                <p className="mt-1 flex flex-wrap items-center gap-1.5">
-                  <Badge tone="brand">{ROLE_WORDS[row.org_role]}</Badge>
-                  <Badge tone={STATUS_TONE[row.status]}>{STATUS_WORD[row.status]}</Badge>
-                  {row.status === "active" && (row.org_role === "student" || row.org_role === "parent") ? (
-                    <Badge tone={row.share_results ? "success" : "neutral"}>
-                      {row.share_results ? t("Results shared") : t("Results kept private")}
-                    </Badge>
+      {anyAssignable ? (
+        <p className="flex items-start gap-2 text-xs leading-relaxed text-muted">
+          <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-success" aria-hidden />
+          {t("A person to sit with. It opens no file: what this counsellor may read is still the student's own choice.")}
+        </p>
+      ) : null}
+
+      <div className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-surface">
+        {members.map((row) => {
+          const assigned = labelsAreUnique
+            ? counsellors.find((c) => (c.display_label ?? null) === row.assigned_counsellor_label)
+            : undefined;
+          return (
+            <div key={row.id} className="space-y-3 p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="flex items-start gap-2 text-sm font-semibold text-heading">
+                    <UserRound className="mt-0.5 h-4 w-4 shrink-0 text-muted" aria-hidden />
+                    <span className="min-w-0 break-words">{row.display_label || t("A member with no label")}</span>
+                  </p>
+                  <p className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                    <Badge tone="brand">{t(ROLE_WORDS[row.org_role])}</Badge>
+                    <Badge tone={STATUS_TONE[row.status]}>{t(STATUS_WORD[row.status])}</Badge>
+                    {row.status === "active" && isClient(row) ? (
+                      <Badge tone={row.share_results ? "success" : "neutral"}>
+                        {row.share_results ? t("Results shared") : t("Results kept private")}
+                      </Badge>
+                    ) : null}
+                  </p>
+                  {row.status === "invited" && row.invited_email ? (
+                    <p className="mt-1.5 break-words text-xs text-muted">
+                      {row.invite_expires_at
+                        ? tf("Place held for {email} · until {date}", {
+                            email: row.invited_email,
+                            date: new Date(row.invite_expires_at).toLocaleDateString(),
+                          })
+                        : tf("Place held for {email}", { email: row.invited_email })}
+                    </p>
                   ) : null}
-                </p>
-                {row.status === "invited" && row.invited_email ? (
-                  <p className="mt-1.5 text-xs text-muted">
-                    {t("Place held for")} {row.invited_email}
-                    {row.invite_expires_at ? ` · ${t("until")} ${new Date(row.invite_expires_at).toLocaleDateString()}` : ""}
-                  </p>
-                ) : null}
-                {row.joined_at ? (
-                  <p className="mt-1 text-xs text-muted">
-                    {t("Joined")} {new Date(row.joined_at).toLocaleDateString()}
-                  </p>
+                  {row.joined_at ? (
+                    <p className="mt-1 text-xs text-muted">
+                      {tf("Joined {date}", { date: new Date(row.joined_at).toLocaleDateString() })}
+                    </p>
+                  ) : null}
+                </div>
+
+                {canManage && row.status !== "revoked" ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    loading={busy === row.id}
+                    onClick={() => setConfirming(row)}
+                  >
+                    <X className="h-4 w-4" aria-hidden />
+                    {row.status === "invited" ? t("Cancel invite") : t("Remove")}
+                  </Button>
                 ) : null}
               </div>
 
-              {canManage && row.status !== "revoked" ? (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  loading={busy === row.id}
-                  onClick={() => setConfirming(row)}
-                >
-                  <X className="h-4 w-4" aria-hidden />
-                  {row.status === "invited" ? t("Cancel invite") : t("Remove")}
-                </Button>
+              {canAssign(row) ? (
+                <details className="group rounded-xl border border-line bg-canvas/60 px-3 py-2">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-sm font-medium text-brand-dark [&::-webkit-details-marker]:hidden">
+                    {/* The summary carries the answer, so folding the picker hides a control
+                        and never hides who this student is already sitting with. */}
+                    <span className="min-w-0 truncate">
+                      {t("Assigned counsellor")} · {row.assigned_counsellor_label || t("Nobody yet")}
+                    </span>
+                    <ChevronDown className="h-4 w-4 shrink-0 transition-transform group-open:rotate-180" aria-hidden />
+                  </summary>
+                  <div className="mt-2 border-t border-line pt-3">
+                    <Select
+                      label="Assigned counsellor"
+                      value={assigned ? String(assigned.id) : ""}
+                      placeholder="Nobody yet"
+                      options={counsellors.map((c) => ({
+                        value: String(c.id),
+                        // Same rule as the client list: the row id stays as the value the
+                        // request needs, and what the admin reads is a person's label or the
+                        // day they joined.
+                        label: c.display_label
+                          ? c.display_label
+                          : c.joined_at
+                            ? `${t("A counsellor with no label")} · ${new Date(c.joined_at).toLocaleDateString()}`
+                            : t("A counsellor with no label"),
+                      }))}
+                      disabled={busy === row.id}
+                      onChange={(event) => void assign(row, event.target.value)}
+                    />
+                  </div>
+                </details>
+              ) : null}
+
+              {canManage && counsellors.length === 0 && row.status === "active" && row.org_role === "student" ? (
+                <p className="flex items-start gap-1.5 text-xs leading-relaxed text-muted">
+                  <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+                  {t("Invite a counsellor to this portal before assigning students to one.")}
+                </p>
               ) : null}
             </div>
-
-            {canAssign ? (
-              <div className="grid gap-3 sm:grid-cols-2">
-                <Select
-                  label={t("Assigned counsellor")}
-                  value={assigned ? String(assigned.id) : ""}
-                  placeholder="Nobody yet"
-                  options={counsellors.map((c) => ({
-                    value: String(c.id),
-                    // Same rule as the client list: the row id stays as the value the
-                    // request needs, and what the admin reads is a person's label or the
-                    // day they joined.
-                    label: c.display_label
-                      ? c.display_label
-                      : c.joined_at
-                        ? `${t("A counsellor with no label")} · ${new Date(c.joined_at).toLocaleDateString()}`
-                        : t("A counsellor with no label"),
-                  }))}
-                  disabled={busy === row.id}
-                  onChange={(event) => void assign(row, event.target.value)}
-                  hint={t("A person to sit with. It opens no file: what this counsellor may read is still the student's own choice.")}
-                />
-              </div>
-            ) : null}
-
-            {canManage && counsellors.length === 0 && row.status === "active" && row.org_role === "student" ? (
-              <p className="flex items-center gap-1.5 text-xs text-muted">
-                <ShieldCheck className="h-3.5 w-3.5" aria-hidden />
-                {t("Invite a counsellor to this portal before assigning students to one.")}
-              </p>
-            ) : null}
-          </Card>
-        );
-      })}
+          );
+        })}
+      </div>
 
       <Modal
         open={confirming !== null}
@@ -193,22 +226,22 @@ export function RosterPanel({
         footer={
           <>
             <Button variant="ghost" onClick={() => setConfirming(null)}>
-              Keep it
+              {t("Keep it")}
             </Button>
             <Button
               variant="danger"
               loading={confirming !== null && busy === confirming.id}
               onClick={() => confirming && void remove(confirming)}
             >
-              {confirming?.status === "invited" ? "Cancel the invite" : "Take the place back"}
+              {confirming?.status === "invited" ? t("Cancel the invite") : t("Take the place back")}
             </Button>
           </>
         }
       >
-        <p className="text-sm text-muted">
+        <p className="break-words text-sm leading-relaxed text-muted">
           {confirming?.display_label
-            ? `“${confirming.display_label}” — ${ROLE_WORDS[confirming.org_role]}.`
-            : confirming?.invited_email ?? "This place has no label."}
+            ? `“${confirming.display_label}” — ${t(ROLE_WORDS[confirming.org_role])}.`
+            : confirming?.invited_email ?? t("This place has no label.")}
         </p>
       </Modal>
     </div>

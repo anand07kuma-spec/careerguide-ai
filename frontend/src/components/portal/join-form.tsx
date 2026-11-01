@@ -73,9 +73,9 @@ export function JoinForm({
       <Frame>
         <Card className="space-y-4">
           <Badge tone="success">{t("You have joined")}</Badge>
-          <h1 className="text-xl font-semibold text-ink">{joined.portal_title || joined.name}</h1>
+          <h1 className="break-words text-xl font-semibold text-heading">{joined.portal_title || joined.name}</h1>
           <p className="text-sm leading-relaxed text-muted">
-            {t("You are on this portal as")}: <strong className="text-ink">{ROLE_WORDS[joined.org_role]}</strong>.{" "}
+            {t("You are on this portal as")}: <strong className="text-ink">{t(ROLE_WORDS[joined.org_role])}</strong>.{" "}
             {joined.share_results
               ? t("Your finished reports are visible to it. You can change that whenever you like.")
               : t("Nothing you write or answer is visible to it. Only what you choose to share, and you have not chosen yet.")}
@@ -104,7 +104,7 @@ export function JoinForm({
                 <p className="text-xs font-semibold uppercase tracking-wider text-muted">
                   {t("You have been invited to")}
                 </p>
-                <h1 className="mt-1 text-xl font-semibold text-ink">
+                <h1 className="mt-1 break-words text-xl font-semibold text-heading">
                   {branding.data?.portal_title || branding.data?.name || slug}
                 </h1>
               </div>
@@ -127,8 +127,8 @@ export function JoinForm({
         ) : (
           <div className="flex items-start gap-3">
             <MailQuestion className="mt-0.5 h-5 w-5 shrink-0 text-brand-dark" aria-hidden />
-            <div>
-              <h1 className="text-lg font-semibold text-ink">{t("An invitation to a portal")}</h1>
+            <div className="min-w-0">
+              <h1 className="text-lg font-semibold text-heading">{t("An invitation to a portal")}</h1>
               <p className="mt-1 text-sm leading-relaxed text-muted">
                 {t("This link does not say which school or practice sent it, and the platform will not guess: the name appears when the invitation is accepted.")}
               </p>
@@ -136,7 +136,9 @@ export function JoinForm({
           </div>
         )}
 
-        <ul className="space-y-2 rounded-xl bg-canvas p-4 text-sm leading-relaxed text-ink">
+        {/* What joining does and does not hand over stays on the page, above the switch:
+            it is the reason a person can decide about the link at all. */}
+        <ul className="space-y-2 rounded-2xl border border-line bg-canvas p-4 text-sm leading-relaxed text-ink">
           <li className="flex items-start gap-2">
             <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-success" aria-hidden />
             {t("Your answers, your conversations and your report stay yours.")}
@@ -170,8 +172,8 @@ export function JoinForm({
         ) : (
           <>
             <Checkbox
-              label={t("Let this portal see my finished reports")}
-              description={t("Off to begin with. A school that wants your reports asks, and you answer here or in the portal.")}
+              label="Let this portal see my finished reports"
+              description="Off to begin with. A school that wants your reports asks, and you answer here or in the portal."
               checked={share}
               onChange={(event) => setShare(event.target.checked)}
             />

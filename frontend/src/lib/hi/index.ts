@@ -9,6 +9,7 @@
 import { HI as ACCOUNT } from "./account";
 import { HI as ADMIN } from "./admin";
 import { HI as ADMIN_CONTENT } from "./admin-content";
+import { HI as PORTAL } from "./portal";
 import { HI as CALL } from "./call";
 import { HI as CAREERS } from "./careers";
 import { HI as CHAT } from "./chat";
@@ -64,4 +65,5 @@ export const HI: Record<string, string> = {
   ...PARENT,
   ...ADMIN,
   ...ADMIN_CONTENT,
+  ...PORTAL,
 };

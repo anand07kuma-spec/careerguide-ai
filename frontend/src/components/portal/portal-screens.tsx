@@ -20,7 +20,7 @@ import { EmptyState, ErrorState, LoadingPanel } from "@/components/ui/feedback";
 import { Input } from "@/components/ui/field";
 import { Tabs, tabpanelProps } from "@/components/ui/tabs";
 import { api, ApiError } from "@/lib/api";
-import { useT } from "@/lib/i18n";
+import { useT, useTf } from "@/lib/i18n";
 import { ROLE_WORDS, STAFF_ROLES, canManage } from "@/lib/portal";
 import { useResource } from "@/lib/use-resource";
 import type { MemberRow, MyMembership, OrgKind } from "@/lib/types";
@@ -106,18 +106,23 @@ function PortalScreen({ slug, surface }: { slug: string | null; surface: OrgKind
             }
           />
         ) : (
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-surface">
             {portals.map((row) => (
-              <Link key={row.slug} href={`/${surface}/dashboard?portal=${row.slug}`} className="cg-card block p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-ink">{row.portal_title || row.name}</p>
-                    <p className="mt-1 text-xs text-muted">
-                      {ROLE_WORDS[row.org_role]} · {row.slug}
-                    </p>
-                  </div>
-                  <Badge tone="brand">{ROLE_WORDS[row.org_role]}</Badge>
-                </div>
+              <Link
+                key={row.slug}
+                href={`/${surface}/dashboard?portal=${row.slug}`}
+                className="flex items-center justify-between gap-3 p-4 transition-colors hover:bg-canvas"
+              >
+                <span className="min-w-0">
+                  <span className="block truncate text-sm font-semibold text-heading">
+                    {row.portal_title || row.name}
+                  </span>
+                  <span className="mt-1 block truncate text-xs text-muted">{row.slug}</span>
+                </span>
+                <span className="flex shrink-0 items-center gap-2">
+                  <Badge tone="brand">{t(ROLE_WORDS[row.org_role])}</Badge>
+                  <ArrowRight className="h-4 w-4 text-muted" aria-hidden />
+                </span>
               </Link>
             ))}
           </div>
@@ -159,6 +164,7 @@ function PortalWorkspace({
   onTab: (next: string) => void;
   onLeft: () => void;
 }) {
+  const t = useT();
   const slug = membership.slug;
   const staff = STAFF_ROLES.includes(membership.org_role);
   const manager = canManage(membership.kind, membership.org_role);
@@ -199,7 +205,7 @@ function PortalWorkspace({
             : "You work inside this portal. You can see the clients who are yours and write their notes; its name, colour and roster belong to its administrator."
           : "You joined this portal. Nothing on it is visible to its staff unless you say so."
       }
-      badge={<Badge tone="brand">{ROLE_WORDS[membership.org_role]}</Badge>}
+      badge={<Badge tone="brand">{t(ROLE_WORDS[membership.org_role])}</Badge>}
     >
       <div className="space-y-5">
         {staff ? (
@@ -288,35 +294,38 @@ function PortalWorkspace({
 /** The list a note is written against. Joined people only — the server already cut the rest. */
 function ClientList({ clients }: { clients: MemberRow[] }) {
   const t = useT();
+  const tf = useTf();
   if (clients.length === 0) {
     return (
-      <Card className="py-8 text-center text-sm text-muted">
+      <Card className="py-8 text-center text-sm leading-relaxed text-muted">
         {t("Nobody has joined this practice yet, or nobody who is yours to see.")}
       </Card>
     );
   }
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
+    // One divided list rather than a card per person: on a phone the nested boxes
+    // turned twenty clients into a wall of borders.
+    <div className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-surface">
       {clients.map((client) => (
-        <Card key={client.id} className="space-y-2 p-4">
-          <p className="text-sm font-semibold text-ink">{client.display_label || t("A member with no label")}</p>
+        <div key={client.id} className="space-y-2 p-4">
+          <p className="break-words text-sm font-semibold text-heading">
+            {client.display_label || t("A member with no label")}
+          </p>
           <div className="flex flex-wrap items-center gap-1.5">
-            <Badge tone="brand">{ROLE_WORDS[client.org_role]}</Badge>
+            <Badge tone="brand">{t(ROLE_WORDS[client.org_role])}</Badge>
             <Badge tone={client.share_results ? "success" : "neutral"}>
               {client.share_results ? t("Shares results") : t("Private")}
             </Badge>
             {client.assigned_counsellor_label ? (
-              <Badge tone="teal">
-                {t("With")} {client.assigned_counsellor_label}
-              </Badge>
+              <Badge tone="teal">{tf("With {name}", { name: client.assigned_counsellor_label })}</Badge>
             ) : null}
           </div>
           {client.joined_at ? (
             <p className="text-xs text-muted">
-              {t("Joined")} {new Date(client.joined_at).toLocaleDateString()}
+              {tf("Joined {date}", { date: new Date(client.joined_at).toLocaleDateString() })}
             </p>
           ) : null}
-        </Card>
+        </div>
       ))}
     </div>
   );
@@ -360,11 +369,11 @@ function CreatePractice({ onCreated }: { onCreated: (slug: string) => void }) {
   return (
     <Card className="w-full max-w-md space-y-3">
       <Input
-        label={t("Practice name")}
+        label="Practice name"
         value={name}
         maxLength={120}
         onChange={(event) => setName(event.target.value)}
-        hint={t("An address for it is made from the name and shown after it is created.")}
+        hint="An address for it is made from the name and shown after it is created."
       />
       {error ? (
         <p role="alert" className="text-sm text-danger">
