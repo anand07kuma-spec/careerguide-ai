@@ -223,17 +223,45 @@ function DeploymentPanel({ config }: { config: AdminDeployment }) {
           <KeyValue label="Portal changes" value={config.rate_limit_org} />
           <KeyValue
             label="Where the counters live"
-            value={config.rate_limit_shared_storage ? "In Redis, shared by every worker" : "In this process"}
+            value={
+              !config.rate_limit_shared_storage
+                ? "In this process"
+                : config.rate_limit_counters_shared
+                  ? "In Redis, shared by every worker"
+                  : "In this process, although Redis is configured"
+            }
             note={
-              config.rate_limit_shared_storage
-                ? "Four workers and four hundred calls a minute mean one shared allowance."
-                : "One worker, honest limits. Two workers counting separately is a site whose real ceiling is double what these lines say — set RATE_LIMIT_REDIS_URL if this API is ever scaled past one process."
+              !config.rate_limit_shared_storage
+                ? "One worker, honest limits. Two workers counting separately is a site whose real ceiling is double what these lines say — set RATE_LIMIT_REDIS_URL if this API is ever scaled past one process."
+                : config.rate_limit_counters_shared
+                  ? "Four workers and four hundred calls a minute mean one shared allowance."
+                  : "The address in RATE_LIMIT_REDIS_URL is not answering, so each worker is counting its own traffic again. The startup log said the moment it stopped. Nothing else on this page changes: the limits are real, they are just per process until the store replies."
+            }
+          />
+          <KeyValue
+            label="Replies per account, per day"
+            value={config.ai_daily_message_limit > 0 ? String(config.ai_daily_message_limit) : "No ceiling"}
+            note={
+              "The money guard, counted in the store above so several workers share one number. It sits far above what a person types in a day: an account that meets it is a loop, a stuck retry, or somebody else holding a session. A message that reads as a disclosure is always answered."
+            }
+          />
+          <KeyValue
+            label="Provider circuit breaker"
+            value={
+              config.ai_breaker_open
+                ? tf("{seconds} of built-in guide left", { seconds: config.ai_breaker_seconds_left })
+                : tf("{failures} provider failures counted since the last reply", {
+                    failures: config.ai_breaker_failures,
+                  })
+            }
+            note={
+              "After the configured number of failures inside one window, the guide answers from its own script for the cooldown without asking the provider at all. Every reply served while the breaker is open says on screen that the built-in guide wrote it."
             }
           />
         </dl>
         <Caption>
           {t(
-            "The counters live in this process’s memory. One instance means honest limits; a hosted deployment that runs several has a ceiling of the rule times however many are warm, which is a brake rather than a wall.",
+            "A throttle is a brake, not a wall: the same rules counted in one store are what make a hosted deployment’s ceiling the number printed above, rather than that number times however many copies are warm. The day's reply budget and the provider breaker are counted in the same store for the same reason.",
           )}
         </Caption>
       </Card>

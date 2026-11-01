@@ -1478,6 +1478,23 @@ export interface AdminDeployment {
    * really the published limits times however many workers are running.
    */
   rate_limit_shared_storage: boolean;
+  /**
+   * Whether the counters *are* shared right now, which is the same answer only while the
+   * configured Redis answers. A deployment whose Redis went away keeps serving, on buckets
+   * each process keeps to itself — the state an operator has to be able to see without a
+   * log line that may already have rotated away.
+   */
+  rate_limit_counters_shared: boolean;
+  /**
+   * How many guide replies one account may ask for today (`AI_DAILY_MESSAGE_LIMIT`), and
+   * whether the provider is currently being left alone because it has not been answering.
+   * Both numbers live in the store above, so both are one number for the whole deployment
+   * rather than one per warm worker. `0` means no ceiling.
+   */
+  ai_daily_message_limit: number;
+  ai_breaker_open: boolean;
+  ai_breaker_failures: number;
+  ai_breaker_seconds_left: number;
   database_engine: string;
   db_auto_setup: boolean;
   plan_limits_enforced: boolean;
