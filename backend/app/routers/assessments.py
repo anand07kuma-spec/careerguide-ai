@@ -38,7 +38,14 @@ from ..schemas import (
     SittingOut,
 )
 from ..security import get_current_user, require_student
-from ..services import assessment_bank, email_jobs, entitlements, roadmap, scoring
+from ..services import (
+    ai_budget,
+    assessment_bank,
+    email_jobs,
+    entitlements,
+    roadmap,
+    scoring,
+)
 from ..services.themes import THEMES
 
 router = APIRouter(prefix="/api/assessments", tags=["assessments"])
@@ -596,6 +603,13 @@ async def rebuild_roadmap(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="That result does not belong to this account, or it has been deleted.",
         )
+    # The same per-account daily ceiling the chat's two addresses, the practice interviewer
+    # and the resume suggester answer to, because this button buys the same thing they do:
+    # one call to the provider. It is guarded here rather than left to its own tight
+    # per-minute bucket, because a page a student leaves open and presses slowly is inside
+    # every minute rule and still a bill. Before the backfill below, so a refusal leaves
+    # the plan exactly as it was and stores nothing.
+    ai_budget.guard(student_id, "")
     assessment = db.get(Assessment, row.assessment_id)
     chosen = _language(language or (assessment.language if assessment else "en"))
 

@@ -34,7 +34,7 @@ from sqlalchemy.orm import Session
 
 from ..config import get_settings
 from ..models import Message
-from . import profile_facts, prompts
+from . import ai_breaker, profile_facts, prompts
 from .themes import THEMES, detect_themes, expresses_uncertainty, possible_distress
 
 
@@ -571,12 +571,23 @@ async def respond(
     # quietly skip the `safety_flag` the router records a support note against.
     if not settings.ai_configured or possible_distress(user_text):
         reply = demo_respond(user_text, ctx)
+    elif ai_breaker.is_open():
+        # The provider has failed often enough that asking it again is a 45-second wait a
+        # child sits through rather than a question worth putting. The built-in guide
+        # answers, and the note below says that it did.
+        reply = demo_respond(user_text, ctx)
+        reply.error = BREAKER_NOTE
     else:
         try:
             reply = await _openai_compatible_respond(user_text, ctx, history)
         except (httpx.HTTPError, KeyError, IndexError, ValueError) as exc:
+            ai_breaker.note_failure()
             reply = demo_respond(user_text, ctx)
             reply.error = FALLBACK_NOTE
+        else:
+            # One reply that came through ends the streak, so a provider that is merely
+            # flaky is never taken out of service for a whole afternoon.
+            ai_breaker.note_success()
     # Whatever produced the reply, the caller needs to know which language it came
     # back in so text-to-speech picks a voice that can actually pronounce it.
     reply.language = _lang(ctx.language)
@@ -589,6 +600,16 @@ async def respond(
 FALLBACK_NOTE = (
     "The configured AI provider could not be reached, so this reply came from the "
     "built-in guide instead."
+)
+
+# The other reason a scripted reply reaches a student, worded apart from the one above on
+# purpose: that sentence is about *this* question, this one is about the provider being
+# taken out of service for a while, and a child who is told the wrong reason draws the
+# wrong conclusion about whether to ask again.
+BREAKER_NOTE = (
+    "The AI provider has not answered the last few questions from anyone, so for the next "
+    "couple of minutes this reply came from the built-in guide instead of the model. "
+    "Nothing you wrote has been lost, and the model is tried again after that."
 )
 
 # How long the built-in guide waits between sentences when its reply is being streamed.
@@ -686,71 +707,38 @@ async def stream_respond(
 ) -> AsyncIterator[StreamChunk]:
     """Answer a turn in fragments, then hand back the finished reply.
 
-    Three cases, one contract of `delta…` followed by exactly one reply:
+    Four cases, one contract of `delta…` followed by exactly one reply:
 
     * a provider that streams gives its own fragments as they arrive;
     * a provider that cannot stream, or that is not configured at all, produces the
       built-in guide's reply in sentence-sized pieces with a short pause, so the demo
       deployment behaves like the real one rather than like a special case;
     * a provider configured but unable to stream answers in a single fragment carrying
-      the whole reply, which is the contract the client already handles.
+      the whole reply, which is the contract the client already handles;
+    * a provider that `ai_breaker` says has stopped answering is not asked at all, and the
+      built-in guide's reply is streamed with `BREAKER_NOTE` on it, which is the same
+      sentence-shaped honesty the demo deployment already uses.
 
     A failure *after* words have reached the student does not switch guide mid-sentence:
     the fragments so far are handed back as a broken reply and the caller ends the
     stream honestly instead of pasting a scripted sentence under model words the child
-    has already read.
+    has already read. That case still counts as a failure for the breaker — a stream that
+    broke halfway is a provider that did not answer the question.
     """
     settings = get_settings()
     streamed: list[str] = []
+    # Why this turn would be answered from the script instead of the model: no provider is
+    # configured, or the words read as a disclosure that gets the reviewed sentence.
+    scripted = not settings.ai_configured or possible_distress(user_text)
+    # The third reason, and the one a student cannot see coming: the provider is configured
+    # and this is not a safety turn, but it has stopped answering and the breaker is open.
+    # Checked before the call rather than after it fails, which is the whole point.
+    cooled = not scripted and ai_breaker.is_open()
 
-    if settings.ai_configured and not possible_distress(user_text):
-        try:
-            async for piece in _openai_compatible_stream(user_text, ctx, history):
-                streamed.append(piece)
-                yield StreamChunk(text=piece)
-            text = "".join(streamed).strip()
-            if not text:
-                # A reasoning model can spend the whole budget thinking and stream
-                # nothing. An empty bubble is not an answer, so this is a provider
-                # failure and the built-in guide takes over.
-                raise ValueError("the configured provider returned an empty reply")
-            hits = detect_themes(user_text)
-            reply = GuideReply(
-                text=text,
-                stage=_advance(ctx.stage, hits, user_text),
-                themes=list(dict.fromkeys([*ctx.known_themes, *hits])),
-                provider=settings.ai_provider,
-                demo_generated=False,
-            )
-            reply.language = _lang(ctx.language)
-            yield StreamChunk(reply=reply)
-            return
-        except (httpx.HTTPError, KeyError, IndexError, ValueError) as exc:
-            if streamed:
-                # The child has read the model's own words. Keep them, say they are
-                # unfinished, and let the caller emit an error event.
-                partial = GuideReply(
-                    text="".join(streamed).strip(),
-                    stage=ctx.stage,
-                    themes=list(dict.fromkeys([*ctx.known_themes, *detect_themes(user_text)])),
-                    provider=settings.ai_provider,
-                    demo_generated=False,
-                    error="The guide's reply stopped partway.",
-                    partial=True,
-                )
-                partial.language = _lang(ctx.language)
-                yield StreamChunk(reply=partial)
-                return
-            # Nothing has been sent yet, so the whole reply can still come as one
-            # fragment and the event contract stays identical.
-            reply = demo_respond(user_text, ctx)
-            reply.error = FALLBACK_NOTE
-            yield StreamChunk(text=reply.text)
-            reply.language = _lang(ctx.language)
-            yield StreamChunk(reply=reply)
-            return
-    else:
+    if scripted or cooled:
         reply = demo_respond(user_text, ctx)
+        if cooled:
+            reply.error = BREAKER_NOTE
         reply.language = _lang(ctx.language)
         chunks = _sentence_chunks(reply.text)
         for index, chunk in enumerate(chunks):
@@ -762,3 +750,56 @@ async def stream_respond(
             # wait for a fragment that never comes.
             yield StreamChunk(text=reply.text)
         yield StreamChunk(reply=reply)
+        return
+
+    try:
+        async for piece in _openai_compatible_stream(user_text, ctx, history):
+            streamed.append(piece)
+            yield StreamChunk(text=piece)
+        text = "".join(streamed).strip()
+        if not text:
+            # A reasoning model can spend the whole budget thinking and stream
+            # nothing. An empty bubble is not an answer, so this is a provider
+            # failure and the built-in guide takes over.
+            raise ValueError("the configured provider returned an empty reply")
+        hits = detect_themes(user_text)
+        reply = GuideReply(
+            text=text,
+            stage=_advance(ctx.stage, hits, user_text),
+            themes=list(dict.fromkeys([*ctx.known_themes, *hits])),
+            provider=settings.ai_provider,
+            demo_generated=False,
+        )
+        reply.language = _lang(ctx.language)
+        # One reply that arrived whole ends the streak, so the breaker is stood down for
+        # everybody and not merely for this student.
+        ai_breaker.note_success()
+        yield StreamChunk(reply=reply)
+        return
+    except (httpx.HTTPError, KeyError, IndexError, ValueError):
+        # Counted whether or not words reached the child: a stream that broke halfway is
+        # a provider that did not answer the question.
+        ai_breaker.note_failure()
+        if streamed:
+            # The child has read the model's own words. Keep them, say they are
+            # unfinished, and let the caller emit an error event.
+            partial = GuideReply(
+                text="".join(streamed).strip(),
+                stage=ctx.stage,
+                themes=list(dict.fromkeys([*ctx.known_themes, *detect_themes(user_text)])),
+                provider=settings.ai_provider,
+                demo_generated=False,
+                error="The guide's reply stopped partway.",
+                partial=True,
+            )
+            partial.language = _lang(ctx.language)
+            yield StreamChunk(reply=partial)
+            return
+        # Nothing has been sent yet, so the whole reply can still come as one
+        # fragment and the event contract stays identical.
+        reply = demo_respond(user_text, ctx)
+        reply.error = FALLBACK_NOTE
+        yield StreamChunk(text=reply.text)
+        reply.language = _lang(ctx.language)
+        yield StreamChunk(reply=reply)
+        return

@@ -35,7 +35,7 @@ from ..schemas import (
     SessionStartIn,
 )
 from ..security import ensure_settings, get_current_user, require_student
-from ..services import ai_provider, entitlements, profile_facts, roadmap, tts
+from ..services import ai_budget, ai_provider, entitlements, profile_facts, roadmap, tts
 from ..services.language import detect as detect_language
 from ..services.recommender import build_recommendations
 from .auth import CLASS_TO_AGE
@@ -114,10 +114,11 @@ class TurnSetup:
 
     Both the answering route and the streaming route get one from `_prepare_turn`, so the
     rules a child's conversation runs under are written exactly once: whose session this
-    is, whether it is still open, whether the plan allows another message, what language
-    the student just used, what their words teach the profile, and which plan a result
-    page pinned to this chat. A second copy of that list is how a stream ends up skipping
-    one of them, and a stream that skips one is a way into another child's conversation.
+    is, whether it is still open, whether the plan allows another message, whether the
+    day's AI budget has a reply left in it, what language the student just used, what
+    their words teach the profile, and which plan a result page pinned to this chat. A
+    second copy of that list is how a stream ends up skipping one of them, and a stream
+    that skips one is a way into another child's conversation.
 
     `history` and `ctx` are plain data by the time they are stored here — no database
     access happens while the reply is being streamed, which is what lets the streaming
@@ -162,6 +163,15 @@ def _prepare_turn(
     # is the rule that matters more than the money: words that read as a disclosure of
     # danger are answered whatever plan the student is on.
     entitlements.guard_chat(db, user, text)
+
+    # The money guard, and it is a different number from the one above: `guard_chat`
+    # counts the day's conversations a *plan* allows and sleeps until pricing goes live,
+    # while this one counts the calls an *account* may put in front of the provider before
+    # the bill stops making sense, and it is awake by default. It sits here rather than in
+    # either route because both of them buy the same reply, and a stream that skipped it
+    # would be the hole somebody found. Everything it raises about is settled before the
+    # first `Message` row, so a refusal leaves nothing in the transcript.
+    ai_budget.guard(user.id, text)
 
     # Answer in the language the student just used, not the one the session
     # started in: switching between English and Hindi mid-call is normal, and the

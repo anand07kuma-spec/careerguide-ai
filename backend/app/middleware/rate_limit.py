@@ -23,6 +23,14 @@ Two things a reader should know before trusting this file:
   however many instances are warm. It is a brake, not a wall — which is why the come-back
   code is stretched through 210,000 PBKDF2 rounds in `security.py` instead of relying
   on this file to stop guessing.
+  The Redis half is not a string in a config file: with the URL set, the shipped
+  `limits.RedisStorage` counts over the wire, two storage objects on one database refuse
+  the same fourth request, and the memory store answers the identical sequence to the
+  identical asks — proven by an in-process stand-in for the server, so what stays unproven
+  is a real endpoint and a `rediss://` handshake. `_startup_line()` below then says which
+  of the two the process actually got hold of, and the deployment screen reports whether
+  the store slowapi currently believes is answering — because the one moment the
+  distinction costs money is when a Redis is configured and not there.
 * **A write bucket is keyed on the bearer header or the address, never on the session
   cookie.** A school or a family behind one router would otherwise be limited as if it
   were one student — but a cookie is a string the caller types, so a bucket that believed
@@ -42,11 +50,13 @@ from __future__ import annotations
 
 import hashlib
 import logging
+from urllib.parse import urlsplit
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from limits import parse
 from limits.strategies import FixedWindowRateLimiter
+from limits.storage import Storage
 from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
@@ -141,6 +151,14 @@ limiter = Limiter(
     enabled=_settings.rate_limit_enabled,
     key_prefix="careerguide",
     storage_uri=_REDIS or "memory://",
+    # Both timeouts are for the same reason: without them a Redis that has stopped
+    # answering is a request that stops answering too, and the student watching the
+    # spinner is being punished for a database nobody gave them. Two seconds is long
+    # enough for a healthy counter (a local one answers in a millisecond) and short
+    # enough that a dead one trips the fallback below within one screenful.
+    storage_options=(
+        {"socket_connect_timeout": 2, "socket_timeout": 2} if _REDIS else {}
+    ),
     # A Redis that is down, mid-restart, or wrong in the environment must not turn
     # into a 500 in front of a student who is only trying to send a message. The
     # counters fall back to this process — the old behaviour, and a weaker guard, which
@@ -153,10 +171,93 @@ limiter = Limiter(
     in_memory_fallback_enabled=bool(_REDIS),
 )
 
+
+def _host_of(url: str) -> str:
+    """The part of a Redis URL an operator recognises, without the part a log must not keep.
+
+    A Redis URL is `redis://user:password@host:6379/1`, and the password is inside it.
+    The deployment log says which *server* the counters are on, which is the whole
+    useful fact; printing the URL as given would put a credential in whatever collects
+    stdout, on the same machine that the credential is meant to protect.
+    """
+    try:
+        parsed = urlsplit(url)
+    except ValueError:
+        return "an address that does not parse"
+    host = parsed.netloc.rpartition("@")[2] or "an address with no host"
+    return f"{host}/{parsed.path.lstrip('/')}" if parsed.path.strip("/") else host
+
+
+def counters_are_shared() -> bool:
+    """Whether the next request will be counted in a store every worker can see.
+
+    Not the same question as *"is a Redis URL configured"*, which is what the setting
+    alone answers, and the two come apart exactly when it matters: a configured Redis
+    that stopped answering leaves slowapi counting in this process. `limiter._storage`
+    is private and read on purpose — slowapi sets `_storage_dead` itself when a counter
+    raises, and re-probes the store on its own back-off afterwards, so this follows the
+    real state rather than the intention written in an environment variable.
+    """
+    if not _REDIS:
+        return False
+    return not limiter._storage_dead
+
+
+def shared_store() -> Storage:
+    """The one counter store this process has, for numbers that are not per-minute rules.
+
+    Two service modules read it: `services/ai_budget.py` (how many guide replies one
+    account spent today) and `services/ai_breaker.py` (how many times in a row the AI
+    provider failed). Both need the same property this file exists to give a throttle on
+    serverless hosting — one number for the whole deployment, not one per warm container —
+    and a second `storage_from_string()` call would be a second set of counters that
+    quietly disagrees with the named buckets, or a second connection pool for one database.
+    Same reasoning, same private attribute, as `_reads` further down.
+    """
+    return limiter._storage
+
+
+def _startup_line() -> str:
+    """One sentence naming where the counters live, written down as the store is found."""
+    if not _REDIS:
+        return (
+            "Rate limit counters live in this process's memory, so each worker keeps its "
+            "own; set RATE_LIMIT_REDIS_URL to share them."
+        )
+    try:
+        answered = bool(limiter._storage.check())
+        why = "" if answered else "did not answer"
+    except Exception as exc:  # noqa: BLE001 - a store that will not answer is a finding, not a crash
+        answered = False
+        why = f"raised {type(exc).__name__}"
+    if answered:
+        return (
+            f"Rate limit counters are shared through Redis at {_host_of(_REDIS)}; "
+            "every worker answers to the same bucket."
+        )
+    # Said out loud before the first request, rather than left to a warning inside
+    # slowapi on that request: a deployment that scaled to four containers expecting
+    # one ceiling, and got four, is the failure this whole module exists to prevent,
+    # and it is invisible unless somebody writes down which store is actually running.
+    # Marking the store dead is slowapi's own flag, not a substitute for it — it is how
+    # the named buckets reach the in-memory fallback immediately, and how they climb
+    # back out once the Redis answers again (slowapi re-pings on its own schedule).
+    limiter._storage_dead = True
+    return (
+        f"RATE_LIMIT_REDIS_URL points at {_host_of(_REDIS)}, which {why}: the limits "
+        "this process publishes are per-worker memory until it answers again, NOT a "
+        "shared ceiling."
+    )
+
+
 if _REDIS:
-    log.info("Rate limit counters are held in Redis, so every worker shares them.")
+    # The level is chosen *after* the sentence has been written, because writing it is
+    # what discovers the store does not answer, and a finding this important must not be
+    # logged as `info` merely because the flag was read one statement too early.
+    _STARTUP_LINE = _startup_line()
+    (log.warning if limiter._storage_dead else log.info)(_STARTUP_LINE)
 else:
-    log.info("Rate limit counters live in this process's memory.")
+    log.info(_startup_line())
 
 
 def _rule(attribute: str, fallback: str) -> str:
@@ -337,10 +438,10 @@ interview_limit = limiter.limit(
 _READ_RULE = parse(_rule("rate_limit_read", "60 per minute"))
 _READ_RULE.namespace = "read"
 # `limiter._storage` is private, and reusing it on purpose rather than calling
-# `storage_from_string` again: a second `memory://` would be a second set of counters that
-# quietly disagrees with the named buckets, and a second Redis URL would be a second
-# connection pool for the same database.
-_reads = FixedWindowRateLimiter(limiter._storage)
+# `storage_from_string` again — see `shared_store()`: a second `memory://` would be a
+# second set of counters that quietly disagrees with the named buckets, and a second
+# Redis URL would be a second connection pool for the same database.
+_reads = FixedWindowRateLimiter(shared_store())
 
 # Reads that are not throttled, and why. Each entry is either a route whose answer is the
 # same for a stranger as for the family — so throttling it defends nothing — or a request

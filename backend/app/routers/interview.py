@@ -25,7 +25,7 @@ from ..middleware.rate_limit import interview_limit
 from ..models import User
 from ..schemas import MockInterviewIn, MockInterviewOut
 from ..security import get_current_user, require_student
-from ..services import mock_interview
+from ..services import ai_budget, mock_interview
 
 ai_router = APIRouter(prefix="/api/ai", tags=["ai"])
 
@@ -54,6 +54,15 @@ async def mock_interview_turn(
     # and a parent running an interview *at* a child is a different feature with a
     # different consent story.
     require_student(user)
+    # The same per-account daily ceiling the conversation routes answer to, because a turn
+    # of a practice interview is one call to the same provider and a sitting is a page a
+    # student can leave open and re-ask. The student's own last words go into the guard, so
+    # an answer that reads as a disclosure is not the thing that ran out of budget — see
+    # `services/ai_budget.py` for why that one case is never counted.
+    ai_budget.guard(
+        user.id,
+        next((line.text for line in reversed(payload.history) if line.role == "candidate"), ""),
+    )
     reply = await mock_interview.run(
         role=payload.role,
         transcript=[

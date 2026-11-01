@@ -39,7 +39,10 @@ slowapi==0.1.10
 # Only needed when RATE_LIMIT_REDIS_URL is set, which is how the counters move from
 # per-process to shared. One container is fine without it; a compose stack running
 # several workers of the same API is not, because each worker would then hold its own
-# copy of every limit. Nothing else in this app talks to Redis — there is no queue, no
+# copy of every limit. Three numbers live in that store, not one: the per-minute rules,
+# one account's day of AI replies (`app/services/ai_budget.py`) and the provider circuit
+# breaker (`app/services/ai_breaker.py`), each of which would otherwise be a number per
+# warm container. Nothing else in this app talks to Redis — there is no queue, no
 # cache and no session store here — so this is the whole of what the service is for.
 redis==7.4.0
 

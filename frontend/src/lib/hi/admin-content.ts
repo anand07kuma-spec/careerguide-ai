@@ -205,6 +205,8 @@ export const HI: Record<string, string> = {
   "Public enquiries": "आम पूछताछ",
   "Portal changes": "पोर्टल के बदलाव",
   "Where the counters live": "गिनती कहाँ रहती है",
+  "Replies per account, per day": "प्रति दिन, प्रति खाता जवाब",
+  "Provider circuit breaker": "प्रोवाइडर सर्किट ब्रेकर",
 
   // KeyValue notes on the deployment panel
   "A configured provider is answering, so replies come from the model named above.":
@@ -243,6 +245,13 @@ export const HI: Record<string, string> = {
   "One worker, honest limits. Two workers counting separately is a site whose real ceiling is double what these lines say — set RATE_LIMIT_REDIS_URL if this API is ever scaled past one process.":
     "एक वर्कर, सच्ची सीमाएँ। दो वर्कर अलग-अलग गिनें तो असली छत इन लाइनों से दोगुनी हो जाती है — अगर यह API कभी एक से ज़्यादा प्रोसेस पर चले तो RATE_LIMIT_REDIS_URL सेट करें।",
 
+  "The address in RATE_LIMIT_REDIS_URL is not answering, so each worker is counting its own traffic again. The startup log said the moment it stopped. Nothing else on this page changes: the limits are real, they are just per process until the store replies.":
+    "RATE_LIMIT_REDIS_URL में दिया पता जवाब नहीं दे रहा, इसलिए हर वर्कर फिर ख़ुद की गिनती कर रहा है। स्टार्टअप लॉग ने बंद होते ही यह लिख दिया। इस पेज पर और कुछ नहीं बदलता: सीमाएँ असली हैं, बस स्टोर जवाब देने तक वे प्रति-प्रोसेस हैं।",
+  "The money guard, counted in the store above so several workers share one number. It sits far above what a person types in a day: an account that meets it is a loop, a stuck retry, or somebody else holding a session. A message that reads as a disclosure is always answered.":
+    "यह ख़र्च की रक्षा है और ऊपर बताए स्टोर में गिनी जाती है, ताकि कई वर्कर एक ही संख्या साझा करें। यह किसी व्यक्ति के दिन भर की टाइपिंग से बहुत ऊपर है: यह छत छूने वाला खाता कोई लूप है, अटका पुनःप्रयास है, या कोई और सेशन लिए बैठे है। जो संदेश ख़तरे की बात लगती है, उसका जवाब हमेशा जाता है।",
+  "After the configured number of failures inside one window, the guide answers from its own script for the cooldown without asking the provider at all. Every reply served while the breaker is open says on screen that the built-in guide wrote it.":
+    "एक विंडो में सेट की संख्या भरने के बाद, गाइड ठहरे समय तक प्रोवाइडर से पूछे बिना अपनी स्क्रिप्ट से जवाब देता है। जब तक ब्रेकर खुला है, हर जवाब स्क्रीन पर कहता है कि वह बना-बनाया गाइड ने लिखा है।",
+
   // KeyValue notes that carry a value
   "Region {region}. Gemini's spoken model is {model}.":
     "रीजन {region}। Gemini की बोलने वाली मॉडल {model} है।",
@@ -256,6 +265,11 @@ export const HI: Record<string, string> = {
   Neither: "कोई नहीं",
   "In Redis, shared by every worker": "Redis में, हर वर्कर के लिए साझा",
   "In this process": "इस प्रोसेस में",
+  "In this process, although Redis is configured": "इस प्रोसेस में, हालाँकि Redis सेट है",
+  "No ceiling": "कोई छत नहीं",
+  "{seconds} of built-in guide left": "बना-बनाया गाइड {seconds} और",
+  "{failures} provider failures counted since the last reply":
+    "पिछले जवाब के बाद {failures} प्रोवाइडर विफलताएँ गिनी गईं",
   "{hours} hours from UTC": "UTC से {hours} घंटे",
 
   // Captions on the deployment panel
@@ -263,8 +277,8 @@ export const HI: Record<string, string> = {
     "कोई भी स्पीच प्रोवाइडर पक्का ऑफ़लाइन रास्ता नहीं है, और सर्वर के पास की न हो तो ब्राउज़र अपनी आवाज़ इस्तेमाल करता है। किसने बोया यह उसी स्क्रीन पर बताया जाता है जहाँ इसका इस्तेमाल हो, यहाँ नहीं।",
   "Clerk is optional. Without it a device is the account, and the come-back code is the way back onto it — which is why the code is stretched through 210,000 PBKDF2 rounds rather than relying on the throttle below.":
     "Clerk ज़रूरी नहीं है। इसके बिना एक डिवाइस ही खाता होता है, और वापसी कोड ही उस पर लौटने का रास्ता है — इसीलिए कोड को 210,000 PBKDF2 राउंड से मज़बूत किया जाता है, नीचे दिए थ्रॉटल पर निर्भर न होकर।",
-  "The counters live in this process’s memory. One instance means honest limits; a hosted deployment that runs several has a ceiling of the rule times however many are warm, which is a brake rather than a wall.":
-    "गिनती इस प्रोसेस की मेमोरी में रहती है। एक इंस्टेंस का मतलब सच्ची सीमाएँ; कई इंस्टेंस पर चली होस्टेड तैनाती की छत नियम गुना चलते इंस्टेंस होती है, जो दीवार नहीं ब्रेक जैसी है।",
+  "A throttle is a brake, not a wall: the same rules counted in one store are what make a hosted deployment’s ceiling the number printed above, rather than that number times however many copies are warm. The day's reply budget and the provider breaker are counted in the same store for the same reason.":
+    "थ्रॉटल दीवार नहीं, ब्रेक है: एक ही स्टोर में गिने जाने के कारण होस्टेड तैनाती की छत ऊपर लिखी संख्या ही रहती है, चलती कॉपियों से गुना नहीं होकर। दिन का जवाब-बजट और प्रोवाइडर ब्रेकर भी इसी वजह से उसी स्टोर में गिने जाते हैं।",
 
   // Audit log panel
   Action: "क्रिया",
