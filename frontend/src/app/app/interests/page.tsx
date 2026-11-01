@@ -16,6 +16,7 @@ import { Button, LinkButton } from "@/components/ui/button";
 import { Checkbox, Textarea } from "@/components/ui/field";
 import { EmptyState, ErrorState, LoadingPanel, SkeletonCard } from "@/components/ui/feedback";
 import { useToast } from "@/components/ui/toast";
+import { useT, useTf } from "@/lib/i18n";
 import { useSession } from "@/lib/session";
 import { api } from "@/lib/api";
 import { useResource } from "@/lib/use-resource";
@@ -47,6 +48,8 @@ function errorMessage(error: unknown) {
 export default function InterestsPage() {
   const { profile, settings, saveProfile } = useSession();
   const { toast } = useToast();
+  const t = useT();
+  const tf = useTf();
 
   // Classes 6-8 (and the young age bands) get shorter, more concrete sentences.
   const simple = useMemo(() => {
@@ -163,7 +166,7 @@ export default function InterestsPage() {
       }
       badge={
         <Badge tone="teal" icon={<Lightbulb className="h-3.5 w-3.5" aria-hidden />}>
-          Early signals, not labels
+          {t("Early signals, not labels")}
         </Badge>
       }
     >
@@ -194,7 +197,7 @@ export default function InterestsPage() {
                 description="Check the backend is running, then reload this page."
                 action={
                   <Button size="sm" variant="outline" onClick={promptsPanel.reload}>
-                    Reload questions
+                    {t("Reload questions")}
                   </Button>
                 }
               />
@@ -222,7 +225,7 @@ export default function InterestsPage() {
                       )}
                     >
                       {done ? <Check className="h-3 w-3" aria-hidden /> : null}
-                      Q{itemIndex + 1}
+                      {tf("Q{n}", { n: itemIndex + 1 })}
                     </button>
                   );
                 })}
@@ -230,18 +233,18 @@ export default function InterestsPage() {
 
               {result ? (
                 <div className="rounded-2xl border border-teal/25 bg-teal-mist/50 p-4">
-                  <p className="text-sm font-medium text-ink">
+                  <p className="text-sm font-medium text-heading">
                     {result.saved_themes.length > 0
                       ? simple
-                        ? "That tells us you might enjoy…"
-                        : "That tells us you might enjoy areas like these — it is a possibility, not a prediction:"
+                        ? t("That tells us you might enjoy…")
+                        : t("That tells us you might enjoy areas like these — it is a possibility, not a prediction:")
                       : ""}
                   </p>
                   {result.saved_themes.length > 0 ? (
                     <div className="mt-2 flex flex-wrap gap-2">
                       {result.saved_themes.map((theme) => (
                         <Badge key={theme.theme} tone="teal">
-                          {THEME_LABELS[theme.theme] ?? theme.label}
+                          {t(THEME_LABELS[theme.theme] ?? theme.label)}
                         </Badge>
                       ))}
                     </div>
@@ -252,16 +255,16 @@ export default function InterestsPage() {
                   <div className="mt-3 flex flex-wrap gap-2">
                     {index + 1 < prompts.length ? (
                       <Button size="sm" onClick={() => goTo(index + 1)}>
-                        Next question
+                        {t("Next question")}
                         <ArrowRight className="h-4 w-4" aria-hidden />
                       </Button>
                     ) : (
                       <Button size="sm" variant="outline" onClick={() => goTo(0)}>
-                        Back to the start
+                        {t("Back to the start")}
                       </Button>
                     )}
                     <Button size="sm" variant="ghost" onClick={() => setResult(null)}>
-                      Change my answer
+                      {t("Change my answer")}
                     </Button>
                   </div>
                 </div>
@@ -269,9 +272,9 @@ export default function InterestsPage() {
                 <div className="space-y-3">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-                      Question {index + 1} of {prompts.length}
+                      {tf("Question {n} of {total}", { n: index + 1, total: prompts.length })}
                     </p>
-                    <p className="mt-1.5 text-base font-semibold leading-snug text-ink">
+                    <p className="mt-1.5 text-base font-semibold leading-snug text-heading break-words">
                       {prompt?.question}
                     </p>
                     <p className="mt-1 text-sm text-muted">{prompt?.hint}</p>
@@ -290,7 +293,7 @@ export default function InterestsPage() {
                   {latestSession ? (
                     <Checkbox
                       label="Also save to my last conversation"
-                      description={`Adds this answer to conversation #${latestSession.id} so your guide can use it.`}
+                      description={tf("Adds this answer to conversation #{id} so your guide can use it.", { id: latestSession.id })}
                       checked={attachToChat}
                       onChange={(event) => setAttachToChat(event.target.checked)}
                     />
@@ -302,15 +305,15 @@ export default function InterestsPage() {
                   ) : null}
                   <div className="flex flex-wrap items-center gap-2">
                     <Button onClick={() => void submit()} loading={submitting} disabled={!answer.trim()}>
-                      Save my answer
+                      {t("Save my answer")}
                     </Button>
                     <Button variant="outline" onClick={skip} disabled={prompts.length <= 1}>
                       <SkipForward className="h-4 w-4" aria-hidden />
-                      Skip this one
+                      {t("Skip this one")}
                     </Button>
                     {index > 0 ? (
                       <Button variant="ghost" onClick={() => goTo(index - 1)}>
-                        Previous
+                        {t("Previous")}
                       </Button>
                     ) : null}
                   </div>
@@ -347,30 +350,29 @@ export default function InterestsPage() {
                 description="Answer one of the questions above, or have a chat with your guide, and small observations will start appearing here."
                 action={
                   <LinkButton href="/app/call" size="sm">
-                    Talk to your guide
+                    {t("Talk to your guide")}
                   </LinkButton>
                 }
               />
             ) : (
-              <ul className="space-y-3">
+              <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line">
                 {observations.map((observation: Observation) => (
-                  <li
-                    key={observation.id}
-                    className="rounded-2xl border border-line bg-canvas/60 p-4"
-                  >
+                  <li key={observation.id} className="p-4 sm:px-5">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <Badge tone="teal">
-                        {THEME_LABELS[observation.theme] ?? observation.theme}
+                        {t(THEME_LABELS[observation.theme] ?? observation.theme)}
                       </Badge>
                       <span className="text-xs text-muted">
                         {relativeTime(observation.created_at)}
                       </span>
                     </div>
-                    <p className="mt-2 text-sm leading-relaxed text-ink">
+                    <p className="mt-2 text-sm leading-relaxed text-ink break-words">
                       &ldquo;{observation.evidence}&rdquo;
                     </p>
                     <p className="mt-1.5 text-xs text-muted">
-                      Noticed through {SOURCE_LABELS[observation.source] ?? observation.source}
+                      {tf("Noticed through {source}", {
+                        source: t(SOURCE_LABELS[observation.source] ?? observation.source),
+                      })}
                     </p>
                   </li>
                 ))}
@@ -388,7 +390,7 @@ export default function InterestsPage() {
             action={
               summaryPanel.state === "ready" ? (
                 <Button size="sm" variant="ghost" onClick={summaryPanel.reload}>
-                  Refresh
+                  {t("Refresh")}
                 </Button>
               ) : undefined
             }
@@ -409,7 +411,7 @@ export default function InterestsPage() {
               <div className="grid gap-4 sm:grid-cols-2">
                 {summary.themes.map((theme) => (
                   <div key={theme.theme} className="rounded-2xl border border-line bg-surface p-4">
-                    <Badge tone="teal">{theme.label}</Badge>
+                    <Badge tone="teal">{t(THEME_LABELS[theme.theme] ?? theme.label)}</Badge>
                     <p className="mt-2.5 text-sm leading-relaxed text-ink">{theme.blurb}</p>
                     {theme.evidence.length > 0 ? (
                       <ul className="mt-3 space-y-1.5">
@@ -465,9 +467,9 @@ export default function InterestsPage() {
             }
             action={
               interestsSaving ? (
-                <span className="text-xs text-muted">Saving…</span>
+                <span className="text-xs text-muted">{t("Saving…")}</span>
               ) : (
-                <span className="text-xs text-muted">{interests.length} selected</span>
+                <span className="text-xs text-muted">{tf("{n} selected", { n: interests.length })}</span>
               )
             }
           />
@@ -488,7 +490,7 @@ export default function InterestsPage() {
                   )}
                 >
                   {selected ? <Check className="h-3.5 w-3.5" aria-hidden /> : null}
-                  {option}
+                  {t(option)}
                 </button>
               );
             })}

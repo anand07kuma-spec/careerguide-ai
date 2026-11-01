@@ -21,6 +21,10 @@ import { HI as RESUME } from "./resume";
 import { HI as ROADMAP } from "./roadmap";
 import { HI as JOURNEY } from "./journey";
 import { HI as REPORTS } from "./reports";
+import { HI as CATALOGUE } from "./catalogue";
+import { HI as INTERESTS } from "./interests";
+import { HI as SCHOLARSHIPS } from "./scholarships";
+import { HI as INSTITUTES } from "./institutes";
 import { HI as LEGAL } from "./legal";
 import { HI as ONBOARDING } from "./onboarding";
 import { HI as PARENT } from "./parent";
@@ -42,6 +46,10 @@ export const HI: Record<string, string> = {
   ...ROADMAP,
   ...JOURNEY,
   ...REPORTS,
+  ...CATALOGUE,
+  ...INTERESTS,
+  ...SCHOLARSHIPS,
+  ...INSTITUTES,
   ...TRUST,
   ...PUBLIC_PAGES,
   ...WELCOME,

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   BadgeCheck,
+  ChevronDown,
   ExternalLink,
   HeartHandshake,
   Info,
@@ -16,11 +17,12 @@ import {
 } from "lucide-react";
 import { Screen } from "@/components/layout/app-shell";
 import { Card, SectionHeading } from "@/components/ui/card";
-import { LinkButton } from "@/components/ui/button";
+import { Button, LinkButton } from "@/components/ui/button";
 import { Badge, SourceBadge } from "@/components/ui/badge";
 import { EmptyState, ErrorState, SkeletonCard } from "@/components/ui/feedback";
 import { Input, Select } from "@/components/ui/field";
 import { api } from "@/lib/api";
+import { useT, useTf } from "@/lib/i18n";
 import { useSession } from "@/lib/session";
 import { useResource } from "@/lib/use-resource";
 import type { Scholarship } from "@/lib/types";
@@ -60,6 +62,7 @@ function stateLabel(value: string): string {
 
 export default function ScholarshipsScreen() {
   const { status: sessionStatus } = useSession();
+  const t = useT();
 
   const [search, setSearch] = useState("");
   const [debounced, setDebounced] = useState("");
@@ -97,6 +100,8 @@ export default function ScholarshipsScreen() {
     };
   }, []);
 
+  // Option labels stay in English source here: the Select primitive translates
+  // them itself, so wrapping them again would be a double translation.
   const levelOptions = useMemo(() => {
     const seen = Array.from(new Set(facets.flatMap((s) => s.education_levels))).sort();
     return [
@@ -136,7 +141,7 @@ export default function ScholarshipsScreen() {
     <Screen
       title="Scholarships & Financial Guidance"
       description="A starting point for finding help with study costs. This is a sample list, not a complete or live one — every scheme must be confirmed on its official portal."
-      badge={<Badge tone="teal" icon={<Wallet className="h-3.5 w-3.5" aria-hidden />}>Sample list — verify first</Badge>}
+      badge={<Badge tone="teal" icon={<Wallet className="h-3.5 w-3.5" aria-hidden />}>{t("Sample list — verify first")}</Badge>}
     >
       <div className="space-y-5">
         {/* How to check a scheme is real — persistent, above the list */}
@@ -148,20 +153,20 @@ export default function ScholarshipsScreen() {
           <ul className="mt-3 space-y-2 text-sm leading-relaxed text-ink">
             <li className="flex items-start gap-2">
               <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-brand-dark" aria-hidden />
-              <span>Open the official government website yourself (for example the National Scholarship Portal) and read the current circular there — not a forwarded screenshot or WhatsApp message.</span>
+              <span className="break-words">{t("Open the official government website yourself (for example the National Scholarship Portal) and read the current circular there — not a forwarded screenshot or WhatsApp message.")}</span>
             </li>
             <li className="flex items-start gap-2">
               <Landmark className="mt-0.5 h-4 w-4 shrink-0 text-brand-dark" aria-hidden />
-              <span>Ask your school office or college scholarship desk. They handle these applications and can tell you what is genuine.</span>
+              <span className="break-words">{t("Ask your school office or college scholarship desk. They handle these applications and can tell you what is genuine.")}</span>
             </li>
             <li className="flex items-start gap-2">
               <Lock className="mt-0.5 h-4 w-4 shrink-0 text-brand-dark" aria-hidden />
-              <span>Never pay a fee to someone who offers to &ldquo;apply on your behalf.&rdquo; Genuine government schemes do not charge agents to submit an application.</span>
+              <span className="break-words">{t("Never pay a fee to someone who offers to “apply on your behalf.” Genuine government schemes do not charge agents to submit an application.")}</span>
             </li>
           </ul>
           <p className="mt-3 flex items-start gap-1.5 text-xs leading-relaxed text-muted">
             <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
-            This list is a starting point only. It is not complete, and details change every academic year.
+            <span className="break-words">{t("This list is a starting point only. It is not complete, and details change every academic year.")}</span>
           </p>
         </Card>
 
@@ -175,14 +180,14 @@ export default function ScholarshipsScreen() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search schemes"
-                aria-label="Search scholarships"
+                aria-label={t("Search scholarships")}
                 className="pl-9 pr-9"
               />
               {search ? (
                 <button
                   type="button"
                   onClick={() => setSearch("")}
-                  aria-label="Clear search"
+                  aria-label={t("Clear search")}
                   className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-1.5 text-muted hover:bg-canvas hover:text-ink"
                 >
                   <X className="h-4 w-4" aria-hidden />
@@ -193,19 +198,19 @@ export default function ScholarshipsScreen() {
               value={level}
               onChange={(e) => setLevel(e.target.value)}
               options={levelOptions}
-              aria-label="Filter by class level"
+              aria-label={t("Filter by class level")}
             />
             <Select
               value={state}
               onChange={(e) => setState(e.target.value)}
               options={stateOptions}
-              aria-label="Filter by state"
+              aria-label={t("Filter by state")}
             />
             <Select
               value={scope}
               onChange={(e) => setScope(e.target.value)}
               options={scopeOptions}
-              aria-label="Filter by provider type"
+              aria-label={t("Filter by provider type")}
             />
           </div>
           {hasFilters ? (
@@ -216,7 +221,7 @@ export default function ScholarshipsScreen() {
                 className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-brand-dark hover:bg-brand-mist"
               >
                 <X className="h-3.5 w-3.5" aria-hidden />
-                Clear filters
+                {t("Clear filters")}
               </button>
             </div>
           ) : null}
@@ -248,100 +253,17 @@ export default function ScholarshipsScreen() {
                   className="inline-flex items-center gap-1.5 rounded-xl bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-dark"
                 >
                   <X className="h-4 w-4" aria-hidden />
-                  Clear filters
+                  {t("Clear filters")}
                 </button>
               ) : undefined
             }
           />
         ) : (
-          <>
-            <p className="text-sm text-muted" aria-live="polite">
-              Showing <span className="font-semibold text-ink">{items.length}</span>{" "}
-              {items.length === 1 ? "scheme" : "schemes"}
-              {hasFilters ? " with your filters" : ""}.
-            </p>
-            <div className="grid gap-4 lg:grid-cols-2">
-              {items.map((scholarship) => {
-                const allIndia = scholarship.states.includes("all-india");
-                return (
-                  <Card key={scholarship.id} className="flex flex-col">
-                    <div className="flex flex-wrap items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <h3 className="text-base font-semibold leading-tight text-ink">{scholarship.name}</h3>
-                        <p className="mt-0.5 text-sm text-muted">{scholarship.provider}</p>
-                      </div>
-                      <Badge tone="brand">{scopeLabel(scholarship.scope)}</Badge>
-                    </div>
-
-                    <div className="mt-3 flex flex-wrap gap-1.5">
-                      {allIndia ? (
-                        <Badge tone="teal">All India</Badge>
-                      ) : (
-                        scholarship.states.map((s) => <Badge key={s} tone="neutral">{stateLabel(s)}</Badge>)
-                      )}
-                      {scholarship.education_levels.map((l) => (
-                        <Badge key={l} tone="neutral">{levelLabel(l)}</Badge>
-                      ))}
-                      {scholarship.categories.map((c) => (
-                        <Badge key={c} tone="neutral">{c.replace(/-/g, " ")}</Badge>
-                      ))}
-                    </div>
-
-                    <dl className="mt-3 space-y-2 text-sm leading-relaxed">
-                      <div>
-                        <dt className="font-medium text-ink">What it offers</dt>
-                        <dd className="text-muted">{scholarship.benefit_summary}</dd>
-                      </div>
-                      <div>
-                        <dt className="font-medium text-ink">Who it is generally for</dt>
-                        <dd className="text-muted">{scholarship.eligibility_summary}</dd>
-                      </div>
-                    </dl>
-
-                    {scholarship.application_steps.length > 0 ? (
-                      <div className="mt-3">
-                        <p className="flex items-center gap-1.5 text-sm font-medium text-ink">
-                          <ListChecks className="h-4 w-4 text-brand-dark" aria-hidden />
-                          How to apply
-                        </p>
-                        <ol className="mt-1.5 space-y-1.5">
-                          {scholarship.application_steps.map((step, index) => (
-                            <li key={index} className="flex items-start gap-2 text-sm text-muted">
-                              <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-mist text-[11px] font-semibold text-brand-dark">
-                                {index + 1}
-                              </span>
-                              <span className="leading-relaxed">{step}</span>
-                            </li>
-                          ))}
-                        </ol>
-                      </div>
-                    ) : null}
-
-                    {/* Disclaimer — always visible, not hidden behind a tooltip */}
-                    <div className="mt-3 rounded-xl border border-warning/30 bg-warning-mist px-3 py-2.5">
-                      <p className="flex items-start gap-1.5 text-xs leading-relaxed text-amber-800">
-                        <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
-                        {scholarship.disclaimer}
-                      </p>
-                    </div>
-
-                    <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-line pt-3">
-                      <SourceBadge
-                        verified={scholarship.verified}
-                        checkedAt={scholarship.last_verified_at}
-                        sourceUrl={scholarship.source_url}
-                        alternatives={[{ label: "Where you apply", url: scholarship.official_url }]}
-                      />
-                      <LinkButton href={scholarship.official_url} variant="outline" size="sm">
-                        Official site
-                        <ExternalLink className="h-3.5 w-3.5" aria-hidden />
-                      </LinkButton>
-                    </div>
-                  </Card>
-                );
-              })}
-            </div>
-          </>
+          <ScholarshipResults
+            key={`${debounced}|${level}|${state}|${scope}`}
+            items={items}
+            hasFilters={hasFilters}
+          />
         )}
 
         {/* Family finances — a calmer view */}
@@ -350,7 +272,7 @@ export default function ScholarshipsScreen() {
             title={
               <span className="flex items-center gap-2">
                 <HeartHandshake className="h-5 w-5 text-teal" aria-hidden />
-                Family finances — a calmer view
+                {t("Family finances — a calmer view")}
               </span>
             }
             description="Money shapes which route is possible. It never measures how much you are worth."
@@ -358,27 +280,153 @@ export default function ScholarshipsScreen() {
           <ul className="mt-3 space-y-2 text-sm leading-relaxed text-ink">
             <li className="flex items-start gap-2">
               <BadgeCheck className="mt-0.5 h-4 w-4 shrink-0 text-teal" aria-hidden />
-              <span>Limited money can limit a route, but it never limits your worth or your right to a good career.</span>
+              <span className="break-words">{t("Limited money can limit a route, but it never limits your worth or your right to a good career.")}</span>
             </li>
             <li className="flex items-start gap-2">
               <BadgeCheck className="mt-0.5 h-4 w-4 shrink-0 text-teal" aria-hidden />
-              <span>Ask your school office about schemes you may qualify for — many never get applied to simply because families don&rsquo;t know they exist.</span>
+              <span className="break-words">{t("Ask your school office about schemes you may qualify for — many never get applied to simply because families don’t know they exist.")}</span>
             </li>
             <li className="flex items-start gap-2">
               <BadgeCheck className="mt-0.5 h-4 w-4 shrink-0 text-teal" aria-hidden />
-              <span>Government schemes and low-cost state colleges are legitimate first choices, not a lesser path.</span>
+              <span className="break-words">{t("Government schemes and low-cost state colleges are legitimate first choices, not a lesser path.")}</span>
             </li>
             <li className="flex items-start gap-2">
               <BadgeCheck className="mt-0.5 h-4 w-4 shrink-0 text-teal" aria-hidden />
-              <span>Never pay a middleman to apply for you. Applications go through official portals, often with help from your school.</span>
+              <span className="break-words">{t("Never pay a middleman to apply for you. Applications go through official portals, often with help from your school.")}</span>
             </li>
             <li className="flex items-start gap-2">
               <BadgeCheck className="mt-0.5 h-4 w-4 shrink-0 text-teal" aria-hidden />
-              <span>This app never asks for banking details or documents, and you should not share them here with anyone.</span>
+              <span className="break-words">{t("This app never asks for banking details or documents, and you should not share them here with anyone.")}</span>
             </li>
           </ul>
         </Card>
       </div>
     </Screen>
+  );
+}
+
+// ------------------------------------------------------------------- results
+
+/** Owns the reveal window so a filter change remounts it back to the first page
+ * instead of leaving a long list scrolled open under a new query. Cards keep the
+ * offer, the disclaimer and the official link in view; eligibility and the
+ * application steps sit one tap deeper, so six cards read as a short list. */
+function ScholarshipResults({ items, hasFilters }: { items: Scholarship[]; hasFilters: boolean }) {
+  const t = useT();
+  const tf = useTf();
+  const [shown, setShown] = useState(6);
+  const page = items.slice(0, shown);
+
+  return (
+    <>
+      <p className="text-sm text-muted" aria-live="polite">
+        {tf(
+          hasFilters
+            ? items.length === 1
+              ? "Showing {n} scheme with your filters."
+              : "Showing {n} schemes with your filters."
+            : items.length === 1
+              ? "Showing {n} scheme."
+              : "Showing {n} schemes.",
+          { n: items.length },
+        )}
+      </p>
+      <div className="grid gap-4 lg:grid-cols-2">
+        {page.map((scholarship) => {
+          const allIndia = scholarship.states.includes("all-india");
+          return (
+            <Card key={scholarship.id} className="flex flex-col">
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <h3 className="break-words text-base font-semibold leading-snug text-heading">{scholarship.name}</h3>
+                  <p className="mt-0.5 break-words text-sm text-muted">{scholarship.provider}</p>
+                </div>
+                <Badge tone="brand">{t(scopeLabel(scholarship.scope))}</Badge>
+              </div>
+
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {allIndia ? (
+                  <Badge tone="teal">{t("All India")}</Badge>
+                ) : (
+                  scholarship.states.map((s) => <Badge key={s} tone="neutral">{t(stateLabel(s))}</Badge>)
+                )}
+                {scholarship.education_levels.map((l) => (
+                  <Badge key={l} tone="neutral">{t(levelLabel(l))}</Badge>
+                ))}
+                {scholarship.categories.map((c) => (
+                  <Badge key={c} tone="neutral">{c.replace(/-/g, " ")}</Badge>
+                ))}
+              </div>
+
+              <dl className="mt-3 space-y-2 text-sm leading-relaxed">
+                <div>
+                  <dt className="font-medium text-ink">{t("What it offers")}</dt>
+                  <dd className="break-words text-muted">{scholarship.benefit_summary}</dd>
+                </div>
+              </dl>
+
+              <details className="group mt-3 rounded-xl border border-line bg-canvas/60 px-3 py-2">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-sm font-medium text-brand-dark [&::-webkit-details-marker]:hidden">
+                  {t("Eligibility & how to apply")}
+                  <ChevronDown className="h-4 w-4 shrink-0 transition-transform group-open:rotate-180" aria-hidden />
+                </summary>
+                <div className="mt-2 space-y-3 pb-1">
+                  <div className="text-sm leading-relaxed">
+                    <p className="font-medium text-ink">{t("Who it is generally for")}</p>
+                    <p className="break-words text-muted">{scholarship.eligibility_summary}</p>
+                  </div>
+                  {scholarship.application_steps.length > 0 ? (
+                    <div>
+                      <p className="flex items-center gap-1.5 text-sm font-medium text-ink">
+                        <ListChecks className="h-4 w-4 text-brand-dark" aria-hidden />
+                        {t("How to apply")}
+                      </p>
+                      <ol className="mt-1.5 space-y-1.5">
+                        {scholarship.application_steps.map((step, index) => (
+                          <li key={index} className="flex items-start gap-2 text-sm text-muted">
+                            <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-mist text-[11px] font-semibold text-brand-dark">
+                              {index + 1}
+                            </span>
+                            <span className="break-words leading-relaxed">{step}</span>
+                          </li>
+                        ))}
+                      </ol>
+                    </div>
+                  ) : null}
+                </div>
+              </details>
+
+              {/* Disclaimer — always visible, not hidden behind a tooltip */}
+              <div className="mt-3 rounded-xl border border-warning/30 bg-warning-mist px-3 py-2.5">
+                <p className="flex items-start gap-1.5 text-xs leading-relaxed text-amber-800">
+                  <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+                  <span className="break-words">{scholarship.disclaimer}</span>
+                </p>
+              </div>
+
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-line pt-3">
+                <SourceBadge
+                  verified={scholarship.verified}
+                  checkedAt={scholarship.last_verified_at}
+                  sourceUrl={scholarship.source_url}
+                  alternatives={[{ label: "Where you apply", url: scholarship.official_url }]}
+                />
+                <LinkButton href={scholarship.official_url} variant="outline" size="sm">
+                  {t("Official site")}
+                  <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+                </LinkButton>
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+      {items.length > shown ? (
+        <div className="flex justify-center">
+          <Button variant="outline" onClick={() => setShown((s) => s + 6)}>
+            {t("Show more scholarships")}
+          </Button>
+        </div>
+      ) : null}
+    </>
   );
 }
