@@ -86,7 +86,7 @@ frontend code, never in a commit, never pasted into chat or a screenshot.
 | `PUBLIC_SITE_URL` / `PUBLIC_REPO_URL` | backend | this site's own URLs | The two addresses a printed report carries, and the contact route a family can write to |
 | `NEXT_PUBLIC_BACKEND_URL` | frontend | `http://localhost:8000` | API origin the browser calls (baked at build time) |
 | `BACKEND_INTERNAL_URL` | frontend (server only) | `http://api:8000` in compose, unset otherwise | API origin this app's **own server code** calls: `/careers`, `/blog`, the study-abroad pages and `sitemap.xml` all read the backend during render. Inside the web container `localhost` is the container itself, so without this the pages print "the catalogue service could not be reached" while the browser half of the same app works. Deliberately not `NEXT_PUBLIC_` — it is stripped from the client bundle |
-| `NEXT_PUBLIC_GA_MEASUREMENT_ID` | frontend | empty | `G-…`. A public property id, **not** a secret. Empty means no Google Analytics script is ever fetched, and the consent banner says "this site sets no cookies" instead of promising measurement. `middleware.ts` adds `googletagmanager.com` / `*.google-analytics.com` to the CSP only when it is set |
+| `NEXT_PUBLIC_GA_MEASUREMENT_ID` | frontend | empty | `G-…`. A public property id, **not** a secret. Empty means no Google Analytics script is ever fetched, and the consent banner says "this site sets no tracking cookie" instead of promising measurement. `middleware.ts` adds `googletagmanager.com` / `*.google-analytics.com` to the CSP only when it is set |
 | `NEXT_PUBLIC_CLARITY_PROJECT_ID` | frontend | empty | The Microsoft Clarity project id, same rule. Clarity replays a page's own elements, so it is switched off outright on `/app`, `/parent`, `/onboarding`, `/sign-in`, `/sign-up` and `/account` whatever the visitor answered — a replay of a student's screen would replay what they typed |
 | `NEXT_PUBLIC_SITE_URL` | frontend | the deployed Vercel origin | Where canonicals, OpenGraph urls, `robots.txt`'s `Host` and the sitemap's absolute urls point. Set it to the real domain on the day one exists, or every canonical points somewhere nobody owns |
 | `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION` | frontend | empty | The Search Console placeholder. With no value, no `verification` meta tag is emitted at all; paste the token Google gives you and the root layout prints it. Both analytics ids and this one are public identifiers — nothing that lets anyone call your API |
@@ -318,7 +318,8 @@ Three rules those files now enforce, since a Vercel misconfiguration of this kin
 
 Preview deployments are the reason the fallback matters: a preview built without
 `NEXT_PUBLIC_BACKEND_URL` talks to `localhost:8000` on the visitor's own machine, which fails closed —
-every screen shows its offline state — instead of pointing a preview at the production database and
+every screen shows the server-is-not-answering state, not the offline one, because §4's rules keep those
+two sentences apart — instead of pointing a preview at the production database and
 writing test traffic into a real child's account. Production must set it, and only Production is checked
 when the site is judged to work.
 
@@ -497,7 +498,7 @@ Cost and privacy:
 | `/app/streams` | Class 10 → Science / Commerce / Humanities: what each stream is really like, other routes, five myths, and what to ask your own school. No recommendation, no score, no prediction |
 | `/app/exams` | Entrance exams grouped by what you become through them (JEE, NEET, CUET, CLAT, CA, NDA, design, SSC/IBPS, state CETs). The list is the server's now — `GET /api/exams` fills the screen, and nothing about an exam is typed into the frontend bundle any more. No dates, fees, cutoffs or eligibility numbers anywhere, and that is a server rule rather than a design habit: a date or a fee is stored but **withheld** until an operator ticks the row as read from the official notification, and no seeded row is ticked, so the API could not publish a figure if a page asked for one. Each card names the official notification instead, plus a "how to check a notification is real" checklist |
 | `/app/interests` | One gentle question at a time; answers become early signals, not a fixed profile |
-| `/app/assessments`, `/app/assessments/[type]`, `/app/assessments/result/[id]` | Three questionnaires the student starts and finishes in their own time: **interest** (RIASEC, 30 statements), **personality** (Big Five short form, 20 statements) and **aptitude** (25 puzzles in numbers, words, reasoning and shapes). Each item exists in English and हिन्दी in `backend/data/assessment_questions.json`; the answer key never leaves the server. One question at a time, any order, every answer saved as it is clicked, so closing the tab costs nothing and "Continue where you left off" restores the exact sitting. Nothing is timed — a ticking clock turns a career questionnaire into an exam. The result page shows how much was actually answered before it shows any number, a radar chart with the same figures as a screen-reader table (and a bar list when too few areas are scored to draw one), each area with its band *and* its `answered of total` count, the careers in the app's own sample catalogue that the strongest areas point at, and a "what these numbers are not" block. A dimension with too few answers has no score at all and is printed as "No number yet" rather than 0. These are in-house self-questionnaires in the RIASEC and Big Five traditions, not licensed clinical instruments, and no screen calls them a diagnosis, an IQ score or a prediction. **A finished result also carries a next step**: a **Your skill gap** card and a **Your 30-day plan** timeline, both written from that sitting's own answers by `app/services/roadmap.py` and stored on the result itself (`roadmap_json`, migration `0015_result_roadmap`), so the plan arrives with the result instead of being generated each time the page opens. The gap says what the answers already cover and what the career those answers pointed at leans on beyond that — phrased as a property of *the work*, never of the child — and any area too thinly answered to score is printed in its own "Not measured, so not a weakness" block rather than as a 0. The plan is four weeks of short steps that need no money and no account, each one tied back to a named gap, plus a **Discuss this roadmap with AI Guide** button that opens `/app/chat?context=roadmap&result=N` with those same four weeks in front of the model — so "what is week two?" is answerable without the student describing it. **✨ Rewrite this plan with AI** asks the configured model for the same document in its own words, and the card then says who wrote it: *Written by the app's own rules* or *<provider> model*, which is the same line the resume screen holds itself to. A provider that is unreachable, unreadable or empty leaves the rules plan standing and prints one true sentence about the click that failed; the ✨ itself is not rendered when no model is configured at all. And because a model's sentences are the model's, a plan written in English stays in English when the interface switches to हिन्दी — the card says so with a *Written in English* badge rather than inventing a translation |
+| `/app/assessments`, `/app/assessments/[type]`, `/app/assessments/result/[id]` | Three questionnaires the student starts and finishes in their own time: **interest** (RIASEC, 30 statements), **personality** (Big Five short form, 20 statements) and **aptitude** (25 puzzles in numbers, words, reasoning and shapes). Each item exists in English and हिन्दी in `backend/data/assessment_questions.json`; the answer key never leaves the server. One question at a time, any order, every answer saved as it is clicked, so closing the tab costs nothing and "Continue where you left off" restores the exact sitting. Nothing is timed — a ticking clock turns a career questionnaire into an exam. The result page shows how much was actually answered before it shows any number, a radar chart with the same figures as a screen-reader table (and a bar list when too few areas are scored to draw one — and on a device in Lite mode the table is the *visible* copy and the chart library is never asked for, which is the same component rather than a second one; see "Lite mode" below), each area with its band *and* its `answered of total` count, the careers in the app's own sample catalogue that the strongest areas point at, and a "what these numbers are not" block. A dimension with too few answers has no score at all and is printed as "No number yet" rather than 0. These are in-house self-questionnaires in the RIASEC and Big Five traditions, not licensed clinical instruments, and no screen calls them a diagnosis, an IQ score or a prediction. **A finished result also carries a next step**: a **Your skill gap** card and a **Your 30-day plan** timeline, both written from that sitting's own answers by `app/services/roadmap.py` and stored on the result itself (`roadmap_json`, migration `0015_result_roadmap`), so the plan arrives with the result instead of being generated each time the page opens. The gap says what the answers already cover and what the career those answers pointed at leans on beyond that — phrased as a property of *the work*, never of the child — and any area too thinly answered to score is printed in its own "Not measured, so not a weakness" block rather than as a 0. The plan is four weeks of short steps that need no money and no account, each one tied back to a named gap, plus a **Discuss this roadmap with AI Guide** button that opens `/app/chat?context=roadmap&result=N` with those same four weeks in front of the model — so "what is week two?" is answerable without the student describing it. **✨ Rewrite this plan with AI** asks the configured model for the same document in its own words, and the card then says who wrote it: *Written by the app's own rules* or *<provider> model*, which is the same line the resume screen holds itself to. A provider that is unreachable, unreadable or empty leaves the rules plan standing and prints one true sentence about the click that failed; the ✨ itself is not rendered when no model is configured at all. And because a model's sentences are the model's, a plan written in English stays in English when the interface switches to हिन्दी — the card says so with a *Written in English* badge rather than inventing a translation |
 | `/app/journey` | Timeline of conversations, interests, saves and plans — counts, not scores |
 | `/app/plans` | Student-owned study plans with per-step status |
 | `/app/resume` | **"My Resume"**, in the sidebar under Your progress and on the dashboard. A one-page CV the student writes themselves: a read-only card with the name and class the account already holds (or "Not given yet"), one job title to aim at, class rows (class, school or board, year, and whatever the board calls the result — marks, percentage, grade, "appearing"), skills with an optional level, and projects with a line about what happened. `GET`/`POST /api/resume` hold it as one document on one account; saving replaces the whole document, so a row removed on screen is removed in the database too. **✨ Suggest** next to Skills and Projects calls `POST /api/ai/resume-suggest` with *only* the job title typed in the box, and the screen then says out loud which of its two sources answered — the configured model, or this app's own career catalogue when no provider is set, is unreachable, or returns something unreadable (`demo_generated`, and the career a fuzzy match landed on, shown beside the list so "cricket commentator" → "Professional Sport" is visible rather than presented as a fact about the child's future). A list labelled "AI suggested" when no model was consulted is the one thing this project will not print. **Download as PDF** is `window.print()` over a print-only layout — Tailwind `print:` variants, no `react-to-print`, no PDF library, no file on the server: the screen and the app's own header go hidden, the document the student wrote comes up on white paper with a footer naming the print date and stating that it was written by the student and not scored, verified or sent anywhere. Nothing here is scored, no recruiter receives anything, and the fields the brief listed as "Personal Info" deliberately do not collect a phone number, address, email or photo |
@@ -532,26 +533,174 @@ root layout with `<link rel="manifest">` and matched by `apple-touch-icon` and `
 
 `public/sw.js` is a hand-written worker, not `next-pwa`. That plugin is webpack-only, and this
 project builds with Turbopack and `cacheComponents`; bolting it on would have changed the bundling of
-every screen to buy a file that could have been written in a hundred lines. It caches exactly two
-things, in two caches: `/_next/static/**` (content-hashed file names, so a cached chunk can never be
-the wrong chunk) and the five public assets (`/manifest.webmanifest` and the four icons). Everything
-else — every page and every `/api` call — is `fetch(request, {cache: "no-store"})`: each screen here
-is live data behind a per-device token, and an app that kept copies of a child's conversations on a
-shared family phone would be handing them to whoever picked the device up next. That is why no page
-document is ever put in a cache, and why a failed `/api` response is handed back to the screen as a
-rejection instead of being papered over with HTML — every screen already answers a dead API with its
-own honest message.
+every screen to buy a file that could have been written in a few hundred lines. It keeps five caches,
+and what goes into each is a decision rather than a pattern:
 
-A navigation that cannot reach the server gets one thing: an inline fallback page, written into the
-worker itself so it costs no request, saying that the page could not be reached and that nothing was
-saved on the device while waiting, with one button — "Try again" — that reloads. It was verified by
-stopping the container, loading `/app` (the fallback renders, the worker controls the page), starting
-it again and pressing the button: the live screen came back.
+* `…-static` — `/_next/static/**`, cache-first. Content-hashed names, so a cached chunk can never be
+  the wrong chunk. Capped at 160 entries, oldest dropped, because Next emits a new file per build and a
+  browser that comes back weekly for a year would otherwise keep every version of this app.
+* `…-assets` — the manifest and the four icons. Static, public, small.
+* `…-pages` — `/careers` and `/careers/<slug>`, network-first with the cache behind it, and only those
+  two shapes. Each is stored twice, the document a reload asks for and the payload an in-app tap asks
+  for, so twenty careers is forty entries.
+* `…-api` — `/api/careers`, `/api/careers/categories` and `/api/careers/<slug>`: the same catalogue as
+  JSON, and the only exception to the rule about `/api`, because those rows are public by construction.
+  `publicCatalogue` names `/api/careers/saved` as a refusal on its own line rather than leaving it to
+  the pattern, since that one is a student's list and a pattern that forgets it is a privacy failure.
+* `…-private` — one conversation, at most sixty messages, and only what this browser's own chat screen
+  hands over. The worker never takes one: it cannot tell whose `messages` response it is looking at, so
+  it does not try. `src/lib/offline.ts` is the only page→worker channel, it posts under
+  `careerguide.device-id` — the same id the session runs on, which is what makes "the student's own
+  copy" mean something on a handset two children share — and it posts nothing at all while
+  Settings → save history is off. Start over, "Delete history", ending a conversation, clearing it and
+  switching saving off each drop the copy without being asked; the offline screen has a Forget button
+  for the case where nobody can reach Settings.
+
+Everything else is network, always, and a POST is never intercepted. `DISALLOWED_PATHS` names those
+surfaces a second time as a hard refusal inside `put()` — the one door every write to every cache goes
+through — so a future rule cannot store a private response by matching too broadly. Two copies of a
+privacy list in one repo drift, so `scripts/offline-paths.mjs` is a build step: it runs the worker in a
+`node:vm` sandbox with a fake Cache API and fails when the worker's list and `src/lib/site.ts`'s
+`DISALLOWED_PATHS` differ, when any private prefix is storable, when a conversation arrives without the
+save-history switch or the key, or when the stored copy is readable by a device that is not its owner.
+
+A stored copy says so. Career documents are marked with a bilingual line naming the moment they were
+put there, so a page that is three weeks old is not read as today's. Two mechanics sit behind that
+sentence, and both exist because of something measured rather than imagined. The mark is written
+**before `</head>`, not after `<body>`**: Next opens the body with an inline script, and a `<div>` that
+arrives at that point is foster-parented into the head by the parser and never renders — the offline page
+was correct except for the one line that tells a student the words in front of them are old. A small
+inline script moves it into the body, and a `MutationObserver` puts it back while hydration rebuilds the
+tree above it, counting real insertions rather than mutation records so it cannot give up mid-load. The
+second mechanic is the header: **Next marks every per-request page `private, no-cache, no-store`**, and
+`cache.put` refuses a response carrying `no-store` — so a career page read at request time could never be
+kept, which is what made the whole offline story false until the audit counted the cache and found no
+career documents in it at all. The exception is bounded by the *path*, not by the header (`isCareerPage`
+plus `worthKeepingPage`), and the header is replaced at `put()` — the one door every write goes through —
+with `max-age=0`, so the copy is this file's own object rather than a response replayed with freshness
+instructions written by something that did not know it would be handed to a student with no network.
+
+What "offline" means here, stated plainly because the app should not oversell itself: a career page you
+have read before opens, the last conversation you had on this device can be re-read, and everything
+else says so rather than spinning. That is a change from what this file used to promise, and the new
+promise has a cost worth reading: your last conversation *is* written on this device, and whoever can
+open this browser can read it. Nothing else of yours is.
+
+An offline navigation to `/app/**` gets a shell document that is written out inside the worker itself —
+it is not a stored server response, which is how the hard refusal above stays intact while the dashboard
+still opens. It draws the frame, the held conversation, the list of career pages that will open, and one
+retry button. Any other offline navigation gets the plain two-sentence notice. Both are inlined rather
+than fetched from a route on purpose: a route needs its own JavaScript chunks, which are exactly the
+thing that may not be in the cache on a first visit that goes offline, and a page that fails to render
+its own offline page is not a fallback. The chat screen's own bubbles are built with `textContent`,
+never `innerHTML`, because that copy is a student's words.
 
 The worker is registered by `src/components/sw-registration.tsx` in production builds only — in
-`next dev` it would freeze pages against every edit. Offline support here means *the shell*, not the
-data: a student on a train gets the app's own files, and the conversation resumes when the network
-does.
+`next dev` it would freeze pages against every edit, and `offline.ts` says nothing rather than failing
+when no worker is listening. Offline support here is now real for two things and honest about the rest:
+a student on a train gets the app's own files, the careers they had open and their own last reply, and
+a clear sentence wherever there is nothing to give them.
+
+
+### Lite mode: the same words on a slower phone
+
+`src/lib/lite.ts` is a third device switch, beside the theme and the interface language, and it works the
+same way: one key in this browser's `localStorage` (`careerguide.lite`), three states, nothing sent to the
+server. **Automatic / Lite / Full**, and Automatic is the only state that looks outside this app — it asks
+the browser what the link is doing right now (`navigator.connection.saveData`, then `effectiveType` in
+`slow-2g`, `2g`, `3g`). A first visit gets Automatic, so a handset on a shared rural tower starts light
+without anyone choosing it and a handset on fibre starts with everything. `connection` is a Chromium
+feature: on Safari and Firefox there is no answer, and an absent answer is not a slow one — those visitors
+start with the full interface and can press Lite, which is the honest consequence of building on a signal
+only some browsers publish.
+
+The choice is per device and deliberately **not** a column on the student's `Settings` row, for the same
+reason the theme is not one: the connection a family's phone has tonight is not a fact about the student,
+and two children sharing one account on one handset can have opposite answers. So both answers can be
+kept, on the devices they belong to.
+
+Two halves, because the question is asked twice. Before React exists, an inline script in
+`app/layout.tsx` re-states the key and the resolution rule and writes `data-lite` on `<html>` — the same
+trick `theme.ts` plays, and the same requirement: the two halves must agree or the attribute flips under
+the first paint. That script can decide what the page *looks like*, not what it downloads, so what
+`globals.css` does with the attribute is everything CSS can do alone — every animation and transition
+flattened and its loop count set to 1 (a keyframe running at `0.001ms infinite` is still work a compositor
+is asked to do on every frame of a six-year-old phone), `animation: none` on the three looping decorations,
+and `display: none` on anything tagged `data-decorative` — which today means the guide's avatar on the call
+screen, tagged twice on purpose: `aria-hidden` tells a screen reader no fact lives there and
+`data-decorative` tells a slow phone the same thing. The words under it and the ring's own colour are what
+say whether the microphone is open.
+
+Everything that costs bytes is decided in React instead, one render after hydration. `useLite()` answers
+`false` until the device has actually said so, because the server's HTML and React's first render have to
+agree — the same rule the theme follows — and every screen that renders from it has to look the same in
+both answers. Four things are gated, and none of them takes information away:
+
+* **The chart.** `ResultSummary.tsx` holds the drawing behind a `dynamic()` import with `ssr: false` and
+  `loading: () => null` — nothing, because the table is already on the wall and a spinner would replace
+  information with a wait. The default for a screen that has not decided yet is the table; the shape
+  arrives afterwards, on a device that is allowed to pay for a drawing of six numbers. A Lite device
+  never asks for the chunk at all, which §5 measures as 1 797 KB of scripts on the result screen against
+  2 378 KB with the shape on it.
+* **The prefetches.** `app-shell.tsx` passes `prefetch={false}` to its own links in Lite mode and
+  `undefined` (Next's default) everywhere else. The sidebar is on screen from the first moment and holds
+  nine to twenty links, so "prefetch what is visible" is a queue of downloads in front of the page the
+  student actually opened.
+* **The motion JavaScript drives**, which the CSS gate cannot reach: the call screen's smooth-scroll to
+  the newest caption becomes an instant one.
+* **The streamed reply.** In Lite mode only, a first fragment that took more than two seconds sets
+  `careerguide.stream-slow` and the next turn goes to the buffered route instead — the one place where a
+  slow link is answered with fewer round trips rather than a worse answer. On the full interface a slow
+  first fragment is the student's own connection doing what it does, and the streamed reply is still
+  quicker to read, so the rule is not allowed to fire there.
+
+`src/components/assessments/ScoreTable.tsx` is why the chart half costs nothing to give up: the rows the
+shape is drawn from and the rows the table prints are the *same component*, so the hidden
+screen-reader copy and the visible Lite copy cannot grow different numbers about one set of answers. In
+Lite the table is simply not `sr-only`; the card's own description changes to say how to read it
+("The first number is the score out of 100, the second says how many answers it came from") because a list
+needs different instructions from a shape.
+
+There is deliberately **no `change` listener on `navigator.connection`**. On these handsets the reported
+type flips between `3g` and `4g` every few minutes, and following it would take a chart or a picture away
+from under a student in the middle of reading it. Automatic means "whatever the link said when this screen
+was opened"; a reload is how the answer changes.
+
+The control is a fourth pill group inside Settings → the **Privacy, consent and display** modal, beside the
+theme — and the sentence under it differs depending on who decided, because "Automatic" and "Automatic
+found a slow link" are different facts. It reads back `careerguide.lite` rather than an account setting,
+so a device that has never been asked says so instead of claiming somebody chose Automatic.
+
+Last, and unrelated to speed but found in the same pass: `app/layout.tsx` carries a `<noscript>` notice as
+the first thing in the body. A visitor with script switched off gets nothing after it — every `/app` screen
+is built in the browser — so the two sentences it holds are the only thing such a person reads: which
+buttons will do nothing, and which pages still open. It carries English and Hindi in the same string,
+because choosing between them is a thing JavaScript does, and it is the one span in the app marked
+`hi-coverage:ignore`.
+
+
+### The frame before the screen: `/app`'s loading shell and error boundary
+
+`src/app/app/loading.tsx` is a Next route segment file, so it is **server-rendered HTML** — the first
+thing this app puts on a screen without the browser running anything of its own. Every page under `/app`
+is a client component that asks for its own data with this browser's token, so between the first byte and
+the first contentful paint there is a round trip to the server and a second one to the API; without this
+file the browser sits on white through both, and on the handset this app is written for a white page is
+indistinguishable from a broken one. What it draws is the *frame*, not the content — the navy column, the
+phone's header, the thumb bar, measured to the same numbers as `AppShell` — because `/app` is twenty-odd
+screens with twenty-odd shapes and a shell that drew a dashboard in front of Settings would be a layout
+shift and a lie in one gesture. The 37 skeleton bars §5 counts at first paint are this file's, and the
+sentence for anyone not looking stays `RouteGuard`'s `role="status"` line: this file does not know whether
+the account is being checked, redirected or handed a page, and does not claim to.
+
+`src/app/app/error.tsx` is its counterpart for the case a student on a shared handset can neither
+diagnose nor explain — something threw before hydration, the browser painted nothing, and there is no
+button to press. Two omissions are deliberate: the error's own message is not shown (it is a JavaScript
+sentence written for a developer, the one text in this app guaranteed to be English, and a stack string on
+a child's screen is noise with a digest attached — it goes to `console.error` instead), and there is no
+automatic retry (a page that threw will throw again, and a reload loop on a metered connection spends the
+family's data to prove a point). One button, labelled, and the sentence that is true: nothing has been
+lost and nothing has been cleared.
 
 
 ### Profile facts, language
@@ -609,6 +758,10 @@ page passes to `t()` directly; `node scripts/hi-prose-check.mjs <files>` catches
 that lives in a `SECTIONS` array or a `VALUES` list and is translated through a variable, which the
 first script cannot see; `node scripts/hi-duplicates.mjs` watches the merge order, because the last
 file wins and two dictionaries disagreeing about one label is a silent wording change elsewhere.
+`hi-coverage.mjs` will skip a span fenced by `/* hi-coverage:ignore-start */` and
+`/* hi-coverage:ignore-end */`, and there is exactly one such span in the app: the `<noscript>` notice in
+`app/layout.tsx`, which carries English and Hindi in the same string on purpose, because choosing between
+them is a thing JavaScript does and that page has no JavaScript to do it.
 
 The primitives carry a good share of this so a screen cannot forget it: `Screen`, `CardHeader`, the
 badges, the empty / error / loading states, `Modal`'s title and description, `Tabs` and `PillGroup`,
@@ -1406,6 +1559,7 @@ cd ../frontend && npx tsc --noEmit && npx eslint src && npm run build
 node scripts/hi-coverage.mjs          # which UI strings have no Hindi yet
 node scripts/hi-prose-check.mjs       # the ones passed through a variable (SECTIONS, VALUES)
 node scripts/hi-duplicates.mjs        # the same key written twice — the last file wins, so check it
+node scripts/offline-paths.mjs        # what the service worker is forbidden to store, run against a fake Cache API
 ```
 
 Last runs on this machine. The date in the right-hand column is the last time that row was actually
@@ -1440,6 +1594,22 @@ And the streamed reply was watched arriving, not only asserted: over a real sock
 the rest following at **294 ms**. The four shapes that are not the happy path — the stream route missing, the
 body dying halfway, the day's allowance spent, the same screen in Hindi — were each walked through the running
 app, in `_scratch/stream_ui.mjs`, and what they printed is in §4.
+
+**The frontend again on 2026-11-01, with Lite mode and the offline worker.** `npx tsc --noEmit` exits 0;
+`npx eslint .` is 0 errors with the one pre-existing warning, now at `scripts/layout-shot.mjs:113`;
+`npm run build` exits 0 and `app-path-routes-manifest.json` lists **65** entries — the 64 of 2026-10-30
+plus the build's own `/_global-error/page`, which is new in this round; the row does not claim to know why,
+and no screen links to it. `node scripts/hi-coverage.mjs`: **3 375 keys** (3 335 before this round —
+forty more, for the Lite sentences, the four states of its Settings note, the offline shell and the error
+screen), **0 untranslated, 0 unreached, 0 unwired**. `node scripts/hi-duplicates.mjs`: 0 conflicting, the
+same ten harmless repeats. `node scripts/hi-prose-check.mjs`: **0** prose literals missing.
+`node scripts/offline-paths.mjs` prints `offline paths ok | private prefixes 12 | caches 3 | offline
+documents 10893 bytes`, and this round it is not only something to remember to run: it is a step in
+`.github/workflows/frontend.yml`, between Lint and the build, because `public/sw.js` is served verbatim and
+no compiler ever reads it, so the two copies of the privacy list — the worker's and `src/lib/site.ts`'s —
+are the only way that drift gets caught. **No file under `backend/` changed in this round**, so the
+23-suite battery recorded above for the same date is the last word on the server, and this row says nothing
+about it either way.
 
 **The frontend the same day:** `npx tsc --noEmit` exits 0; `npx eslint .` is 0 errors with one warning,
 in `scripts/layout-shot.mjs`, that predates this work; `npm run build` exits 0 and the route manifest
@@ -1936,6 +2106,10 @@ failed** · 2026-10-31 (new suite on 2026-10-23 with 72, section 9 added with `/
 | The profile screen and the new Account panel in a real browser, as the local student, with Clerk's keys absent | `/app/profile` rendered the account as it actually is: the identity line "This browser is the account — no email, no password", `CLASS · Not set yet`, `Age band not set`, `REPLIES IN · Hinglish (Hindi + English)`, the empty-interests sentence that points at Settings *and* at just talking to the guide, and an Assessment history section listing the three questionnaires this account finished — "How you tend to work · 20 of 20 answers · 1 day ago · हिंदी", "Puzzles to try · 8 of 25 answers · 1 day ago · English", "What you are drawn to · 13 of 30 answers · 1 day ago · English" — each one a link to its own `/app/assessments/result/N`, plus `Edit → /app/settings` and `Take an assessment → /app/assessments`. Settings → Account opens a panel whose state line says "Email sign-in is not switched on for this site", whose body names `CLERK_SECRET_KEY`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and `POST /api/webhooks/clerk`, and whose only buttons lead somewhere real; there is no Connect button that does nothing. All four Clerk routes — `/sign-in`, `/sign-up`, `/account/enter`, `/account/connect` — serve the same written explanation instead of Clerk's widget, each with a working "Continue without an email". In हिन्दी the row state lines ("दी गई अनुमतियाँ: 3 में से 1 · इतिहास सहेजा जाता है"), the panel headings and both legal pages' new Clerk sentences render in Devanagari with no English runs left in the body. **No console errors** on any of them. What this pass did *not* re-walk: what a parent token sees on `/app/profile` (the redirect and the nav filter are code, not re-tested here), and the whole flow past a real Clerk sign-in — see §4 | 2026-10-18 |
 | Hindi coverage — `scripts/hi-coverage.mjs` + `scripts/hi-prose-check.mjs` | **1 045 keys** when this row was written, **1 140** today, and the new `/app/reports/[id]` screen — 21 strings of its own — reports **0** untranslated from both scripts. The three assessment screens and their four components report **0** untranslated strings from both scripts, and so do the six trust pages (`/terms`, `/refund`, `/disclaimer`, `/about`, `/contact`, `/legal`) plus the footer, banner and preferences panel — the second script exists because a page's `SECTIONS` and `VALUES` arrays are translated through a variable, which the first cannot see. `/terms` and `/about` in हिन्दी render end to end in Devanagari; brand names and the quoted `Settings → This device → Start over` path stay Latin on purpose. **What is still English in हिन्दी: 181 strings**, on the older screens this round did not touch — `/parent` (41), `/app/settings` (35), `/app/reports` (24), `/app/interests` (16), `/app/plans` (15), `/app/journey` (14), `/app/chat` (11), scholarships, institutes, resources, onboarding and the call screen · the **181** is today's, the per-screen counts beside each name were measured 2026-10-17 and add up to 195, so treat them as the shape of the gap rather than its current total. Re-run 2026-10-18, after the profile screen and the settings list were built: three shared components now translate what they are handed instead of printing it — `SettingsRow`'s state line, `SubHeading` and `Modal`'s heading and description — which took the settings screen's own gap from 35 to **23** — what is left there is control labels (`Reply language`, `Age band`, `Display name`) and panel descriptions, which those primitives do not translate. What still stays English in हिन्दी on the newer screens is the long body text and the button labels written as JSX text, the same pattern every older screen uses. One thing inside the assessment screens does stay English in हिन्दी, on purpose and in common with every other screen here: when a request fails, the sentence printed under the error is the server's own. **Re-measured 2026-10-18 after the money screens landed: 1 140 dictionary keys, 731 candidate strings, 289 untranslated** — the jump from 181 is the pricing page (17), the billing screen (52) and the three `components/pricing/*` files (34), 103 of them, all written this round and none translated |
 | PWA — the production container (`careerguide-web`, built from this tree) in a real browser | The worker installs, reaches `activated` and **controls** the page at scope `/`. Two caches, and nothing else: `careerguide-v2-assets` holds `/manifest.webmanifest` plus the four icons, `careerguide-v2-static` holds **19** entries, every one of them under `/_next/static/` (16 chunks, 1 CSS, 2 fonts) — **24** requests in the caches, **zero** of them an `/api` path and **zero** a page document, which is the assertion that matters. The offline path was tested rather than reasoned about: `docker compose stop web` (a direct `curl` on `/app` then fails with a connection error) → navigating to `/app` still renders "You are offline", with the sentence explaining that no conversation, plan or report was saved on the device, and one labelled **Try again** button → `docker compose start web`, press it, and the live dashboard returns. `<link rel="manifest">`, `apple-touch-icon` and `theme-color` are in the served HTML; `/sw.js`, `/manifest.webmanifest` and all four icons serve `200` with their real content types · 2026-10-19. Also re-run today against this tree: `npx tsc --noEmit` **0 errors**, `npm run lint` **0 errors** (1 warning, `scripts/layout-shot.mjs:109`, a tooling file). The manifest-versus-build assertion that `.github/workflows/frontend.yml` runs was executed locally against this tree's `.next` output and prints `PWA ok | start_url /app | icons 5 | routes 60` — note that this page's own CSP allows `'unsafe-inline'` in `script-src`, so the fallback document's inline listener is not a CSP exception, it is simply permitted |
+| **Lite mode on a throttled connection** — real Chrome, empty profile (so no HTTP cache and no old worker), network throttled to Slow 3G (400 ms latency, 750 Kbps down, 250 Kbps up) with 6× CPU throttling, against a production build (`next start`, `:3200`) and the backend on `:8001`, driven from a throwaway CDP harness outside the repo (`_scratch/measure_probe.mjs`, run 5) | The first clause is true, and the number that proves it is not the one you would reach for. **The frame paints at 1652 ms; the last script in the page finishes at 7840 ms**, and what is on screen inside that gap is the dashboard's own skeleton — **37 bars**, counted in the DOM at first paint, which is the measurement rather than a screenshot of a promise. First Contentful Paint on the same load is **7688 ms**, and saying so matters: `Contentful` means the first text or image, and the render-blocking stylesheet plus the two self-hosted `…s.p.woff2` fonts sit in front of it. If "meaningful paint" is read as FCP this clause fails, and it fails for a reason Lite mode cannot fix — the words arrive in the document, the document has to wait for its fonts. What the bundle does is stop the *page working*, and that gap is what closed: `DOMContentLoaded` at **1754 ms**, before the 20 distinct chunks and **521 KB** of JS still streaming behind it; `load` at 7161 ms; after hydration, **0** skeletons left and the signed-in dashboard with this device's student on it. Automatic mode resolved itself under this throttle — `data-lite=true` with `effectiveType="3g"` and `saveData=false` — and reloading with the device pinned to Full gives `data-lite=false`, which is the half of the promise nobody tests by accident: a student who once chose Full is not quietly put back into Lite when their signal drops. **The chart, and the information beside it.** The same finished assessment result, twice: in Full the page requests the recharts chunk and carries **2 378 KB across 35 scripts**, drawing the six-sided shape with one `sr-only` table of 12 cells behind it; in Lite **that chunk is never requested**, the same page is **1 797 KB across 21 scripts**, and the table is on screen instead of screen-reader-only, reading "Scores from 0 to 100, one row per area — Area / Score / Answers behind it — Creating and expressing 50/100 5/5, Organising and checking 50/100 5/5, Leading and persuading…". Same 12 cells both times, so what was removed is the drawing. (The element counters would have fooled anyone who used them alone: 42 `svg` with 99 paths in Full against 41 with 92 in Lite, because most of what they count are this app's own icons — the chunk request and the cell count are the two numbers that mean something.) **The prefetches.** With the full interface, asking the sidebar to point at `/app/resume` fires **25** RSC prefetch requests off nine visible links; in Lite the same intent fires **2**, because `app-shell.tsx` passes `prefetch={false}` when the device is lite. **The control.** Settings → the Privacy, consent and display modal carries a fourth pill group, **Automatic / Lite / Full**; pressing Lite moved `careerguide.lite` from `"full"` to `"lite"` and `data-lite` with it, and the sentence under the pills changes depending on who decided — Automatic reports what it found, a hand-picked Lite says what it will keep doing. Motion and the two decorative pictures are `globals.css` reacting to `data-lite` (`animation-iteration-count: 1`, `[data-decorative] { display: none }`) and need no JavaScript decision at all · 2026-11-01 |
+| **The same build with the network switched off** — career page, app shell, a page nobody read, and the server refusing while the device still had a route | **A career page that had been read opens.** `/careers/actuary` was read online first, then the offline switch was turned on for the tab *and* the worker, and the same URL rendered "Actuarial Science" out of `…-pages` with `navigator.onLine=false` and the worker in control — under the heading, the worker's own sentence "You are offline. This is the copy this device kept." (getting that sentence *onto the screen* was a bug in its own right; the row below records it). **`/app` behind the offline switch gets the shell the worker writes itself**, not a stored response: headings "You are offline", "What this device is holding", "Career pages you can still open", the eleven-message conversation this browser had agreed to keep with its date, the one career page it could still open, and one **Try again** button — and `heldBubbles: 0` in the probe's own count, because that copy is listed rather than re-rendered as a chat. **A public page nobody read is not snapshotted.** `/pricing`, never opened on this device, answered the offline navigation with the plain notice and the sentence "Nothing of yours was kept for this page." **The privacy audit after walking every signed-in screen** (billing, chat, plans, resume, settings, an assessment result): `careerguide-v3-assets` holds **5** entries (manifest plus four icons), `careerguide-v3-static` holds **35**, every one of them under `/_next/static/`, and there are **no private page documents and no `/api` bodies in any cache**. The private cache's only entry is `/__offline-conversation`, and it is there because the chat screen handed it over after the storage notice was accepted — the worker never takes one itself. **A server that is down and a device that is offline are two sentences, and this build prints the right pair.** With requests to `:8001` refused at the network layer while the device still had a route out (`navigator.onLine=true`), `/app` prints "The server is not answering — Nothing has been cleared on this device" and does **not** borrow the offline wording; the same screen after `Try again`, with `navigator.onLine=false`, still prints the server sentence — which is correct for a retry from a page already on screen, and the case the worker's own shell covers is the *navigation*, tested two paragraphs above. **With JavaScript switched off entirely**, the `<noscript>` notice renders — both languages in the one string, and the sentence that keeps it honest: the careers list, the pricing page and the policy still read without a script, because they are server-rendered · 2026-11-01 |
+| A measurement that looked right and was not: **the offline switch applied to the wrong window** | An earlier run of this same harness reported career pages opening with the network off, and that report was **false**. `Network.emulateNetworkConditions` and `Network.setBlockedURLs` are per-target in CDP, and the harness attached only to the tab, so the page believed it was offline while the service worker kept fetching the live server — which is exactly the shape of a test that would pass forever and prove nothing about the one clause it was written for. `_scratch/sw_switch_check.mjs` is the decisive experiment rather than a guess: attached to the worker's own target, `onLine=false` and the worker-side fetch returns `FAILED TypeError`; attached only to the tab, the same fetch returns **`OK 200`** while the page reports `navigator.onLine=false`. Two things came out of it — the fix (`/json/list` hands out `id`, while `Target.attachToTarget` wants `targetId`, so the attach read a field that was never there and threw into a `try/catch`), and the rule that makes a swallowed attach impossible to miss: every attach failure is collected and printed in the report, and each offline phase now ends with `worker sessions this run reached with its switches: 3`, so a run that attached to nothing says that in numbers instead of describing a page that was reading the live server all along · 2026-11-01 |
+| **The offline notice was not on the screen, and the HTML parser was why** — one real product bug found by looking at the DOM instead of at the served string | `markStored` wrote the bilingual "this is the copy this device kept" `<div>` immediately after `<body>`, and the offline career page rendered without it. The served HTML contained the notice, so a test that reads the response would have said this worked; the DOM did not contain it, because **Next's `<body>` opens with an inline script**, so a `<div>` arriving before any text is foster-parented out of the body — into `<head>`, where nothing renders it. Three changes in `public/sw.js`: the notice now goes **before `</head>`**; a small inline script re-parents it into the body and a `MutationObserver` keeps putting it back while hydration rebuilds the tree under it; and the guard counts **real insertions**, not mutation records — the first attempt counted records and stopped re-inserting mid-page-load, which a probe at 1.2 s catches and a probe at 120 ms does not. Verified with a harness that reads the same offline moment three ways (the served string, the DOM at 120 ms, the DOM at 1.2 s): `noticeInBody: true` at both times, `<h1>` still "Actuarial Science", `navigator.onLine=false` · 2026-11-01 |
 | `scripts/layout-shot.mjs` — the operator's five screens (`/app/admin/dashboard`, `users`, `content`, `leads`, `settings`) at 1440×900 and 390×844, with a live operator token against the running containers | 5 × 2 = **10 shots, no horizontal overflow, no console errors, no failed requests** · 2026-10-19. The numbers on them are this deployment's own, not a fixture: 8 open accounts (8 students, 0 parents, 2 operators at the time), 4 conversations / 14 messages of which **9 are demo replies and 0 came from a model**, 4 finished questionnaires, ₹0 captured on 0 orders, 0 paid and 0 granted subscriptions, 55 careers still carrying the seed's `needs_verification` flag, 75 questions in the bank, and 1 email waiting in the outbox. The accounts list shows all 8 rows with their plan, conversation count and the operator toggle; the content screen paginates 1–20 of 55 careers with the category counts above it; the enquiries queue is empty and says so in the sentence the suite was written to require. `Deployment` reads the live process back correctly at the end of this pass — `postgresql`, the four allowed browser origins including `http://localhost:3001`, Redis holding the throttle counters, Razorpay and Clerk both absent, payments off. **Three bugs came out of walking these pages, and none of them was visible to the 134 backend checks**: **(1)** `docker-compose.yml`'s `CORS_ORIGINS` default listed port 3000 but not `${WEB_PORT}`, so a stack started on any other port served pages whose every API call was refused by the browser — the screens rendered and stayed empty, with one blocked request as the only trace; the port is now appended to the default. **(2)** `frontend/src/lib/session.tsx` left a student stranded on "Checking your account…" for good when the server *refused* the stored token: the branch cleared the token and then returned, so `status` never moved off `loading` and there was no button to escape it — it now falls through to the device check, which gives either the old profile back or the one question (verified: a revoked token lands on `/onboarding` instead of the dead screen). **(3)** `GET /api/admin/deployment` matched the database URL against three literal prefixes, and this stack's `postgresql+psycopg://` is not `postgresql://`, so the screen whose only job is to say which database is running printed `sqlite` over Postgres; the scheme is now parsed off the URL, which also labels `mysql+pymysql://` correctly and an unset URL as `not configured`. The token was written into the browser profile under `careerguide.token` by the script, on the origin, before navigation — the same key the app itself stores. What this pass did not do: the study-abroad operator screen (row 7 of the nav) was not swept again, and no operator action (grant, close, edit a career, recount) was pressed from the page — those are `admin_test.py`'s, and the flags this run set on two verification accounts have been revoked |
 
 | Language toggle — real browser, click हिन्दी in Settings → Language and voice | nav, bottom bar, dashboard, streams, exams and the four legal pages switched on the spot, survived a reload, and `<html lang>` became `hi-IN` · 2026-10-17 |
@@ -2100,8 +2274,10 @@ Still needs your own testing:
   the same file (and the whole English document) searches and copy-pastes normally.
 * **The install prompt** — the manifest, the service worker and the theme-color / apple-touch-icon
   tags were checked in a real browser against the production build, but nobody has clicked Chrome's
-  "Install app" and used the installed window. And there is no offline story to test: the worker is
-  network-only on purpose, so an installed app with no connection shows the app's own error states.
+  "Install app" and used the installed window. The offline story underneath it is now testable and has
+  been walked (§5, 2026-11-01) — a throttled first paint, a career page opened with the network off, the
+  held copy on a handset two children share. What has not been checked is whether any of that behaves
+  differently inside the installed window rather than a tab.
 * **The deployed site** — live it is now a real Groq reply and a real Gemini voice, verified through
   the API on 2026-10-16, but nobody has *listened* to that audio or walked the guest flow in a browser
   on the production URL. Do that before showing it to anyone.
