@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CircleDollarSign, Info, Lock, ShieldCheck, Sparkles } from "lucide-react";
+import { ChevronDown, CircleDollarSign, Info, Lock, ShieldCheck, Sparkles } from "lucide-react";
 import { Wordmark } from "@/components/brand";
 import { JsonLd } from "@/components/seo/json-ld";
 import { CheckoutDialog } from "@/components/pricing/checkout-dialog";
@@ -203,15 +203,15 @@ export default function PricingPage() {
 
         {pricing.state === "loading" ? (
           <Card className="mt-10">
-            <LoadingPanel label={t("Loading the price list")} />
+            <LoadingPanel label="Loading the price list" />
           </Card>
         ) : pricing.state === "error" && !pricing.data ? (
           <Card className="mt-10">
             <ErrorState
-              title={t("The price list could not be read")}
+              title="The price list could not be read"
               description={
                 pricing.error ??
-                t("This page shows the server's own prices, and the server is not answering.")
+                "This page shows the server's own prices, and the server is not answering."
               }
               onRetry={pricing.reload}
               extra={
@@ -294,9 +294,20 @@ export default function PricingPage() {
                     "in \"3 chats a day\" is the wording the limiter uses.",
                 )}
               </p>
-              <div className="mt-5">
+              <div className="mt-5 hidden sm:block">
                 <FeatureTable plans={plans} features={features} currentPlanCode={currentCode} />
               </div>
+              {/* On a phone the matrix is a 4,000px scroll of its own, so it waits
+                  behind a labelled disclosure; desktop keeps it in view. */}
+              <details className="group mt-5 overflow-hidden rounded-2xl border border-line bg-surface sm:hidden">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3 text-sm font-medium text-brand-dark [&::-webkit-details-marker]:hidden">
+                  {t("Compare the plans side by side")}
+                  <ChevronDown className="h-4 w-4 shrink-0 transition-transform group-open:rotate-180" aria-hidden />
+                </summary>
+                <div className="border-t border-line p-3">
+                  <FeatureTable plans={plans} features={features} currentPlanCode={currentCode} />
+                </div>
+              </details>
             </section>
           </>
         )}

@@ -25,10 +25,12 @@ import { HI as CATALOGUE } from "./catalogue";
 import { HI as INTERESTS } from "./interests";
 import { HI as SCHOLARSHIPS } from "./scholarships";
 import { HI as INSTITUTES } from "./institutes";
+import { HI as PRICING } from "./pricing";
 import { HI as LEGAL } from "./legal";
 import { HI as ONBOARDING } from "./onboarding";
 import { HI as PARENT } from "./parent";
 import { HI as PUBLIC_PAGES } from "./public-pages";
+import { HI as STUDY_ABROAD } from "./study-abroad";
 import { HI as STREAM } from "./stream";
 import { HI as TRUST } from "./trust";
 import { HI as WELCOME } from "./welcome";
@@ -50,8 +52,10 @@ export const HI: Record<string, string> = {
   ...INTERESTS,
   ...SCHOLARSHIPS,
   ...INSTITUTES,
+  ...PRICING,
   ...TRUST,
   ...PUBLIC_PAGES,
+  ...STUDY_ABROAD,
   ...WELCOME,
   ...ONBOARDING,
   ...CHAT,

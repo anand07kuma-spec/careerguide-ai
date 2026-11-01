@@ -200,11 +200,11 @@ export function CheckoutDialog({
             checked={attested}
             disabled={step !== "attest"}
             onChange={(event) => setAttested(event.target.checked)}
-            label={t("I am 18 or older, and I am the adult paying for this")}
-            description={t(
+            label="I am 18 or older, and I am the adult paying for this"
+            description={
               "This app is for students. A paid plan can only be bought by an adult who says so " +
-                "here, and that answer is kept against this one order.",
-            )}
+                "here, and that answer is kept against this one order."
+            }
           />
 
           <p className="text-xs leading-relaxed text-muted">
