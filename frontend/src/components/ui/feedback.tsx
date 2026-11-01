@@ -150,7 +150,7 @@ export function EmptyState({
       </span>
       <p className="text-sm font-semibold text-ink">{t(title)}</p>
       {description ? (
-        <p className="mt-1 max-w-md text-sm text-muted">
+        <p className="mt-1 max-w-md text-sm leading-relaxed text-muted">
           {typeof description === "string" ? t(description) : description}
         </p>
       ) : null}
@@ -189,7 +189,7 @@ export function ErrorState({
       </span>
       <p className="text-sm font-semibold text-ink">{t(title)}</p>
       {description ? (
-        <p className="mt-1 max-w-md text-sm text-muted">
+        <p className="mt-1 max-w-md text-sm leading-relaxed text-muted">
           {typeof description === "string" ? t(description) : description}
         </p>
       ) : null}
@@ -270,9 +270,9 @@ export function Stat({
   const t = useT();
   const body = (
     <>
-      <p className="text-xs font-medium uppercase tracking-wide text-muted">{t(label)}</p>
+      <p className="text-xs font-medium uppercase leading-relaxed tracking-wide text-muted break-words">{t(label)}</p>
       <p className={cn("mt-1.5 text-2xl font-semibold leading-none", accent)}>{value}</p>
-      {hint ? <p className="mt-2 text-xs text-muted">{hint}</p> : null}
+      {hint ? <p className="mt-2 text-xs leading-relaxed text-muted">{hint}</p> : null}
       {footer}
     </>
   );

@@ -166,6 +166,33 @@ html[data-high-contrast="true"] .cg-card {
   scrollbar-color: var(--color-line) transparent;
 }
 
+/* The chat thread is the one panel that owns its own scroll: the messages move
+   inside it while the composer stays put below them. So its height is the
+   viewport minus the chrome around it, and that chrome differs by breakpoint —
+   the sticky header and the bottom tab bar only exist below `lg`.
+
+   Below `lg`: header, the screen's heading, the voice row above the thread, the
+   tab bar, and whatever the phone reserves at the bottom edge — measured at
+   ~20rem on a 390x844 screen.
+   From `lg`: neither bar exists, but the screen padding grows and the voice row
+   sits on one line — measured at ~22rem on a 1440x900 screen.
+
+   The floor is what keeps the thread usable on a short window: below it the
+   page scrolls instead, which is better than a composer with no messages above
+   it. A pinned plan or a safety notice adds height above the thread, and then
+   the page scrolls too; the thread itself never shrinks below the floor. */
+.cg-thread {
+  height: calc(100dvh - 20rem - env(safe-area-inset-bottom));
+  min-height: 22rem;
+}
+
+@media (min-width: 1024px) {
+  .cg-thread {
+    height: calc(100dvh - 22rem);
+    min-height: 26rem;
+  }
+}
+
 /* Shared surface recipe so cards look identical across every screen. */
 @layer components {
   .cg-card {
