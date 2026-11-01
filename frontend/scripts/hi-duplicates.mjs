@@ -5,28 +5,17 @@
 import { readdirSync, readFileSync } from "node:fs";
 
 const HI_DIR = "src/lib/hi";
-const ORDER = [
-  "account.ts",
-  "common.ts",
-  "dashboard.ts",
-  "stream.ts",
-  "exams.ts",
-  "legal.ts",
-  "careers.ts",
-  "assessments.ts",
-  "resume.ts",
-  "roadmap.ts",
-  "trust.ts",
-  "public-pages.ts",
-  "welcome.ts",
-  "onboarding.ts",
-  "chat.ts",
-  "interview.ts",
-  "call.ts",
-  "parent.ts",
-  "admin.ts",
-  "admin-content.ts",
-];
+// Read the merge order from index.ts rather than a copy of it here: a hardcoded
+// list silently skipped any new dictionary file, which is exactly the file most
+// likely to introduce a conflicting key.
+const indexSrc = readFileSync(`${HI_DIR}/index.ts`, "utf8");
+const aliasToFile = new Map();
+for (const m of indexSrc.matchAll(/import\s*\{\s*HI\s+as\s+(\w+)\s*\}\s*from\s*"\.\/([\w-]+)"/g)) {
+  aliasToFile.set(m[1], `${m[2]}.ts`);
+}
+const ORDER = [...indexSrc.matchAll(/\.\.\.(\w+),/g)]
+  .map((m) => aliasToFile.get(m[1]))
+  .filter(Boolean);
 
 const ENTRY =
   /^\s*(?:"((?:[^"\\]|\\.)*)"|([A-Za-z][A-Za-z0-9_]*))\s*:\s*"((?:[^"\\]|\\.)*)"/gm;

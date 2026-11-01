@@ -27,6 +27,7 @@ import {
   Stat,
 } from "@/components/ui/feedback";
 import { api } from "@/lib/api";
+import { translate, useT, useTf, useUiLang } from "@/lib/i18n";
 import { useResource } from "@/lib/use-resource";
 import type { JourneyEvent } from "@/lib/types";
 import { cn, relativeTime } from "@/lib/utils";
@@ -58,15 +59,15 @@ function dayKey(iso: string) {
   return Number.isNaN(date.getTime()) ? "unknown" : date.toDateString();
 }
 
-function dayLabel(iso: string) {
+function dayLabel(iso: string, locale: string) {
   const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return "Sometime";
+  if (Number.isNaN(date.getTime())) return translate("Sometime");
   const today = new Date();
   const yesterday = new Date(today);
   yesterday.setDate(today.getDate() - 1);
-  if (date.toDateString() === today.toDateString()) return "Today";
-  if (date.toDateString() === yesterday.toDateString()) return "Yesterday";
-  return date.toLocaleDateString(undefined, {
+  if (date.toDateString() === today.toDateString()) return translate("Today");
+  if (date.toDateString() === yesterday.toDateString()) return translate("Yesterday");
+  return date.toLocaleDateString(locale, {
     weekday: "short",
     day: "numeric",
     month: "short",
@@ -75,6 +76,10 @@ function dayLabel(iso: string) {
 }
 
 export default function JourneyPage() {
+  const t = useT();
+  const tf = useTf();
+  const lang = useUiLang();
+  const locale = lang === "hi" ? "hi-IN" : "en-IN";
   const loadJourney = useCallback(() => api.journey(), []);
   const loadEvents = useCallback(() => api.journeyEvents(60), []);
   const {
@@ -119,10 +124,10 @@ export default function JourneyPage() {
       const key = dayKey(event.created_at);
       const last = groups[groups.length - 1];
       if (last && last.key === key) last.events.push(event);
-      else groups.push({ key, label: dayLabel(event.created_at), events: [event] });
+      else groups.push({ key, label: dayLabel(event.created_at, locale), events: [event] });
     }
     return groups;
-  }, [filtered]);
+  }, [filtered, locale]);
 
   return (
     <Screen
@@ -130,7 +135,7 @@ export default function JourneyPage() {
       description="A record of everything you've explored so far — chats, questions, careers you saved, plans you started. It is a story, not a score."
       badge={
         <Badge tone="teal" icon={<Compass className="h-3.5 w-3.5" aria-hidden />}>
-          Exploration, not ranking
+          {t("Exploration, not ranking")}
         </Badge>
       }
     >
@@ -161,23 +166,23 @@ export default function JourneyPage() {
                   <Stat
                     label="Chats finished"
                     value={journey.sessions_completed}
-                    hint="Conversations you completed"
+                    hint={t("Conversations you completed")}
                   />
                   <Stat
                     label="Careers saved"
                     value={journey.careers_saved}
-                    hint="Profiles you bookmarked"
+                    hint={t("Profiles you bookmarked")}
                     tone="teal"
                   />
                   <Stat
                     label="Themes explored"
                     value={journey.themes_explored}
-                    hint="Interest areas noticed"
+                    hint={t("Interest areas noticed")}
                   />
                   <Stat
                     label="Plans going"
                     value={journey.plans_active}
-                    hint="Study plans you set yourself"
+                    hint={t("Study plans you set yourself")}
                     tone="teal"
                   />
                 </div>
@@ -186,14 +191,18 @@ export default function JourneyPage() {
                   total={journey.activities_total}
                   label={
                     journey.activities_total
-                      ? `Plan steps you chose to do: ${journey.activities_completed} of ${journey.activities_total}`
-                      : "Plan steps you chose to do: none yet, they come with a study plan"
+                      ? tf("Plan steps you chose to do: {done} of {total}", {
+                          done: journey.activities_completed,
+                          total: journey.activities_total,
+                        })
+                      : t("Plan steps you chose to do: none yet, they come with a study plan")
                   }
                   tone="teal"
                 />
                 <p className="text-xs leading-relaxed text-muted">
-                  Every number here just counts things you explored. Nobody is ranked by it, and
-                  taking a break never erases anything.
+                  {t(
+                    "Every number here just counts things you explored. Nobody is ranked by it, and taking a break never erases anything.",
+                  )}
                 </p>
               </div>
             ) : null}
@@ -213,7 +222,7 @@ export default function JourneyPage() {
                   onClick={reloadEvents}
                   className="rounded-full border border-line bg-surface px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:border-brand-light hover:text-ink"
                 >
-                  Refresh
+                  {t("Refresh")}
                 </button>
               ) : undefined
             }
@@ -236,10 +245,10 @@ export default function JourneyPage() {
                 action={
                   <div className="flex flex-wrap items-center justify-center gap-2">
                     <LinkButton href="/app/call" size="sm">
-                      Start a conversation
+                      {t("Start a conversation")}
                     </LinkButton>
                     <LinkButton href="/app/careers" size="sm" variant="outline">
-                      Browse careers
+                      {t("Browse careers")}
                     </LinkButton>
                   </div>
                 }
@@ -270,7 +279,7 @@ export default function JourneyPage() {
                           onClick={() => setKindFilter("all")}
                           className="rounded-full border border-line bg-surface px-3 py-1.5 text-xs font-medium text-muted hover:border-brand-light hover:text-ink"
                         >
-                          Show everything
+                          {t("Show everything")}
                         </button>
                       }
                     />
@@ -285,7 +294,7 @@ export default function JourneyPage() {
                         <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
                           {day.label}
                         </p>
-                        <ol className="relative space-y-4 border-l-2 border-line pl-5">
+                        <ol className="relative space-y-5 border-l-2 border-line pl-5">
                           {day.events.map((event) => {
                             const meta = KIND_META[event.kind];
                             const Icon = meta?.icon ?? CircleDot;
@@ -300,9 +309,12 @@ export default function JourneyPage() {
                                 >
                                   <Icon className="h-3.5 w-3.5" />
                                 </span>
-                                <div className="rounded-2xl border border-line bg-canvas/50 px-4 py-3">
+                                {/* The rail and its dot already mark each entry; a box
+                                    around every event turned the timeline into a stack
+                                    of cards and doubled the page height. */}
+                                <div className="min-w-0">
                                   <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-                                    <p className="text-sm font-medium leading-snug text-ink">
+                                    <p className="break-words text-sm font-medium leading-relaxed text-ink">
                                       {event.title}
                                     </p>
                                     <span className="shrink-0 text-xs text-muted">
@@ -310,13 +322,13 @@ export default function JourneyPage() {
                                     </span>
                                   </div>
                                   {event.detail ? (
-                                    <p className="mt-1 text-sm leading-relaxed text-muted">
+                                    <p className="mt-1 break-words text-sm leading-relaxed text-muted">
                                       {event.detail}
                                     </p>
                                   ) : null}
                                   {!meta ? (
                                     <p className="mt-1.5 text-[11px] uppercase tracking-wide text-muted/70">
-                                      {kindLabel(event.kind)}
+                                      {t(kindLabel(event.kind))}
                                     </p>
                                   ) : null}
                                 </div>
@@ -327,8 +339,9 @@ export default function JourneyPage() {
                       </section>
                     ))}
                     <p className="text-xs leading-relaxed text-muted">
-                      This timeline is only a record of what you explored. It is private to you, it
-                      never grades anything, and skipping days changes nothing.
+                      {t(
+                        "This timeline is only a record of what you explored. It is private to you, it never grades anything, and skipping days changes nothing.",
+                      )}
                     </p>
                   </div>
                 )}

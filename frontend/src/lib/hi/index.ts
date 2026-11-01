@@ -19,6 +19,8 @@ import { HI as EXAMS } from "./exams";
 import { HI as ASSESSMENTS } from "./assessments";
 import { HI as RESUME } from "./resume";
 import { HI as ROADMAP } from "./roadmap";
+import { HI as JOURNEY } from "./journey";
+import { HI as REPORTS } from "./reports";
 import { HI as LEGAL } from "./legal";
 import { HI as ONBOARDING } from "./onboarding";
 import { HI as PARENT } from "./parent";
@@ -38,6 +40,8 @@ export const HI: Record<string, string> = {
   ...ASSESSMENTS,
   ...RESUME,
   ...ROADMAP,
+  ...JOURNEY,
+  ...REPORTS,
   ...TRUST,
   ...PUBLIC_PAGES,
   ...WELCOME,
