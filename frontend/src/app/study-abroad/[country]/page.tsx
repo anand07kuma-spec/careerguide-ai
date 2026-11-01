@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { cache } from "react";
 import { connection } from "next/server";
-import { ExternalLink } from "lucide-react";
+import { ChevronDown, ExternalLink } from "lucide-react";
 
 import { PublicLangNotice, PublicSiteHeader } from "@/components/careers/public-careers-shell";
 import { LeadForm } from "@/components/study-abroad/lead-form";
@@ -179,6 +179,42 @@ export default async function StudyAbroadCountryPage({ params, searchParams }: {
 
   const verifiedCount = universities.filter((row) => row.verified).length;
 
+  // A destination can hold dozens of rows; on a phone that is a scroll of its own.
+  // Show the first six and keep the rest in a native disclosure so the whole list
+  // stays in the HTML for crawlers and no-JS readers. A search shows all matches.
+  const visibleUniversities = search ? universities : universities.slice(0, 6);
+  const restUniversities = search ? [] : universities.slice(6);
+
+  const universityRow = (row: UniversitySummary) => (
+    <li key={row.slug} className="flex flex-wrap items-start justify-between gap-3 p-4">
+      <div className="min-w-0">
+        <p className="text-sm font-semibold text-heading">{row.name}</p>
+        <p className="mt-0.5 text-xs text-muted">
+          {row.city} &middot;{" "}
+          {tf("{kind} university", { kind: t(row.kind === "public" ? "Public" : "Private") })}
+          {row.sponsored ? ` · ${t("paid listing")}` : ""}
+        </p>
+      </div>
+      <div className="flex shrink-0 items-center gap-3">
+        <SourceBadge
+          verified={row.verified}
+          checkedAt={row.verified_at}
+          sourceUrl={row.source_url}
+          alternatives={[{ label: "The university's own site", url: row.official_url }]}
+        />
+        <a
+          href={row.official_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand underline-offset-2 hover:underline"
+        >
+          {t("Official site")}
+          <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+        </a>
+      </div>
+    </li>
+  );
+
   return (
     <div className="min-h-dvh bg-canvas">
       <PublicSiteHeader current="/study-abroad" lang={lang} path={`/study-abroad/${country.slug}`} keepQuery={query} />
@@ -255,37 +291,18 @@ export default async function StudyAbroadCountryPage({ params, searchParams }: {
             </Card>
           ) : (
             <ul className="mt-4 divide-y divide-line rounded-card border border-line bg-surface">
-              {universities.map((row) => (
-                <li key={row.slug} className="flex flex-wrap items-start justify-between gap-3 p-4">
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-heading">{row.name}</p>
-                    <p className="mt-0.5 text-xs text-muted">
-                      {row.city} &middot;{" "}
-                      {tf("{kind} university", { kind: t(row.kind === "public" ? "Public" : "Private") })}
-                      {row.sponsored ? ` · ${t("paid listing")}` : ""}
-                    </p>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-3">
-                    <SourceBadge
-                      verified={row.verified}
-                      checkedAt={row.verified_at}
-                      sourceUrl={row.source_url}
-                      alternatives={[{ label: "The university's own site", url: row.official_url }]}
-                    />
-                    <a
-                      href={row.official_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand underline-offset-2 hover:underline"
-                    >
-                      {t("Official site")}
-                      <ExternalLink className="h-3.5 w-3.5" aria-hidden />
-                    </a>
-                  </div>
-                </li>
-              ))}
+              {visibleUniversities.map(universityRow)}
             </ul>
           )}
+          {restUniversities.length > 0 ? (
+            <details className="group mt-3 overflow-hidden rounded-card border border-line bg-surface">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3 text-sm font-medium text-brand-dark [&::-webkit-details-marker]:hidden">
+                {tf("Show the other {n} universities", { n: restUniversities.length })}
+                <ChevronDown className="h-4 w-4 shrink-0 transition-transform group-open:rotate-180" aria-hidden />
+              </summary>
+              <ul className="divide-y divide-line border-t border-line">{restUniversities.map(universityRow)}</ul>
+            </details>
+          ) : null}
           <p className="mt-3 text-xs leading-relaxed text-muted">
             {t(
               "A name, a city and a link are the only claims made here. Fees, deadlines and entry requirements belong to the university's own page, which is why every row links out rather than quoting.",

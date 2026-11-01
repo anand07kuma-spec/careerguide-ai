@@ -130,6 +130,7 @@ export const HI: Record<string, string> = {
   "You may contact me at this address about this enquiry.": "आप इस पूछताछ के बारे में मुझसे इस पते पर संपर्क कर सकते हैं।",
   "Without this tick nothing is stored at all. The enquiry can be deleted on request — see the privacy policy.": "इस टिक के बिना कुछ भी सेव नहीं होता। पूछताछ कहने पर मिटाई जा सकती है — प्राइवेसी पॉलिसी देखें।",
   "Send enquiry": "पूछताछ भेजें",
+  "Show the other {n} universities": "बाकी {n} यूनिवर्सिटी दिखाएँ",
   // Format examples, not words — they render the same in both languages.
   "you@example.com": "you@example.com",
   "+91…": "+91…",
