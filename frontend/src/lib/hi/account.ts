@@ -93,6 +93,24 @@ export const HI: Record<string, string> = {
     "यह लाइट-डार्क सिर्फ़ इस डिवाइस पर बदलता है, और जैसा आप रखेंगे वैसा ही रहेगा। «सिस्टम» चुनने पर यह आपके फ़ोन या ब्राउज़र की अपनी सेटिंग के साथ चलता है — शाम को वह अपने-आप बदले तो भी।",
   "Switch to dark theme": "डार्क थीम पर जाएँ",
   "Switch to light theme": "लाइट थीम पर जाएँ",
+
+  // Lite mode, the fourth device-local control in the same block. "हल्का" is
+  // deliberately not "लाइट": the theme pill above already owns that word here,
+  // and two controls side by side that both read "लाइट" would be a coin toss.
+  "Lite mode": "हल्का मोड",
+  Automatic: "स्वचालित",
+  Lite: "हल्का",
+  Full: "पूरा",
+  "Automatic found a slow connection on this device, or a request to save data, so the app is keeping itself light.":
+    "स्वचालित ने इस डिवाइस पर धीमा कनेक्शन, या डेटा बचाने की चाहत देखी है, इसलिए ऐप हल्का ही रहता है।",
+  "Automatic found a quick connection on this device, so nothing is switched off. Pick Lite yourself if you want it on anyway.":
+    "स्वचालित को इस डिवाइस पर तेज़ कनेक्शन मिला, इसलिए कुछ नहीं बंद है। फिर भी हल्का मोड चाहिए तो खुद चुन लीजिए।",
+  "Animations, charts, pictures that are only for looking at, and pages you have not opened yet are all switched off. Where a chart was, the same numbers are written out as a list.":
+    "एनिमेशन, चार्ट, सिर्फ़ सजाने के तस्वीर, और जो पन्ने आपने अभी तक नहीं खोले — सब बंद रहेंगे। जहाँ चार्ट होता, वही अंक सूची की तरह लिखे दिखेंगे।",
+  "Everything this app can show is switched on, even if this device's connection is slow.":
+    "इस डिवाइस का कनेक्शन धीमा हो, तब भी ऐप का हर दिखने वाला हिस्सा चालू रहेगा।",
+  "This choice lives on this device and is remembered. Once you pick Lite or Full, Automatic does not quietly put you back.":
+    "यह चुनाव इसी डिवाइस में रहता है और याद भी रहता है। एक बार «हल्का» या «पूरा» चुन लें तो स्वचालित चुपचाप उसे नहीं बदलेगा।",
   "Consent records": "अनुमति के रिकॉर्ड",
   "Sharing code": "शेयरिंग कोड",
   "Adults who can see your summary": "वे अभिभावक जो आपका सारांश देख सकते हैं",

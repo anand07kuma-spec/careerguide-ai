@@ -13,7 +13,7 @@ import { CookiePreferences } from "./cookie-preferences";
  *
  * It started life as a banner that had nothing to ask, because this site set no
  * cookies, no analytics and no advertising — so the honest notice was about the
- * four values the app keeps in this browser to know who is coming back. That is
+ * values the app keeps in this browser to know who is coming back. That is
  * still true of the default build, and this component says that when it is true.
  *
  * What changed is that there is now something worth asking about: a deployment
@@ -55,11 +55,11 @@ export function CookieBanner() {
           <p className="text-sm font-semibold text-heading">
             {measurementOn
               ? t("Your choice decides whether anything is measured")
-              : t("This site sets no cookies")}
+              : t("This site sets no tracking cookie")}
           </p>
           <p className="mt-1.5 text-xs leading-relaxed text-muted">
             {t(
-              "It keeps four values in this browser — a random student id, a session token, your language choice, and the answer you give this banner — so the same student can come back without a password.",
+              "It keeps a few small values in this browser — a random student id, your language, the colours, the lighter-interface choice and the answer you give this banner — plus the cookie that keeps you signed in, so the same student can come back without a password.",
             )}{" "}
             {measurementOn ? (
               t(
@@ -80,10 +80,10 @@ export function CookieBanner() {
           <p className="mt-1.5 text-xs leading-relaxed text-muted">
             {measurementOn
               ? t(
-                  "Rejecting changes nothing about how this app runs — the four values above are the ones it needs to work, and they are kept whichever answer you give. What rejecting does is keep the two measurement services from ever loading, on this page or on any student's screen.",
+                  "Rejecting changes nothing about how this app runs — the values above are the ones it needs to work, and they are kept whichever answer you give. What rejecting does is keep the two measurement services from ever loading, on this page or on any student's screen.",
                 )
               : t(
-                  "Rejecting changes nothing about how this app runs today, because the four values above are the ones it needs to work. What you choose is recorded, and anything added later has to obey it.",
+                  "Rejecting changes nothing about how this app runs today, because the values above are the ones it needs to work. What you choose is recorded, and anything added later has to obey it.",
                 )}
           </p>
           <div className="mt-3 flex flex-wrap items-center gap-2">

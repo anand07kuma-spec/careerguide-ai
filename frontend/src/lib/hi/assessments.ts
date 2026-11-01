@@ -126,6 +126,9 @@ export const HI: Record<string, string> = {
     "छह भुजाओं वाला चित्र बनाने के लिए क्षेत्र कम हैं, इसलिए हर क्षेत्र अलग से दिखाया गया है।",
   "One line per area. Longer means more of your strongest answers fell in that area.":
     "हर क्षेत्र के लिए एक पट्टी। लंबी पट्टी का मतलब है कि आपके मज़बूत जवाब उसी क्षेत्र में ज़्यादा हैं।",
+  // Lite mode: the chart is gone, so this sentence describes the list in its place.
+  "One row per area. The first number is the score out of 100, the second says how many answers it came from.":
+    "हर क्षेत्र की एक पंक्ति। पहली संख्या 100 में से स्कोर है, दूसरी बताती है कि यह कितने जवाबों से बना है।",
   "Your strongest areas": "आपके मज़बूत क्षेत्र",
   "Ranked by the answers you gave, not by what anyone expects of you.":
     "आपके जवाबों के हिसाब से क्रम, किसी की उम्मीदों के हिसाब से नहीं।",
