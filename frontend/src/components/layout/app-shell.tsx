@@ -81,17 +81,6 @@ const NAV: NavItem[] = [
   { href: "/app/settings", label: "Settings", short: "Settings", icon: Settings, group: "family" },
 ];
 
-const GROUP_TITLES: Record<NavItem["group"], string> = {
-  guide: "Talk with your guide",
-  explore: "Explore",
-  grow: "Your progress",
-  // Rendered only for an account that appears on a portal's roster. The rows are not
-  // written here because nobody can say in advance which school a device has joined;
-  // see `portalRows` in `AppShell`.
-  portal: "Your portals",
-  family: "Account",
-};
-
 // The header avatar already goes to Settings, so the bar would waste a slot on a
 // second route to the same page.
 const MOBILE_NAV = [
@@ -230,9 +219,6 @@ export function AppShell({ children }: { children: ReactNode }) {
           if (!groupItems.length) return null;
           return (
             <div key={group}>
-              <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-wider text-white/35">
-                {t(GROUP_TITLES[group])}
-              </p>
               <ul className="space-y-0.5">
                 {groupItems.map((item) => {
                   const active = isActive(pathname, item.href);
