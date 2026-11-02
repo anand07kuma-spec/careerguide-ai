@@ -59,6 +59,7 @@ export const HI: Record<string, string> = {
   "I have read this": "मैंने यह पढ़ लिया है",
 
   // The composer
+  "Type your answer…": "अपना जवाब लिखें…",
   "Type your answer… (Enter sends, Shift+Enter makes a new line)":
     "अपना जवाब लिखें… (Enter भेजता है, Shift+Enter नई लाइन बनाता है)",
   "Message to your guide": "अपने गाइड के लिए संदेश",
@@ -67,8 +68,8 @@ export const HI: Record<string, string> = {
 
   // Reading replies aloud
   "Read replies aloud": "जवाब बोलकर सुनाएँ",
-  "The server's speech service reads replies aloud over the internet, with your browser's own voice as a fallback. Settings names the exact service.":
-    "सर्वर की स्पीच सेवा इंटरनेट पर जवाब बोलकर सुनाती है, और वह न चले तो आपका ब्राउज़र अपनी आवाज़ देता है। सेटिंग्स में सेवा का ठीक नाम बताया गया है।",
+  "Replies are read aloud; your browser's own voice is the fallback.":
+    "जवाब बोलकर सुनाए जाते हैं; सर्वर की आवाज़ न चले तो आपका ब्राउज़र अपनी आवाज़ में पढ़ता है।",
   "Pause voice": "आवाज़ रोकें",
   "Play voice": "आवाज़ चलाएँ",
   "Stop voice": "आवाज़ बंद करें",

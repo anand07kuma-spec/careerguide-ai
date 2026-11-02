@@ -7,7 +7,7 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { ErrorState, LoadingPanel } from "@/components/ui/feedback";
 import { Input, Textarea } from "@/components/ui/field";
 import { api, ApiError } from "@/lib/api";
-import { useT } from "@/lib/i18n";
+import { useT, useTf } from "@/lib/i18n";
 import { ACCENTS } from "@/lib/portal";
 import { cn } from "@/lib/utils";
 import { useResource } from "@/lib/use-resource";
@@ -59,6 +59,7 @@ function BrandingFields({
   onSaved: () => void;
 }) {
   const t = useT();
+  const tf = useTf();
   const [title, setTitle] = useState(branding.portal_title ?? "");
   const [note, setNote] = useState(branding.welcome_note ?? "");
   const [logo, setLogo] = useState(branding.logo_url ?? "");
@@ -100,31 +101,31 @@ function BrandingFields({
   return (
     <>
       <Input
-        label={t("Portal heading")}
+        label="Portal heading"
         value={title}
         maxLength={80}
         onChange={(event) => setTitle(event.target.value)}
-        hint={t("Shown above the platform's own name. The platform label is always there too.")}
+        hint="Shown above the platform's own name. The platform label is always there too."
       />
       <Textarea
-        label={t("Welcome note")}
+        label="Welcome note"
         rows={5}
         value={note}
         maxLength={600}
         onChange={(event) => setNote(event.target.value)}
-        hint={t("Only a member of this portal reads it. Nothing written here is sent to another portal.")}
+        hint="Only a member of this portal reads it. Nothing written here is sent to another portal."
       />
       <Input
-        label={t("Logo link (https)")}
+        label="Logo link (https)"
         type="url"
         value={logo}
         maxLength={500}
         spellCheck={false}
         onChange={(event) => setLogo(event.target.value)}
         error={
-          badLogo ? t("A logo has to be a plain https link, with no spaces and no password in it.") : undefined
+          badLogo ? "A logo has to be a plain https link, with no spaces and no password in it." : undefined
         }
-        hint={t("There is no upload on this platform, so the file stays hosted by whoever owns it.")}
+        hint="There is no upload on this platform, so the file stays hosted by whoever owns it."
       />
 
       <div>
@@ -140,7 +141,7 @@ function BrandingFields({
               className={cn(
                 "flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-medium transition-colors",
                 accent === option.value
-                  ? "border-ink/30 bg-canvas text-ink"
+                  ? "border-brand/40 bg-brand-mist text-brand-dark"
                   : "border-line text-muted hover:border-brand/40",
               )}
             >
@@ -149,7 +150,7 @@ function BrandingFields({
                 style={{ backgroundColor: option.value }}
                 aria-hidden
               />
-              {option.name}
+              {t(option.name)}
               {accent === option.value ? <Check className="h-3.5 w-3.5" aria-hidden /> : null}
             </button>
           ))}
@@ -171,8 +172,8 @@ function BrandingFields({
         ) : null}
       </div>
 
-      <p className="text-xs text-muted">
-        {t("Last changed")} {new Date(branding.changed_at).toLocaleString()}
+      <p className="text-xs leading-relaxed text-muted">
+        {tf("Last changed {at}", { at: new Date(branding.changed_at).toLocaleString() })}
       </p>
     </>
   );

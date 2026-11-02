@@ -171,4 +171,5 @@ export const HI: Record<string, string> = {
   "Recorded from the official page below. Check it against this year's notification.":
     "नीचे दिए आधिकारिक पेज से पढ़कर दर्ज किया गया। इसे इस साल के नोटिफ़िकेशन से मिलाकर ज़रूर देखें।",
   "Open the page it was read from": "जिस पेज से पढ़ी गई है उसे खोलें",
+  "Careers, timing & early prep": "करियर, समय और शुरुआती तैयारी",
 };

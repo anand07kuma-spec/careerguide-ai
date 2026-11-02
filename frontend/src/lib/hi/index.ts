@@ -9,6 +9,7 @@
 import { HI as ACCOUNT } from "./account";
 import { HI as ADMIN } from "./admin";
 import { HI as ADMIN_CONTENT } from "./admin-content";
+import { HI as PORTAL } from "./portal";
 import { HI as CALL } from "./call";
 import { HI as CAREERS } from "./careers";
 import { HI as CHAT } from "./chat";
@@ -19,10 +20,18 @@ import { HI as EXAMS } from "./exams";
 import { HI as ASSESSMENTS } from "./assessments";
 import { HI as RESUME } from "./resume";
 import { HI as ROADMAP } from "./roadmap";
+import { HI as JOURNEY } from "./journey";
+import { HI as REPORTS } from "./reports";
+import { HI as CATALOGUE } from "./catalogue";
+import { HI as INTERESTS } from "./interests";
+import { HI as SCHOLARSHIPS } from "./scholarships";
+import { HI as INSTITUTES } from "./institutes";
+import { HI as PRICING } from "./pricing";
 import { HI as LEGAL } from "./legal";
 import { HI as ONBOARDING } from "./onboarding";
 import { HI as PARENT } from "./parent";
 import { HI as PUBLIC_PAGES } from "./public-pages";
+import { HI as STUDY_ABROAD } from "./study-abroad";
 import { HI as STREAM } from "./stream";
 import { HI as TRUST } from "./trust";
 import { HI as WELCOME } from "./welcome";
@@ -38,8 +47,16 @@ export const HI: Record<string, string> = {
   ...ASSESSMENTS,
   ...RESUME,
   ...ROADMAP,
+  ...JOURNEY,
+  ...REPORTS,
+  ...CATALOGUE,
+  ...INTERESTS,
+  ...SCHOLARSHIPS,
+  ...INSTITUTES,
+  ...PRICING,
   ...TRUST,
   ...PUBLIC_PAGES,
+  ...STUDY_ABROAD,
   ...WELCOME,
   ...ONBOARDING,
   ...CHAT,
@@ -48,4 +65,5 @@ export const HI: Record<string, string> = {
   ...PARENT,
   ...ADMIN,
   ...ADMIN_CONTENT,
+  ...PORTAL,
 };

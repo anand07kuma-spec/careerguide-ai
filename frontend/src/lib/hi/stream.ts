@@ -175,4 +175,5 @@ export const HI: Record<string, string> = {
   "Helping people": "लोगों की मदद",
   "Teaching others": "दूसरों को पढ़ाना",
   "Sports and games": "खेल",
+  "Subjects, courses & what to ask": "विषय, कोर्स और स्कूल से क्या पूछें",
 };

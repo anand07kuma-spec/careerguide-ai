@@ -9,7 +9,7 @@ import { EmptyState, ErrorState, LoadingPanel } from "@/components/ui/feedback";
 import { Modal } from "@/components/ui/modal";
 import { Select, Textarea } from "@/components/ui/field";
 import { api, ApiError } from "@/lib/api";
-import { useT } from "@/lib/i18n";
+import { useT, useTf } from "@/lib/i18n";
 import { useResource } from "@/lib/use-resource";
 import type { MemberRow, SessionNote } from "@/lib/types";
 
@@ -22,9 +22,15 @@ const MAX_BODY = 2000;
  * people this counsellor may see — so an assignment that was never made shows an empty
  * list rather than the whole school. A note starts private, and the only way a family
  * reads one is the switch on it.
+ *
+ * The notes are rows of one divided list, and each row keeps its sharing badge and its
+ * date on a line of their own below the text: beside a 2000-character note the old
+ * side-by-side action column left the writing about 150px wide on a phone. What a note
+ * says is the counsellor's own data and is never translated.
  */
 export function NotesPanel({ slug, clients }: { slug: string; clients: MemberRow[] }) {
   const t = useT();
+  const tf = useTf();
   const [clientId, setClientId] = useState<string>("");
   const [body, setBody] = useState("");
   const [busy, setBusy] = useState(false);
@@ -93,7 +99,7 @@ export function NotesPanel({ slug, clients }: { slug: string; clients: MemberRow
         ) : (
           <>
             <Select
-              label={t("Client")}
+              label="Client"
               value={clientId}
               placeholder="Choose a client"
               options={clients.map((client) => ({
@@ -110,10 +116,10 @@ export function NotesPanel({ slug, clients }: { slug: string; clients: MemberRow
                     : t("A member with no label"),
               }))}
               onChange={(event) => setClientId(event.target.value)}
-              hint={t("The list is the members of this portal alone, and only those its own settings allow to be listed.")}
+              hint="The list is the members of this portal alone, and only those its own settings allow to be listed."
             />
             <Textarea
-              label={t("Note")}
+              label="Note"
               rows={5}
               value={body}
               maxLength={MAX_BODY}
@@ -141,26 +147,25 @@ export function NotesPanel({ slug, clients }: { slug: string; clients: MemberRow
       ) : null}
 
       {data && data.length === 0 ? (
-        <Card className="py-8 text-center text-sm text-muted">
+        <Card className="py-8 text-center text-sm leading-relaxed text-muted">
           {clientId === ""
-            ? "You have not written a note yet. Notes you write appear here newest first."
-            : `${selected?.display_label ?? "This client"} has no note yet.`}
+            ? t("You have not written a note yet. Notes you write appear here newest first.")
+            : tf("{name} has no note yet.", { name: selected?.display_label ?? t("This client") })}
         </Card>
       ) : null}
 
-      {data
-        ? data.map((note) => (
-            <Card key={note.id} className="space-y-3 p-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-ink">{note.body}</p>
-                  <p className="mt-2 text-xs text-muted">
-                    {note.author_label ? `${note.author_label} · ` : ""}
-                    {new Date(note.created_at).toLocaleString()}
-                    {note.edited_at ? " · edited" : ""}
-                  </p>
-                </div>
-                <div className="flex shrink-0 items-center gap-2">
+      {data && data.length > 0 ? (
+        <div className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-surface">
+          {data.map((note) => (
+            <div key={note.id} className="space-y-3 p-4">
+              <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-ink">{note.body}</p>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="min-w-0 break-words text-xs text-muted">
+                  {note.author_label ? `${note.author_label} · ` : ""}
+                  {new Date(note.created_at).toLocaleString()}
+                  {note.edited_at ? ` · ${t("edited")}` : ""}
+                </p>
+                <div className="flex flex-wrap items-center gap-1.5">
                   <Badge tone={note.shared_with_family ? "success" : "neutral"}>
                     {note.shared_with_family ? t("Shared") : t("Private")}
                   </Badge>
@@ -175,13 +180,16 @@ export function NotesPanel({ slug, clients }: { slug: string; clients: MemberRow
                 </div>
               </div>
               {note.shared_with_family && note.shared_at ? (
-                <p className="text-xs text-muted">
-                  {t("The family has been able to read this since")} {new Date(note.shared_at).toLocaleDateString()}.
+                <p className="text-xs leading-relaxed text-muted">
+                  {tf("The family has been able to read this since {date}.", {
+                    date: new Date(note.shared_at).toLocaleDateString(),
+                  })}
                 </p>
               ) : null}
-            </Card>
-          ))
-        : null}
+            </div>
+          ))}
+        </div>
+      ) : null}
 
       <Modal
         open={confirming !== null}
@@ -191,15 +199,17 @@ export function NotesPanel({ slug, clients }: { slug: string; clients: MemberRow
         footer={
           <>
             <Button variant="ghost" onClick={() => setConfirming(null)}>
-              Keep it
+              {t("Keep it")}
             </Button>
             <Button variant="danger" onClick={() => confirming && void destroy(confirming)}>
-              Delete
+              {t("Delete")}
             </Button>
           </>
         }
       >
-        <p className="whitespace-pre-wrap break-words text-sm text-muted">{confirming?.body.slice(0, 240)}</p>
+        <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-muted">
+          {confirming?.body.slice(0, 240)}
+        </p>
       </Modal>
     </div>
   );

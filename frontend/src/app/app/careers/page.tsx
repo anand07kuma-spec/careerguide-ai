@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Bookmark, Info, Search, SlidersHorizontal, X } from "lucide-react";
 import { Screen } from "@/components/layout/app-shell";
 import { Card } from "@/components/ui/card";
-import { LinkButton } from "@/components/ui/button";
+import { Button, LinkButton } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState, ErrorState, SkeletonCard } from "@/components/ui/feedback";
 import { Input, Select } from "@/components/ui/field";
@@ -15,7 +15,7 @@ import { useSession } from "@/lib/session";
 import { useT, useTf } from "@/lib/i18n";
 import { messageFor, useResource } from "@/lib/use-resource";
 import { THEME_LABELS, type CareerSummary, type Category, type ThemeKey } from "@/lib/types";
-import { categoryTint, cn } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 const THEME_OPTIONS = (Object.keys(THEME_LABELS) as ThemeKey[]).map((key) => ({
   value: key,
@@ -31,6 +31,82 @@ function linkedFilters(): { category: string; theme: string } {
   if (typeof window === "undefined") return { category: "", theme: "" };
   const params = new URLSearchParams(window.location.search);
   return { category: params.get("category") ?? "", theme: params.get("theme") ?? "" };
+}
+
+/**
+ * Forty-plus full cards in one column is twenty screens of scrolling on a phone,
+ * so a dozen are revealed at a time. The parent keys this by the active filters,
+ * which remounts it and resets the window without an effect.
+ */
+function CareerResults({
+  visible,
+  savedIds,
+  pending,
+  onToggle,
+}: {
+  visible: CareerSummary[];
+  savedIds: Set<number>;
+  pending: Set<number>;
+  onToggle: (career: CareerSummary) => Promise<void>;
+}) {
+  const t = useT();
+  const tf = useTf();
+  const [shown, setShown] = useState(12);
+  const page = visible.slice(0, shown);
+
+  return (
+    <>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {page.map((career) => {
+          const isSaved = savedIds.has(career.id);
+          const busy = pending.has(career.id);
+          return (
+            <Card key={career.id} className="flex flex-col p-4 sm:p-5">
+              <div className="flex items-start justify-between gap-2">
+                <Badge className="min-w-0 bg-slate-100 text-slate-600">{career.category}</Badge>
+                <button
+                  type="button"
+                  onClick={() => void onToggle(career)}
+                  disabled={busy}
+                  aria-pressed={isSaved}
+                  aria-label={isSaved ? `Unsave ${career.title}` : `Save ${career.title}`}
+                  className={cn(
+                    "shrink-0 rounded-full border p-2 transition-colors disabled:opacity-60",
+                    isSaved
+                      ? "border-brand bg-brand text-white"
+                      : "border-line bg-surface text-muted hover:border-brand-light hover:text-brand-dark",
+                  )}
+                >
+                  <Bookmark className={cn("h-4 w-4", isSaved && "fill-current")} aria-hidden />
+                </button>
+              </div>
+
+              <h3 className="mt-2.5 text-base font-semibold leading-tight text-heading break-words">
+                {t(career.title)}
+              </h3>
+              <p className="mt-1.5 flex-1 text-sm leading-relaxed text-muted line-clamp-2">{career.summary}</p>
+
+              <div className="mt-3 flex items-center justify-between gap-2">
+                <span className="min-w-0 text-xs leading-relaxed font-medium text-muted">
+                  {tf("Explorable from class {n}", { n: career.min_class })}
+                </span>
+                <LinkButton href={`/app/careers/${career.slug}`} variant="ghost" size="sm" className="shrink-0 px-0 text-brand-dark hover:bg-transparent">
+                  {t("View details")}
+                </LinkButton>
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+      {visible.length > shown ? (
+        <div className="flex justify-center">
+          <Button variant="outline" onClick={() => setShown((s) => s + 12)}>
+            {t("Show more careers")}
+          </Button>
+        </div>
+      ) : null}
+    </>
+  );
 }
 
 export default function CareerExplorer() {
@@ -265,48 +341,13 @@ export default function CareerExplorer() {
                 : tf("Showing {n} careers", { n: visible.length })}
               {hasFilters ? ` ${t("with your filters")}` : ""}.
             </p>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {visible.map((career) => {
-                const isSaved = savedIds.has(career.id);
-                const busy = pending.has(career.id);
-                return (
-                  <Card key={career.id} className="flex flex-col">
-                    <div className="flex items-start justify-between gap-2">
-                      <Badge className={categoryTint(career.category)}>{career.category}</Badge>
-                      <button
-                        type="button"
-                        onClick={() => void toggleSave(career)}
-                        disabled={busy}
-                        aria-pressed={isSaved}
-                        aria-label={isSaved ? `Unsave ${career.title}` : `Save ${career.title}`}
-                        className={cn(
-                          "shrink-0 rounded-full border p-2 transition-colors disabled:opacity-60",
-                          isSaved
-                            ? "border-brand bg-brand text-white"
-                            : "border-line bg-surface text-muted hover:border-brand-light hover:text-brand-dark",
-                        )}
-                      >
-                        <Bookmark className={cn("h-4 w-4", isSaved && "fill-current")} aria-hidden />
-                      </button>
-                    </div>
-
-                    <h3 className="mt-2.5 text-base font-semibold leading-tight text-ink">
-                      {t(career.title)}
-                    </h3>
-                    <p className="mt-1.5 flex-1 text-sm leading-relaxed text-muted">{career.summary}</p>
-
-                    <div className="mt-3 flex items-center justify-between gap-2">
-                      <span className="text-xs font-medium text-teal">
-                        {tf("Explorable from class {n}", { n: career.min_class })}
-                      </span>
-                      <LinkButton href={`/app/careers/${career.slug}`} variant="ghost" size="sm" className="px-0 text-brand-dark hover:bg-transparent">
-                        {t("View details")}
-                      </LinkButton>
-                    </div>
-                  </Card>
-                );
-              })}
-            </div>
+            <CareerResults
+              key={`${debounced}|${category}|${theme}|${savedOnly}`}
+              visible={visible}
+              savedIds={savedIds}
+              pending={pending}
+              onToggle={toggleSave}
+            />
           </>
         )}
       </div>

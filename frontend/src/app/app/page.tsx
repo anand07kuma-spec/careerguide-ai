@@ -84,22 +84,12 @@ function classNumber(classLevel: string | null | undefined): number {
   return digits ? Number.parseInt(digits, 10) : 0;
 }
 
-const TONE = {
-  brand: "bg-brand-mist text-brand-dark",
-  teal: "bg-teal-mist text-teal",
-  success: "bg-success-mist text-success",
-  warning: "bg-warning-mist text-amber-700",
-} as const;
-
-type Tone = keyof typeof TONE;
-
 /** The places a student can go, described once so the tile itself can stay quiet. */
-const PLACES: { href: string; label: string; icon: typeof Briefcase; tone: Tone; detail: Detail }[] = [
+const PLACES: { href: string; label: string; icon: typeof Briefcase; detail: Detail }[] = [
   {
     href: "/app/careers",
     label: "Careers",
     icon: Briefcase,
-    tone: "brand",
     detail: {
       title: "Career Explorer",
       icon: <Briefcase className="h-5 w-5" aria-hidden />,
@@ -115,7 +105,6 @@ const PLACES: { href: string; label: string; icon: typeof Briefcase; tone: Tone;
     href: "/app/streams",
     label: "Streams",
     icon: Split,
-    tone: "teal",
     detail: {
       title: "Choose your stream",
       icon: <Split className="h-5 w-5" aria-hidden />,
@@ -131,7 +120,6 @@ const PLACES: { href: string; label: string; icon: typeof Briefcase; tone: Tone;
     href: "/app/exams",
     label: "Exams",
     icon: ClipboardList,
-    tone: "warning",
     detail: {
       title: "Exams & entrances",
       icon: <ClipboardList className="h-5 w-5" aria-hidden />,
@@ -147,7 +135,6 @@ const PLACES: { href: string; label: string; icon: typeof Briefcase; tone: Tone;
     href: "/app/interests",
     label: "Interests",
     icon: Lightbulb,
-    tone: "warning",
     detail: {
       title: "Discover My Interests",
       icon: <Lightbulb className="h-5 w-5" aria-hidden />,
@@ -163,7 +150,6 @@ const PLACES: { href: string; label: string; icon: typeof Briefcase; tone: Tone;
     href: "/app/plans",
     label: "Plans",
     icon: GraduationCap,
-    tone: "teal",
     detail: {
       title: "Study & Skill Plans",
       icon: <GraduationCap className="h-5 w-5" aria-hidden />,
@@ -179,7 +165,6 @@ const PLACES: { href: string; label: string; icon: typeof Briefcase; tone: Tone;
     href: "/app/resources",
     label: "Resources",
     icon: BookOpen,
-    tone: "brand",
     detail: {
       title: "Resources",
       icon: <BookOpen className="h-5 w-5" aria-hidden />,
@@ -195,7 +180,6 @@ const PLACES: { href: string; label: string; icon: typeof Briefcase; tone: Tone;
     href: "/app/scholarships",
     label: "Money help",
     icon: Wallet,
-    tone: "success",
     detail: {
       title: "Scholarships & Aid",
       icon: <Wallet className="h-5 w-5" aria-hidden />,
@@ -211,7 +195,6 @@ const PLACES: { href: string; label: string; icon: typeof Briefcase; tone: Tone;
     href: "/app/institutes",
     label: "Institutes",
     icon: Building2,
-    tone: "teal",
     detail: {
       title: "Institutes & Courses",
       icon: <Building2 className="h-5 w-5" aria-hidden />,
@@ -227,7 +210,6 @@ const PLACES: { href: string; label: string; icon: typeof Briefcase; tone: Tone;
     href: "/app/reports",
     label: "Report",
     icon: FileText,
-    tone: "brand",
     detail: {
       title: "Reports",
       icon: <FileText className="h-5 w-5" aria-hidden />,
@@ -243,7 +225,6 @@ const PLACES: { href: string; label: string; icon: typeof Briefcase; tone: Tone;
     href: "/interview-prep",
     label: "Practice Interview",
     icon: Handshake,
-    tone: "teal",
     detail: {
       title: "Practice Interview",
       icon: <Handshake className="h-5 w-5" aria-hidden />,
@@ -259,7 +240,6 @@ const PLACES: { href: string; label: string; icon: typeof Briefcase; tone: Tone;
     href: "/app/journey",
     label: "Journey",
     icon: Compass,
-    tone: "warning",
     detail: {
       title: "My Journey",
       icon: <Compass className="h-5 w-5" aria-hidden />,
@@ -276,12 +256,10 @@ const PLACES: { href: string; label: string; icon: typeof Briefcase; tone: Tone;
 function Tile({
   icon: Icon,
   label,
-  tone,
   onClick,
 }: {
   icon: typeof Briefcase;
   label: string;
-  tone: Tone;
   onClick: () => void;
 }) {
   const t = useT();
@@ -292,11 +270,11 @@ function Tile({
       className="group flex flex-col items-center gap-2 rounded-card border border-line bg-surface px-2 py-4 text-center transition-all hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-lift"
     >
       <span
-        className={`flex h-11 w-11 items-center justify-center rounded-2xl ${TONE[tone]} transition-transform group-hover:scale-105`}
+        className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-slate-600 transition-colors group-hover:bg-brand-mist group-hover:text-brand-dark"
       >
         <Icon className="h-5 w-5" aria-hidden />
       </span>
-      <span className="text-xs font-medium leading-tight text-ink">{t(label)}</span>
+      <span className="text-xs font-medium leading-relaxed text-ink break-words">{t(label)}</span>
     </button>
   );
 }
@@ -390,11 +368,10 @@ export default function StudentHome() {
   const done = journey.data?.activities_completed ?? 0;
   const total = journey.data?.activities_total ?? 0;
 
-  const statDetails: (Detail & { value: ReactNode; tone: Tone })[] = [
+  const statDetails: (Detail & { value: ReactNode })[] = [
     {
       title: "Sessions completed",
       value: journey.data?.sessions_completed ?? 0,
-      tone: "brand",
       icon: <MessagesSquare className="h-5 w-5" aria-hidden />,
       lines: [
         "Conversations you started and finished. The guide uses them to remember what you already said, so you are never asked the same thing twice.",
@@ -408,7 +385,6 @@ export default function StudentHome() {
     {
       title: "Careers saved",
       value: savedItems.length,
-      tone: "teal",
       icon: <Bookmark className="h-5 w-5" aria-hidden />,
       lines: [
         "Profiles you bookmarked to look at again. Saving says nothing about whether a career suits you — it is only a note to self.",
@@ -420,7 +396,6 @@ export default function StudentHome() {
     {
       title: "Themes explored",
       value: journey.data?.themes_explored ?? 0,
-      tone: "success",
       icon: <Sparkles className="h-5 w-5" aria-hidden />,
       lines: [
         "Broad interests the guide heard from you, such as building things, working with people, or patterns and numbers.",
@@ -434,7 +409,6 @@ export default function StudentHome() {
       // "0/0" reads as a score of zero out of zero. With no plan there is
       // nothing to be out of, so the denominator only appears once there is one.
       value: total ? `${done}/${total}` : "0",
-      tone: "teal",
       icon: <Compass className="h-5 w-5" aria-hidden />,
       lines: [
         total
@@ -522,11 +496,10 @@ export default function StudentHome() {
                   key={item.title}
                   label={item.title}
                   value={item.value}
-                  tone={item.tone}
                   onClick={() => setDetail(item)}
                   footer={
                     item.title === "Activities done" ? (
-                      <ProgressBar className="mt-3" value={done} total={total || 1} tone="teal" />
+                      <ProgressBar className="mt-3" value={done} total={total || 1} />
                     ) : null
                   }
                 />
@@ -544,7 +517,6 @@ export default function StudentHome() {
                 key={place.href}
                 icon={place.icon}
                 label={place.label}
-                tone={place.tone}
                 onClick={() => setDetail(place.detail)}
               />
             ))}
@@ -603,10 +575,10 @@ export default function StudentHome() {
                 {recItems.slice(0, 3).map((rec) => (
                   <Card key={rec.career.id} className="flex flex-col justify-between gap-3 p-4">
                     <div className="flex items-start justify-between gap-2">
-                      <h3 className="text-base font-semibold leading-tight text-ink">
+                      <h3 className="min-w-0 text-base font-semibold leading-tight text-ink break-words">
                         {t(rec.career.title)}
                       </h3>
-                      <EvidenceBadge level={rec.evidence_level} />
+                      <EvidenceBadge level={rec.evidence_level} className="shrink-0" />
                     </div>
                     <Button
                       variant="outline"
@@ -705,17 +677,17 @@ export default function StudentHome() {
               href="/app/settings"
               variant="outline"
               size="md"
-              className="w-full justify-between p-4 text-left"
+              className="w-full justify-between gap-3 p-4 text-left"
             >
-              <span className="flex items-center gap-3">
-                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-success-mist text-success">
+              <span className="flex min-w-0 items-center gap-3">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
                   <ShieldCheck className="h-4 w-4" aria-hidden />
                 </span>
-                <span>
+                <span className="min-w-0">
                   <span className="block text-sm font-semibold text-ink">
                     {t("Privacy, consent and a parent link")}
                   </span>
-                  <span className="mt-0.5 block text-xs text-muted">
+                  <span className="mt-0.5 block text-xs leading-relaxed text-muted">
                     {t("What is stored, who may see it, and what this device remembers.")}
                   </span>
                 </span>

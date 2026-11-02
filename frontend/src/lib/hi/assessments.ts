@@ -8,7 +8,7 @@
  */
 export const HI: Record<string, string> = {
   // ------------------------------------------------------------------ the list
-  Assessments: "आकलन (Assessments)",
+  Assessments: "आकलन",
   "Self-questionnaires, not diagnoses": "खुद पर छोटे प्रश्न-पत्र, किसी निदान के लिए नहीं",
   "Three short questionnaires about what you are drawn to, how you tend to work, and puzzles you enjoy. Each one takes six to ten minutes, nothing is timed, and every answer saves as you go.":
     "तीन छोटे प्रश्न-पत्र — आपको क्या अच्छा लगता है, आप काम कैसे करते हैं, और कौन-सी पहेलियाँ जँचती हैं। हर एक में छह से दस मिनट लगते हैं, कोई समय सीमा नहीं है, और हर जवाब तुरंत सेव हो जाता है।",

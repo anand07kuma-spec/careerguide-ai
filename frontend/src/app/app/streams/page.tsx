@@ -6,6 +6,7 @@ import {
   BookOpen,
   Building2,
   Calculator,
+  ChevronDown,
   Compass,
   HeartHandshake,
   Info,
@@ -228,28 +229,34 @@ function StreamCard({ stream }: { stream: Stream }) {
 
       <p className="mt-2 text-sm leading-relaxed text-muted">{t(stream.tagline)}</p>
 
-      <dl className="mt-3 space-y-2.5 text-sm leading-relaxed">
-        <div>
-          <dt className="font-medium text-ink">{t("What you usually study")}</dt>
-          <dd className="mt-1 space-y-1.5 text-muted">
-            {stream.subjects.map((line) => (
-              <p key={line}>{t(line)}</p>
-            ))}
-          </dd>
-        </div>
-        <div>
-          <dt className="font-medium text-ink">{t("Courses people reach from here")}</dt>
-          <dd className="mt-1 space-y-1.5 text-muted">
-            {stream.leads.map((line) => (
-              <p key={line}>{t(line)}</p>
-            ))}
-          </dd>
-        </div>
-        <div>
-          <dt className="font-medium text-ink">{t("Ask your school this")}</dt>
-          <dd className="text-muted">{t(stream.to_check)}</dd>
-        </div>
-      </dl>
+      <details className="group mt-3 rounded-xl border border-line bg-canvas/60 px-3 py-2">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-sm font-medium text-brand-dark [&::-webkit-details-marker]:hidden">
+          {t("Subjects, courses & what to ask")}
+          <ChevronDown className="h-4 w-4 shrink-0 transition-transform group-open:rotate-180" aria-hidden />
+        </summary>
+        <dl className="mt-2 space-y-2.5 pb-1 text-sm leading-relaxed">
+          <div>
+            <dt className="font-medium text-ink">{t("What you usually study")}</dt>
+            <dd className="mt-1 space-y-1.5 text-muted">
+              {stream.subjects.map((line) => (
+                <p key={line}>{t(line)}</p>
+              ))}
+            </dd>
+          </div>
+          <div>
+            <dt className="font-medium text-ink">{t("Courses people reach from here")}</dt>
+            <dd className="mt-1 space-y-1.5 text-muted">
+              {stream.leads.map((line) => (
+                <p key={line}>{t(line)}</p>
+              ))}
+            </dd>
+          </div>
+          <div>
+            <dt className="font-medium text-ink">{t("Ask your school this")}</dt>
+            <dd className="text-muted">{t(stream.to_check)}</dd>
+          </div>
+        </dl>
+      </details>
 
       <div className="mt-3 flex items-start gap-1.5 rounded-xl border border-line bg-canvas px-3 py-2.5 text-xs leading-relaxed text-ink">
         <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted" aria-hidden />

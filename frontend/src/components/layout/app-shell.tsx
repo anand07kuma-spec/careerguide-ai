@@ -45,9 +45,10 @@ interface NavItem {
   group: "guide" | "explore" | "grow" | "family" | "portal";
   /**
    * The Home dashboard already offers this page as a labelled tile in its own
-   * "Explore" section, so the desktop sidebar does not repeat it — the two lists
-   * sat side by one another with the same names on one screen. The mobile drawer
-   * keeps every row, because on a phone the drawer is the only navigation there is.
+   * "Explore" section, so neither the desktop sidebar nor the mobile drawer repeats
+   * it — the two lists sat side by one another with the same names on one screen.
+   * The drawer keeps the guide rows and everything Explore has no tile for, which is
+   * what a phone needs on top of the dashboard grid one tap away.
    */
   tileOnly?: boolean;
 }
@@ -65,9 +66,9 @@ const NAV: NavItem[] = [
   { href: "/app/resources", label: "Resources", short: "Resources", icon: BookOpen, group: "explore", tileOnly: true },
   { href: "/app/scholarships", label: "Scholarships & Aid", short: "Scholarships", icon: Wallet, group: "explore", tileOnly: true },
   { href: "/app/institutes", label: "Institutes & Courses", short: "Institutes", icon: Building2, group: "explore", tileOnly: true },
-  { href: "/app/journey", label: "My Journey", short: "Journey", icon: Compass, group: "grow" },
-  { href: "/app/plans", label: "Study & Skill Plans", short: "Plans", icon: GraduationCap, group: "grow" },
-  { href: "/app/reports", label: "Reports", short: "Reports", icon: FileText, group: "grow" },
+  { href: "/app/journey", label: "My Journey", short: "Journey", icon: Compass, group: "grow", tileOnly: true },
+  { href: "/app/plans", label: "Study & Skill Plans", short: "Plans", icon: GraduationCap, group: "grow", tileOnly: true },
+  { href: "/app/reports", label: "Reports", short: "Reports", icon: FileText, group: "grow", tileOnly: true },
   // No tile of its own either: Home's explore grid is eight tiles wide and a CV is a
   // thing you come back to before an application, not a thing to be pointed at daily.
   { href: "/app/resume", label: "My Resume", short: "Resume", icon: FileUser, group: "grow" },
@@ -80,17 +81,6 @@ const NAV: NavItem[] = [
   { href: "/app/settings", label: "Settings", short: "Settings", icon: Settings, group: "family" },
 ];
 
-const GROUP_TITLES: Record<NavItem["group"], string> = {
-  guide: "Talk with your guide",
-  explore: "Explore",
-  grow: "Your progress",
-  // Rendered only for an account that appears on a portal's roster. The rows are not
-  // written here because nobody can say in advance which school a device has joined;
-  // see `portalRows` in `AppShell`.
-  portal: "Your portals",
-  family: "Account",
-};
-
 // The header avatar already goes to Settings, so the bar would waste a slot on a
 // second route to the same page.
 const MOBILE_NAV = [
@@ -98,7 +88,7 @@ const MOBILE_NAV = [
   { href: "/app/careers", label: "Careers", icon: Briefcase },
   { href: "/app/call", label: "AI Call", icon: Mic },
   { href: "/app/plans", label: "Plans", icon: GraduationCap },
-  { href: "/app/journey", label: "Journey", icon: Compass },
+  { href: "/app/profile", label: "Profile", icon: UserRound },
 ];
 
 function isActive(pathname: string, href: string) {
@@ -198,6 +188,11 @@ export function AppShell({ children }: { children: ReactNode }) {
     );
   }
 
+  // The call is a focused, full-screen mode. Its own navy chrome replaces the
+  // shell's header, sidebar and bottom bar, which would otherwise print the brand
+  // twice and sit on top of the call composer.
+  if (pathname === "/app/call") return <>{children}</>;
+
   // A student tapping Parent Dashboard is bounced straight back to /app, because
   // that route is guarded for parents — so it is not offered to them. A parent
   // keeps the family pages; the student pages read a child's private answers,
@@ -224,9 +219,6 @@ export function AppShell({ children }: { children: ReactNode }) {
           if (!groupItems.length) return null;
           return (
             <div key={group}>
-              <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-wider text-white/35">
-                {t(GROUP_TITLES[group])}
-              </p>
               <ul className="space-y-0.5">
                 {groupItems.map((item) => {
                   const active = isActive(pathname, item.href);
@@ -305,9 +297,10 @@ export function AppShell({ children }: { children: ReactNode }) {
             drawerOpen ? "translate-x-0" : "-translate-x-full",
           )}
         >
-          {/* Every page this account can open, in two compact columns: the full
-              list fits a short phone screen without the student having to find a
-              scrollbar. Long labels would wrap, so the drawer uses short names. */}
+          {/* The guide rows plus everything Explore has no tile for, in two compact
+              columns: what is left fits a short phone screen without a scrollbar, and
+              the tiled pages stay one tap away on the dashboard grid. Long labels
+              would wrap, so the drawer uses short names. */}
           <div className="flex items-center justify-between gap-3 px-4 pb-3 pt-4">
             <Wordmark tone="white" compact />
             <button
@@ -323,7 +316,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
           <nav className="cg-scrollbar flex-1 overflow-y-auto px-3 pb-2">
             <ul className="grid grid-cols-2 gap-1.5">
-              {items.map((item) => {
+              {items.filter((item) => !item.tileOnly).map((item) => {
                 const active = isActive(pathname, item.href);
                 const Icon = item.icon;
                 return (
@@ -453,7 +446,7 @@ export function Screen({
       <div className="mb-5 flex flex-wrap items-start justify-between gap-3 print:hidden sm:mb-7">
         <div className="min-w-0">
           {badge ? <div className="mb-2">{badge}</div> : null}
-          <h1 className="text-xl font-semibold tracking-tight text-ink sm:text-2xl">{t(title)}</h1>
+          <h1 className="text-xl font-semibold tracking-tight text-heading sm:text-2xl">{t(title)}</h1>
           {description ? (
             <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-muted">
               {typeof description === "string" ? t(description) : description}

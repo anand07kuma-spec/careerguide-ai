@@ -18,6 +18,7 @@ import {
   Send,
   Volume2,
   VolumeX,
+  X,
 } from "lucide-react";
 import { GuideAvatar, VoiceWave, Wordmark } from "@/components/brand";
 import { Badge } from "@/components/ui/badge";
@@ -493,6 +494,13 @@ export default function VoiceCallPage() {
               <Captions className="h-3.5 w-3.5" aria-hidden />
               {t("Captions")}
             </button>
+            <Link
+              href="/app"
+              aria-label={t("Back to dashboard")}
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/8 text-white/70 transition-colors hover:bg-white/12 hover:text-white"
+            >
+              <X className="h-4 w-4" aria-hidden />
+            </Link>
           </div>
         </header>
 

@@ -64,4 +64,6 @@ export const HI: Record<string, string> = {
   "Travel, Tourism and Guiding": "यात्रा, पर्यटन और गाइडिंग",
   "Veterinary Science and Animal Husbandry": "पशु चिकित्सा और पशुपालन",
   "Wildlife and Forest Conservation": "वन्यजीव और वन संरक्षण",
+  "{n} profiles": "{n} प्रोफ़ाइल",
+  "Career": "करियर",
 };

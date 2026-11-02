@@ -9,7 +9,7 @@ import { LoadingPanel } from "@/components/ui/feedback";
 import { Modal } from "@/components/ui/modal";
 import { Toggle } from "@/components/ui/field";
 import { api, ApiError } from "@/lib/api";
-import { useT } from "@/lib/i18n";
+import { useT, useTf } from "@/lib/i18n";
 import { useToast } from "@/components/ui/toast";
 import { useResource } from "@/lib/use-resource";
 import type { MyMembership } from "@/lib/types";
@@ -20,6 +20,10 @@ import type { MyMembership } from "@/lib/types";
  * Their own switch is the only thing on this screen that writes about them, and the notes
  * below it are only the ones a counsellor chose to send — the server filters both, so this
  * is a view of what is already permitted rather than a control that assumes it.
+ *
+ * The sharing switch and the leave sentence are never folded away: they are the two facts
+ * about who can see what. The notes themselves are the portal's own data and stay in the
+ * language they were written in.
  */
 export function MemberView({
   slug,
@@ -31,6 +35,7 @@ export function MemberView({
   onLeft: () => void;
 }) {
   const t = useT();
+  const tf = useTf();
   const toast = useToast();
   const [busy, setBusy] = useState(false);
   const [leaving, setLeaving] = useState(false);
@@ -52,6 +57,7 @@ export function MemberView({
       const row = await api.setSharing(slug, next);
       setShared(row.share_results);
       notes.reload();
+      // The toast translates its own message, so these two stay as source text.
       toast.success(next ? "Your portal can now see your finished reports." : "Your results are private again.");
     } catch (caught) {
       setFailure(caught instanceof ApiError ? caught.message : t("Something went wrong."));
@@ -66,7 +72,7 @@ export function MemberView({
     try {
       await api.leavePortal(slug);
       setShowLeave(false);
-      toast.success(`You have left ${membership.name}. Nothing you wrote was deleted.`);
+      toast.success(tf("You have left {name}. Nothing you wrote was deleted.", { name: membership.name }));
       onLeft();
     } catch (caught) {
       setFailure(caught instanceof ApiError ? caught.message : t("Something went wrong."));
@@ -92,7 +98,7 @@ export function MemberView({
           }
         />
         {branding.state === "error" && !branding.data ? (
-          <p className="text-xs text-danger">{branding.error}</p>
+          <p className="break-words text-xs text-danger">{branding.error}</p>
         ) : null}
       </Card>
 
@@ -101,11 +107,11 @@ export function MemberView({
           checked={shared}
           disabled={busy}
           onChange={(next) => void setSharing(next)}
-          label={t("Let this portal see my finished reports")}
-          description={t("Off by default. Turning it on shows the counts and the report this portal invited you to; your conversations and your drafts stay yours.")}
+          label="Let this portal see my finished reports"
+          description="Off by default. Turning it on shows the counts and the report this portal invited you to; your conversations and your drafts stay yours."
         />
         {failure ? (
-          <p role="alert" className="text-sm text-danger">
+          <p role="alert" className="text-sm leading-relaxed text-danger">
             {failure}
           </p>
         ) : null}
@@ -119,25 +125,28 @@ export function MemberView({
         />
         {notes.state === "loading" && !notes.data ? <LoadingPanel label="Loading" /> : null}
         {notes.data && notes.data.length === 0 ? (
-          <p className="text-sm text-muted">
+          <p className="text-sm leading-relaxed text-muted">
             {t("Nobody has shared a note with you here yet.")}
           </p>
         ) : null}
-        {notes.data
-          ? notes.data.map((note) => (
-              <div key={note.id} className="rounded-xl border border-line bg-canvas/50 p-4">
+        {notes.data && notes.data.length > 0 ? (
+          // One divided list inside the card, rather than a bordered box per note.
+          <div className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-canvas/50">
+            {notes.data.map((note) => (
+              <div key={note.id} className="p-4">
                 <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-ink">{note.body}</p>
-                <p className="mt-2 text-xs text-muted">
+                <p className="mt-2 break-words text-xs text-muted">
                   {note.author_label ? `${note.author_label} · ` : ""}
                   {new Date(note.created_at).toLocaleDateString()}
                 </p>
               </div>
-            ))
-          : null}
+            ))}
+          </div>
+        ) : null}
       </Card>
 
       <Card className="flex flex-wrap items-center justify-between gap-3">
-        <p className="max-w-md text-sm text-muted">
+        <p className="min-w-0 max-w-md text-sm leading-relaxed text-muted">
           {t("Leaving closes your place here. Your account, your answers and your reports are untouched.")}
         </p>
         <Button variant="outline" onClick={() => setShowLeave(true)}>
@@ -150,20 +159,23 @@ export function MemberView({
         open={showLeave}
         onClose={() => setShowLeave(false)}
         title="Leave this portal?"
-        description={`You will stop appearing on ${membership.name}'s roster, and its staff will no longer see your place. Nothing you wrote is deleted.`}
+        description={tf(
+          "You will stop appearing on {name}'s roster, and its staff will no longer see your place. Nothing you wrote is deleted.",
+          { name: membership.name },
+        )}
         footer={
           <>
             <Button variant="ghost" onClick={() => setShowLeave(false)}>
-              Stay
+              {t("Stay")}
             </Button>
             <Button variant="danger" loading={leaving} onClick={() => void leave()}>
-              Leave
+              {t("Leave")}
             </Button>
           </>
         }
       >
-        <p className="text-sm text-muted">
-          You can come back only if the portal writes to your address again.
+        <p className="text-sm leading-relaxed text-muted">
+          {t("You can come back only if the portal writes to your address again.")}
         </p>
       </Modal>
     </div>

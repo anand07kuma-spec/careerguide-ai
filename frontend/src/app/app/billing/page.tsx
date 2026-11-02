@@ -131,12 +131,12 @@ export default function BillingPage() {
     >
       {billing.state === "loading" && !data ? (
         <Card>
-          <LoadingPanel label={t("Loading your plan")} />
+          <LoadingPanel label="Loading your plan" />
         </Card>
       ) : billing.state === "error" && !data ? (
         <Card>
           <ErrorState
-            description={billing.error ?? t("Your billing details could not be read.")}
+            description={billing.error ?? "Your billing details could not be read."}
             onRetry={billing.reload}
           />
         </Card>
@@ -411,12 +411,12 @@ export default function BillingPage() {
       <Modal
         open={confirmDowngrade}
         onClose={() => setConfirmDowngrade(false)}
-        title={t("Switch to the free plan?")}
-        description={t(
+        title="Switch to the free plan?"
+        description={
           "This stops the paid period early. It does not delete anything you made, and it cannot " +
             "be undone by this page — you would have to pay for a new period to get the features " +
-            "back.",
-        )}
+            "back."
+        }
         footer={
           <>
             <Button variant="ghost" onClick={() => setConfirmDowngrade(false)}>

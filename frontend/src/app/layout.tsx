@@ -1,6 +1,6 @@
 import { type ReactNode, Suspense } from "react";
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Noto_Sans_Devanagari } from "next/font/google";
 import "./globals.css";
 import { ClerkGate } from "@/components/account/clerk-gate";
 import { SessionProvider } from "@/lib/session";
@@ -27,6 +27,15 @@ const geistSans = Geist({
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+});
+
+// Geist carries no Devanagari, so Hindi used to fall through to whatever font the
+// device happened to have. Noto Sans Devanagari ships its own unicode-range, so the
+// stack in globals.css picks it up only for the codepoints Geist cannot draw.
+const notoDevanagari = Noto_Sans_Devanagari({
+  variable: "--font-noto-devanagari",
+  subsets: ["devanagari"],
+  weight: ["400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
@@ -152,7 +161,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${notoDevanagari.variable} h-full antialiased`}
       data-reduced-motion="false"
       data-high-contrast="false"
       // The theme below is written onto this element before React exists, so its

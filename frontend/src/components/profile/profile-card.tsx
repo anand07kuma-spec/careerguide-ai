@@ -43,19 +43,19 @@ export function ProfileCard({
           {initials(user?.display_name)}
         </span>
         <div className="min-w-0 flex-1">
-          <h2 className="truncate text-lg font-semibold tracking-tight text-ink">
+          <h2 className="break-words text-lg font-semibold tracking-tight text-heading">
             {user?.display_name}
           </h2>
-          <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
+          <p className="mt-1 flex items-start gap-2 text-xs leading-relaxed text-muted">
             {clerk?.linked ? (
               <>
-                <Mail className="h-3.5 w-3.5 shrink-0 text-teal" aria-hidden />
-                <span>{t("Opened by your email sign-in, and by this browser")}</span>
+                <Mail className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+                <span className="min-w-0 flex-1">{t("Opened by your email sign-in, and by this browser")}</span>
               </>
             ) : (
               <>
-                <Smartphone className="h-3.5 w-3.5 shrink-0 text-brand-dark" aria-hidden />
-                <span>{t("This browser is the account — no email, no password")}</span>
+                <Smartphone className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+                <span className="min-w-0 flex-1">{t("This browser is the account — no email, no password")}</span>
               </>
             )}
           </p>
@@ -67,8 +67,8 @@ export function ProfileCard({
       </div>
 
       <dl className="grid gap-3 sm:grid-cols-2">
-        <div className="rounded-2xl bg-canvas p-4">
-          <dt className="text-xs font-semibold uppercase tracking-wide text-muted">
+        <div className="rounded-xl bg-canvas p-4">
+          <dt className="text-xs font-medium text-muted">
             {t("Class")}
           </dt>
           <dd className="mt-1 text-sm font-semibold text-ink">
@@ -84,8 +84,8 @@ export function ProfileCard({
                 : t("Age not set yet")}
           </dd>
         </div>
-        <div className="rounded-2xl bg-canvas p-4">
-          <dt className="text-xs font-semibold uppercase tracking-wide text-muted">
+        <div className="rounded-xl bg-canvas p-4">
+          <dt className="text-xs font-medium text-muted">
             {t("Replies in")}
           </dt>
           <dd className="mt-1 text-sm font-semibold text-ink">{languageLabel}</dd>

@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/feedback";
 import { useToast } from "@/components/ui/toast";
 import { api } from "@/lib/api";
+import { useT, useTf } from "@/lib/i18n";
 import type { PlanItem, PlanItemStatus, StudyPlan } from "@/lib/types";
 import { cn, relativeTime } from "@/lib/utils";
 
@@ -67,6 +68,8 @@ type ConfirmTarget =
 
 export default function PlansPage() {
   const { toast } = useToast();
+  const t = useT();
+  const tf = useTf();
 
   const [plans, setPlans] = useState<StudyPlan[]>([]);
   const [state, setState] = useState<"loading" | "error" | "ready">("loading");
@@ -123,7 +126,7 @@ export default function PlansPage() {
               },
         ),
       () => api.setPlanItemStatus(planId, itemId, status),
-      status === "completed" ? "Nice — step marked done." : "Status updated.",
+      status === "completed" ? t("Nice — step marked done.") : t("Status updated."),
     );
   }
 
@@ -140,7 +143,7 @@ export default function PlansPage() {
     );
     api
       .deletePlanItem(planId, itemId)
-      .then(() => toast("Step removed from your plan.", "success"))
+      .then(() => toast(t("Step removed from your plan."), "success"))
       .catch((err: unknown) => {
         setPlans(snapshot);
         toast(errorMessage(err), "error");
@@ -157,7 +160,7 @@ export default function PlansPage() {
     setPlans(snapshot.filter((plan) => plan.id !== planId));
     api
       .deletePlan(planId)
-      .then(() => toast("Plan deleted.", "success"))
+      .then(() => toast(t("Plan deleted."), "success"))
       .catch((err: unknown) => {
         setPlans(snapshot);
         toast(errorMessage(err), "error");
@@ -172,7 +175,7 @@ export default function PlansPage() {
     setPlans((current) => [plan, ...current]);
     setCollapsed((current) => ({ ...current, [plan.id]: false }));
     setCreateOpen(false);
-    toast("Your plan is ready. Edit it any way you like.", "success");
+    toast(t("Your plan is ready. Edit it any way you like."), "success");
   }
 
   function onItemAdded(planId: number, item: PlanItem) {
@@ -187,20 +190,21 @@ export default function PlansPage() {
       description="Plans you set for yourself, about things you're curious about. Change, shorten or drop them any time — nothing here is assigned by a teacher or an algorithm."
       badge={
         <Badge tone="teal" icon={<GraduationCap className="h-3.5 w-3.5" aria-hidden />}>
-          Student-owned and adjustable
+          {t("Student-owned and adjustable")}
         </Badge>
       }
       action={
         <Button onClick={() => setCreateOpen(true)}>
           <Plus className="h-4 w-4" aria-hidden />
-          New plan
+          {t("New plan")}
         </Button>
       }
     >
       <div className="space-y-5">
         <p className="rounded-2xl border border-line bg-surface px-4 py-3 text-sm leading-relaxed text-muted">
-          Falling behind on a plan is normal, not failure. If a step feels too big, make it
-          smaller. If a plan no longer interests you, change it or start a new one.
+          {t(
+            "Falling behind on a plan is normal, not failure. If a step feels too big, make it smaller. If a plan no longer interests you, change it or start a new one.",
+          )}
         </p>
 
         {state === "loading" ? (
@@ -219,10 +223,10 @@ export default function PlansPage() {
               <div className="flex flex-wrap items-center justify-center gap-2">
                 <Button size="sm" onClick={() => setCreateOpen(true)}>
                   <Plus className="h-4 w-4" aria-hidden />
-                  Create your first plan
+                  {t("Create your first plan")}
                 </Button>
                 <LinkButton href="/app/careers" size="sm" variant="outline">
-                  Look at careers for ideas
+                  {t("Look at careers for ideas")}
                 </LinkButton>
               </div>
             }
@@ -259,14 +263,18 @@ export default function PlansPage() {
         title={confirm?.kind === "plan" ? "Delete this plan?" : "Delete this step?"}
         description={
           confirm?.kind === "plan"
-            ? `"${confirm.planTitle}" and all of its steps will go away. This cannot be undone.`
-            : `"${confirm?.kind === "item" ? confirm.itemTitle : ""}" will be removed from the plan. This cannot be undone.`
+            ? tf('"{title}" and all of its steps will go away. This cannot be undone.', {
+                title: confirm.planTitle,
+              })
+            : tf('"{title}" will be removed from the plan. This cannot be undone.', {
+                title: confirm?.kind === "item" ? confirm.itemTitle : "",
+              })
         }
         size="sm"
         footer={
           <>
             <Button variant="outline" onClick={() => setConfirm(null)} disabled={confirmBusy}>
-              Keep it
+              {t("Keep it")}
             </Button>
             <Button
               variant="danger"
@@ -278,14 +286,15 @@ export default function PlansPage() {
               }}
             >
               <Trash2 className="h-4 w-4" aria-hidden />
-              Yes, delete
+              {t("Yes, delete")}
             </Button>
           </>
         }
       >
         <p className="text-sm leading-relaxed text-muted">
-          Deleting a plan doesn&apos;t erase anything else you&apos;ve explored. You can always
-          make a new one.
+          {t(
+            "Deleting a plan doesn't erase anything else you've explored. You can always make a new one.",
+          )}
         </p>
       </Modal>
     </Screen>
@@ -311,6 +320,8 @@ function PlanCard({
   onDeleteItem: (itemId: number, itemTitle: string) => void;
   onDeletePlan: () => void;
 }) {
+  const t = useT();
+  const tf = useTf();
   const completed = plan.items.filter((item) => item.status === "completed").length;
   const Chevron = collapsed ? ChevronDown : ChevronUp;
 
@@ -319,15 +330,21 @@ function PlanCard({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-base font-semibold leading-tight text-ink">{plan.title}</h2>
+            <h2 className="break-words text-base font-semibold leading-snug text-heading">
+              {plan.title}
+            </h2>
             <Badge tone={plan.status === "active" ? "teal" : "neutral"}>
-              {plan.status === "active" ? "Your plan, your pace" : plan.status}
+              {plan.status === "active" ? t("Your plan, your pace") : t(plan.status)}
             </Badge>
           </div>
-          <p className="mt-1.5 text-sm leading-relaxed text-muted">{plan.goal}</p>
-          <p className="mt-1 text-xs text-muted">
-            Made {relativeTime(plan.created_at)} · {plan.items.length} step
-            {plan.items.length === 1 ? "" : "s"} you chose
+          <p className="mt-1.5 break-words text-sm leading-relaxed text-muted">{plan.goal}</p>
+          <p className="mt-1 text-xs leading-relaxed text-muted">
+            {tf(
+              plan.items.length === 1
+                ? "Made {when} · {n} step you chose"
+                : "Made {when} · {n} steps you chose",
+              { when: relativeTime(plan.created_at), n: plan.items.length },
+            )}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-1">
@@ -336,7 +353,7 @@ function PlanCard({
             variant="ghost"
             onClick={onToggle}
             aria-expanded={!collapsed}
-            aria-label={collapsed ? `Expand ${plan.title}` : `Collapse ${plan.title}`}
+            aria-label={collapsed ? tf("Expand {title}", { title: plan.title }) : tf("Collapse {title}", { title: plan.title })}
           >
             <Chevron className="h-4 w-4" aria-hidden />
           </Button>
@@ -344,7 +361,7 @@ function PlanCard({
             size="icon"
             variant="ghost"
             onClick={onDeletePlan}
-            aria-label={`Delete plan ${plan.title}`}
+            aria-label={tf("Delete plan {title}", { title: plan.title })}
             className="text-muted hover:bg-danger-mist hover:text-danger"
           >
             <Trash2 className="h-4 w-4" aria-hidden />
@@ -356,30 +373,39 @@ function PlanCard({
         className="mt-4"
         value={completed}
         total={plan.items.length}
-        label={`Steps you've finished: ${completed} of ${plan.items.length}`}
+        label={tf("Steps you've finished: {done} of {total}", {
+          done: completed,
+          total: plan.items.length,
+        })}
         tone="teal"
       />
-      <p className="mt-1.5 text-xs text-muted">
-        This bar only shows what you chose to do. Unfinished steps are not a grade.
+      <p className="mt-1.5 text-xs leading-relaxed text-muted">
+        {t("This bar only shows what you chose to do. Unfinished steps are not a grade.")}
       </p>
 
       {!collapsed ? (
-        <div className="mt-4 space-y-3">
+        <div className="mt-4">
           {plan.items.length === 0 ? (
-            <p className="rounded-2xl border border-dashed border-line px-4 py-5 text-center text-sm text-muted">
-              No steps yet. Add one below — keep it small and doable.
+            <p className="rounded-2xl border border-dashed border-line px-4 py-5 text-center text-sm leading-relaxed text-muted">
+              {t("No steps yet. Add one below — keep it small and doable.")}
             </p>
           ) : (
-            plan.items.map((item) => (
-              <PlanItemRow
-                key={item.id}
-                item={item}
-                onStatus={(status) => onStatus(plan.id, item.id, status)}
-                onDelete={() => onDeleteItem(item.id, item.title)}
-              />
-            ))
+            // One framed list, not a box per step: nine bordered tiles inside a card
+            // read as nine separate objects when they are really one list of steps.
+            <div className="divide-y divide-line overflow-hidden rounded-2xl border border-line">
+              {plan.items.map((item) => (
+                <PlanItemRow
+                  key={item.id}
+                  item={item}
+                  onStatus={(status) => onStatus(plan.id, item.id, status)}
+                  onDelete={() => onDeleteItem(item.id, item.title)}
+                />
+              ))}
+            </div>
           )}
-          <AddItemForm planId={plan.id} onAdded={onItemAdded} />
+          <div className="mt-3">
+            <AddItemForm planId={plan.id} onAdded={onItemAdded} />
+          </div>
         </div>
       ) : null}
     </Card>
@@ -397,36 +423,40 @@ function PlanItemRow({
   onStatus: (status: PlanItemStatus) => void;
   onDelete: () => void;
 }) {
+  const t = useT();
+  const tf = useTf();
   const cycle = NEXT_STATUS[item.status];
+  const statusLabel =
+    STATUS_OPTIONS.find((option) => option.value === item.status)?.label ?? item.status;
   return (
     <div
       className={cn(
-        "rounded-2xl border p-4 transition-colors",
+        "p-4 transition-colors sm:px-5",
         item.status === "completed"
-          ? "border-success/25 bg-success-mist/40"
+          ? "bg-success-mist/40"
           : item.status === "skipped"
-            ? "border-line bg-canvas/60 opacity-80"
-            : "border-line bg-canvas/50",
+            ? "bg-canvas/60 opacity-80"
+            : "bg-transparent",
       )}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p
             className={cn(
-              "text-sm font-medium leading-snug text-ink",
+              "break-words text-sm font-medium leading-relaxed text-ink",
               item.status === "completed" && "line-through decoration-success/50",
             )}
           >
             {item.title}
           </p>
           {item.detail ? (
-            <p className="mt-1 text-sm leading-relaxed text-muted">{item.detail}</p>
+            <p className="mt-1 break-words text-sm leading-relaxed text-muted">{item.detail}</p>
           ) : null}
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            <Badge tone={STATUS_TONE[item.status]}>{item.status.replace("_", " ")}</Badge>
+            <Badge tone={STATUS_TONE[item.status]}>{t(statusLabel)}</Badge>
             {item.estimated_effort ? (
               <Badge tone="neutral" icon={<Clock className="h-3 w-3" aria-hidden />}>
-                {item.estimated_effort}
+                {t(item.estimated_effort)}
               </Badge>
             ) : null}
           </div>
@@ -435,28 +465,29 @@ function PlanItemRow({
           size="icon"
           variant="ghost"
           onClick={onDelete}
-          aria-label={`Delete step ${item.title}`}
+          aria-label={tf("Delete step {title}", { title: item.title })}
           className="shrink-0 text-muted hover:bg-danger-mist hover:text-danger"
         >
           <Trash2 className="h-4 w-4" aria-hidden />
         </Button>
       </div>
 
+      {/* One primary action, and Skip only while the step is still open. A status
+          dropdown beside the button offered the same four states twice and was the
+          widest thing in the row on a phone. */}
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <Button size="sm" variant="outline" onClick={() => onStatus(cycle.next)}>
-          {cycle.label}
+          {t(cycle.label)}
         </Button>
-        <Select
-          aria-label={`Status for ${item.title}`}
-          value={item.status}
-          onChange={(event) => onStatus(event.target.value as PlanItemStatus)}
-          options={STATUS_OPTIONS}
-          className="h-9 w-auto min-w-44 text-sm"
-        />
+        {item.status === "pending" || item.status === "in_progress" ? (
+          <Button size="sm" variant="ghost" onClick={() => onStatus("skipped")}>
+            {t("Skip")}
+          </Button>
+        ) : null}
         {item.resource_url ? (
           <LinkButton href={item.resource_url} size="sm" variant="ghost">
             <ExternalLink className="h-3.5 w-3.5" aria-hidden />
-            Open resource
+            {t("Open resource")}
           </LinkButton>
         ) : null}
       </div>
@@ -474,6 +505,7 @@ function AddItemForm({
   onAdded: (planId: number, item: PlanItem) => void;
 }) {
   const { toast } = useToast();
+  const t = useT();
   const [title, setTitle] = useState("");
   const [detail, setDetail] = useState("");
   const [effort, setEffort] = useState("");
@@ -494,7 +526,7 @@ function AddItemForm({
       setTitle("");
       setDetail("");
       setEffort("");
-      toast("Step added to your plan.", "success");
+      toast(t("Step added to your plan."), "success");
     } catch (error) {
       setFormError(errorMessage(error));
     } finally {
@@ -504,9 +536,9 @@ function AddItemForm({
 
   return (
     <div className="rounded-2xl border border-dashed border-line p-4">
-      <p className="text-sm font-semibold text-ink">Add a step</p>
-      <p className="mt-0.5 text-xs text-muted">
-        Keep it small. You can edit or remove it any time.
+      <p className="text-sm font-semibold text-heading">{t("Add a step")}</p>
+      <p className="mt-0.5 text-xs leading-relaxed text-muted">
+        {t("Keep it small. You can edit or remove it any time.")}
       </p>
       <div className="mt-3 space-y-3">
         <Input
@@ -533,12 +565,12 @@ function AddItemForm({
         </Field>
         {formError ? (
           <p role="alert" className="text-sm font-medium text-danger">
-            {formError}
+            {t(formError)}
           </p>
         ) : null}
         <Button size="sm" onClick={() => void submit()} loading={busy} disabled={!title.trim()}>
           <Plus className="h-4 w-4" aria-hidden />
-          Add step
+          {t("Add step")}
         </Button>
       </div>
     </div>
@@ -560,6 +592,7 @@ function CreatePlanModal({
   const [title, setTitle] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const t = useT();
 
   // Mounting fresh is what clears the form between openings; a reset effect
   // would fight with React over when the state is allowed to change.
@@ -593,10 +626,10 @@ function CreatePlanModal({
       footer={
         <>
           <Button variant="outline" onClick={onClose} disabled={busy}>
-            Cancel
+            {t("Cancel")}
           </Button>
           <Button onClick={() => void submit()} loading={busy} disabled={goal.trim().length < 2}>
-            Create plan
+            {t("Create plan")}
           </Button>
         </>
       }
@@ -620,12 +653,13 @@ function CreatePlanModal({
         />
         {error ? (
           <p role="alert" className="text-sm font-medium text-danger">
-            {error}
+            {t(error)}
           </p>
         ) : null}
         <p className="text-xs leading-relaxed text-muted">
-          We&apos;ll suggest a few starter steps. They are suggestions only — delete, rewrite or
-          reorder anything once the plan is made.
+          {t(
+            "We'll suggest a few starter steps. They are suggestions only — delete, rewrite or reorder anything once the plan is made.",
+          )}
         </p>
       </div>
     </Modal>

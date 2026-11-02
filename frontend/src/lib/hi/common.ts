@@ -9,8 +9,6 @@ export const HI: Record<string, string> = {
   // Sidebar and mobile navigation
   "Talk with your guide": "अपने गाइड से बात करें",
   Explore: "खोजें",
-  "Your progress": "आपकी प्रगति",
-  Account: "खाता",
   Home: "होम",
   "Start AI Call": "AI कॉल शुरू करें",
   "Chat Instead": "बजाय इसके, टाइप करके बात करें",
@@ -27,6 +25,7 @@ export const HI: Record<string, string> = {
   "Study & Skill Plans": "पढ़ाई और स्किल प्लान",
   Reports: "रिपोर्ट",
   "Parent Dashboard": "अभिभावक डैशबोर्ड",
+  "My Profile": "मेरी प्रोफ़ाइल",
   Settings: "सेटिंग्स",
   Careers: "करियर",
   "AI Call": "AI कॉल",
@@ -37,7 +36,9 @@ export const HI: Record<string, string> = {
   Scholarships: "स्कॉलरशिप",
   Institutes: "संस्थान",
   Report: "रिपोर्ट",
+  Resume: "रिज़्यूमे",
   Parent: "अभिभावक",
+  Billing: "बिलिंग",
   Menu: "मेन्यू",
   "Open menu": "मेन्यू खोलें",
   "Close menu": "मेन्यू बंद करें",
@@ -166,6 +167,8 @@ export const HI: Record<string, string> = {
   "Explorable from class {n}": "कक्षा {n} से इसे देखना शुरू कर सकते हैं",
   "Showing 1 career": "1 करियर दिख रहा है",
   "Showing {n} careers": "{n} करियर दिख रहे हैं",
+  "Show more careers": "और करियर दिखाएँ",
+  "Back to dashboard": "डैशबोर्ड पर वापस जाएँ",
   "with your filters": "आपके फ़िल्टर के साथ",
 
   // Career detail page
@@ -227,4 +230,5 @@ export const HI: Record<string, string> = {
   "Physical activity and sports": "शारीरिक गतिविधि और खेल",
   "Nature and scientific curiosity": "प्रकृति और विज्ञान की जिज्ञासा",
   "Organization and leadership": "व्यवस्था और नेतृत्व",
+  "CareerGuide AI logo": "CareerGuide AI लोगो",
 };
