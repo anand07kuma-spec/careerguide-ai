@@ -1,76 +1,24 @@
 /**
- * Hindi for the dashboard's own words: the tile explanations that open in the
- * dialog, the stat cards, and the buttons on this screen.
+ * Hindi for the dashboard's own words: the short section copy, the buttons on
+ * this screen, and the one explanation that still opens in a dialog.
  */
 export const HI: Record<string, string> = {
-  // Tile explanations
-  "More than forty profiles: a working day, the skills, the real cost, and routes that work from smaller towns.":
-    "चालीस से ज़्यादा करियर की जानकारी: एक दिन का काम, कौन से स्किल, असली खर्चा, और छोटे शहरों से भी चलने वाले रास्ते।",
-  "Nothing here is sorted by how much a career earns, and no career is ever marked out of reach.":
-    "यहाँ कुछ भी कमाई के हिसाब से क्रमबद्ध नहीं है, और किसी करियर को असंभव नहीं बताया जाता।",
-  "Open Career Explorer": "करियर एक्सप्लोरर खोलें",
-  "What Science, Commerce and Humanities are actually like, plus the routes that never appear on the usual list.":
-    "साइंस, कॉमर्स और ह्यूमैनिटीज़ असल में कैसी हैं, और वे रास्ते भी जिनका आम सूची में नाम तक नहीं है।",
-  "No recommendation and no score. It explains the streams and tells you exactly what to ask your own school.":
-    "इसमें कोई सिफ़ारिश या स्कोर नहीं। यह स्ट्रीम समझाता है और साफ़ बताता है कि अपने स्कूल से क्या पूछना है।",
-  "Read the streams": "स्ट्रीम पढ़ें",
-  "JEE, NEET, CUET, CLAT, CA Foundation and the others, grouped by what you become through them.":
-    "JEE, NEET, CUET, CLAT, CA Foundation और बाकी एग्ज़ाम — इस हिसाब से बाँटे गए कि इनसे आप क्या बनते हैं।",
-  "No dates, fees, cutoffs or eligibility numbers — those change every year, so each entry names the official notification instead.":
-    "न तारीख़ें, न फ़ीस, न कटऑफ़, न योग्यता के आँकड़े — ये हर साल बदलते हैं, इसलिए हर जगह ऑफ़िशियल नोटिफ़िकेशन का नाम दिया गया है।",
-  "Open the exams map": "एग्ज़ाम का नक्शा खोलें",
-  "A few friendly questions. Answers are stored as short theme notes, not as a profile of you.":
-    "कुछ आसान सवाल। जवाब छोटे नोट की तरह सेव होते हैं, आपकी प्रोफ़ाइल बनाने के लिए नहीं।",
-  "This is not a test. There is no score, and no wrong answer changes what you are told later.":
-    "यह टेस्ट नहीं है। इसका कोई स्कोर नहीं, और ग़लत जवाब से आगे आपको कुछ अलग नहीं बताया जाता।",
-  "Answer the questions": "सवालों के जवाब दें",
-  "Turn a direction into small steps you can actually do this week, and tick them off.":
-    "किसी दिशा को इस हफ़्ते के छोटे-छोटे कामों में बदलें, और पूरा होने पर टिक करें।",
-  "Steps lean on free material first. A plan never turns into a sales pitch for a course.":
-    "प्लान पहले मुफ़्त सामग्री पर टिके रहते हैं। कोई प्लान कभी किसी कोर्स बेचने वाली बात नहीं बनता।",
-  "Build a plan": "प्लान बनाएँ",
-  "Videos, books, practice and people to talk to, sorted by what a family can actually reach.":
-    "वीडियो, किताबें, अभ्यास और बात करने के लिए लोग — सब इस हिसाब से सजे हैं कि एक परिवार असल में क्या पा सकता है।",
-  "Every listing says what it costs. Verify the details on the source website before you count on them.":
-    "हर लिस्टिंग में लिखा है कि इसकी क्या कीमत है। भरोसा करने से पहले असली साइट पर जाकर जाँच लें।",
-  "Browse resources": "संसाधन देखें",
-  "Support that may exist for your class, state or subject, with what each one asks for.":
-    "आपकी कक्षा, राज्य या विषय के लिए जो मदद हो सकती है, और हर एक में क्या शर्तें हैं।",
-  "Rules and deadlines change every year, so these are leads to check on the official site — never a promise.":
-    "नियम और आख़िरी तारीख़ें हर साल बदलती हैं, इसलिए ये केवल जाँचने के सुझाव हैं — कोई वादा नहीं।",
-  "Look at aid": "मदद देखें",
-  "Where a field can be studied, with fees and entry routes shown side by side.":
-    "कौन सा फ़ील्ड कहाँ पढ़ा जा सकता है, फ़ीस और दाखिले के रास्ते साथ-साथ दिखते हुए।",
-  "If a listing was paid for, it says so. Payment has no effect on what the guide suggests.":
-    "अगर कोई लिस्टिंग पैसे लेकर लगाई गई है तो वह साफ़ लिखा है। पैसों से गाइड की सलाह पर कोई असर नहीं पड़ता।",
-  "Compare institutes": "संस्थानों की तुलना करें",
-  "One page that gathers what you explored, meant for showing a parent or a teacher.":
-    "एक पेज जिसमें आपने जो-जो देखा सब एक जगह है — अभिभावक या टीचर को दिखाने के लिए।",
-  "It lists what the guide actually heard from you, and what is still unverified.":
-    "इसमें वही लिखा है जो गाइड ने आपसे सच में सुना, और जो अब भी अपुष्ट है वह भी बताया गया है।",
-  "Make a report": "रिपोर्ट बनाएँ",
-  "The record of conversations, saved careers and steps you finished, newest first.":
-    "बातचीत, सेव किए करियर और पूरे किए काम का रिकॉर्ड — सबसे नया पहले।",
-  "You can delete any conversation from here. Nothing is kept to build a profile of you.":
-    "यहाँ से कोई भी बातचीत हटाई जा सकती है। आपकी प्रोफ़ाइल बनाने के लिए कुछ नहीं रखा जाता।",
-  "Open my journey": "मेरी यात्रा खोलें",
-
-  // Stat card explanations
-  "Conversations you started and finished. The guide uses them to remember what you already said, so you are never asked the same thing twice.":
-    "आपने जो बातचीत शुरू की और पूरी की। गाइड इन्हीं से याद रखता है कि आप पहले क्या कह चुके हैं, ताकि एक ही सवाल दोबारा न पूछा जाए।",
+  // Explore and the recommendation explanation
+  "Go straight to any part of the guide.": "गाइड के किसी भी हिस्से पर सीधे जाएँ।",
+  // The sentence under each Explore card.
+  "Forty-plus profiles, honestly written": "चालीस से ज़्यादा प्रोफ़ाइल, ईमानदारी से लिखी गईं",
+  "Science, Commerce, Humanities": "साइंस, कॉमर्स, ह्यूमैनिटीज़",
+  "JEE, NEET, CUET and more": "JEE, NEET, CUET और बहुत कुछ",
+  "A few friendly questions": "कुछ आसान सवाल",
+  "Small steps for this week": "इस हफ़्ते के छोटे कदम",
+  "Free-first videos and books": "पहले-मुफ़्त वीडियो और किताबें",
+  "Scholarships and aid": "स्कॉलरशिप और आर्थिक मदद",
+  "Where it can be studied": "कहाँ पढ़ाई हो सकती है",
+  "One page for a parent": "माता-पिता के लिए एक पेज",
+  "Five questions, no score": "पाँच सवाल, कोई स्कोर नहीं",
+  "What you have done so far": "अब तक आपने क्या किया",
   "Start a conversation": "बातचीत शुरू करें",
-  "Profiles you bookmarked to look at again. Saving says nothing about whether a career suits you — it is only a note to self.":
-    "वे करियर जिन्हें आपने दोबारा देखने के लिए बुकमार्क किया। सेव करने का मतलब यह नहीं कि वह करियर आपके लिए सही है — यह सिर्फ़ ख़ुद को दिया गया नोट है।",
-  "You can remove any of them at any time, from the list below this one.":
-    "इनमें से किसी को भी आप किसी भी समय हटा सकते हैं, इस कार्ड के नीचे वाली सूची से।",
-  "Browse careers": "करियर देखें",
-  "Broad interests the guide heard from you, such as building things, working with people, or patterns and numbers.":
-    "वे चौड़ी रुचियाँ जो गाइड ने आपसे सुनीं, जैसे चीज़ें बनाना, लोगों के साथ काम करना, या पैटर्न और संख्याएँ।",
-  "Themes come from what you said out loud. They are never inferred from your voice, your accent or how fast you speak.":
-    "थीम केवल उसी से बनती हैं जो आपने खुद कहा। आपकी आवाज़, उच्चारण या बोलने की रफ़्तार से कभी कुछ नहीं जोड़ा जाता।",
-  "Add more interests": "और रुचियाँ जोड़ें",
-  "They are ideas to try, not homework. Skipping one costs nothing and changes no suggestion.":
-    "ये आज़माने के विचार हैं, होमवर्क नहीं। कोई छोड़ दें तो कुछ नहीं खोता और कोई सलाह नहीं बदलती।",
+  "Build a plan": "प्लान बनाएँ",
   "This is a starting point built from what you said. You are allowed to disagree with it.":
     "यह आपने जो कहा उस पर बना एक शुरुआती बिंदु है। इससे असहमत होना आपकी पूरी हक़ है।",
   "Explore this career": "यह करियर देखें",
@@ -86,4 +34,79 @@ export const HI: Record<string, string> = {
   "Answer interest questions": "रुचि वाले सवाल के जवाब दें",
   "No directions yet": "अभी कोई दिशा नहीं",
   "Loading your saved careers…": "आपके सेव किए करियर लाए जा रहे हैं…",
+
+  // "Your latest work" — the newest real item from each part of the account
+  "From your account": "आपके अकाउंट से",
+  "Your latest work": "आपका ताज़ा काम",
+  "The newest thing in each part of your account — a finished questionnaire, a plan, a report, a chat, your resume. Nothing here is estimated.":
+    "आपके अकाउंट के हर हिस्से की सबसे नई चीज़ — पूरा हुआ सवाल-पत्र, प्लान, रिपोर्ट, बातचीत और आपका रिज़्यूमे। यहाँ कुछ भी अनुमान से नहीं लिखा गया।",
+
+  // Latest assessment
+  "Latest assessment": "ताज़ा आंकलन",
+  "No questionnaire finished yet": "अभी कोई सवाल-पत्र पूरा नहीं हुआ",
+  "Open assessments": "आंकलन खोलें",
+  "Each questionnaire takes six to ten minutes. Finish one and its result sits here.":
+    "हर सवाल-पत्र छह से दस मिनट लेता है। एक पूरा करें और उसका नतीजा यहीं दिखेगा।",
+  "View result": "नतीजा देखें",
+  "Retake": "दोबारा दें",
+  "Interest questionnaire": "रुचि सवाल-पत्र",
+  "Personality questionnaire": "व्यक्तित्व सवाल-पत्र",
+  "Aptitude questionnaire": "योग्यता सवाल-पत्र",
+  "{answered} of {total} questions answered": "{total} में से {answered} सवालों के जवाब दिए",
+
+  // Study plan
+  "Study plan": "पढ़ाई का प्लान",
+  "No study plan yet": "अभी कोई प्लान नहीं",
+  "A plan turns a direction into small steps you can do this week. The guide can build one from a career you are exploring.":
+    "प्लान किसी दिशा को इस हफ़्ते के छोटे कामों में बदलता है। जिस करियर को आप देख रहे हैं, उससे गाइड एक प्लान बना सकता है।",
+  "Continue plan": "प्लान जारी रखें",
+  "This plan has no steps yet.": "इस प्लान में अभी कोई कदम नहीं है।",
+  "Next step": "अगला कदम",
+  "Every step in this plan is finished.": "इस प्लान का हर कदम पूरा है।",
+  "Nothing is waiting in this plan. Skipped steps can be reopened on the plan page.":
+    "इस प्लान में अभी कुछ बाकी नहीं है। छोड़े गए कदम प्लान वाले पेज से दोबारा खोले जा सकते हैं।",
+  "{done} of {total} steps finished": "{total} में से {done} कदम पूरे",
+
+  // Latest report
+  "Latest report": "ताज़ा रिपोर्ट",
+  "No report yet": "अभी कोई रिपोर्ट नहीं",
+  "Open reports": "रिपोर्ट खोलें",
+  "A report gathers what the guide has heard from you. It can be made after a conversation or two.":
+    "रिपोर्ट उन बातों को इकट्ठा करती है जो गाइड ने आपसे सुनीं। यह एक-दो बातचीत के बाद बनाई जा सकती है।",
+  "Prepared for {name}": "{name} के लिए तैयार",
+  "View report": "रिपोर्ट देखें",
+  "Updated {when}": "{when} अपडेट हुई",
+  "{n} direction suggested": "{n} दिशा सुझाई गई",
+  "{n} directions suggested": "{n} दिशाएँ सुझाई गईं",
+  "No directions are listed in this report yet.": "इस रिपोर्ट में अभी कोई दिशा नहीं लिखी है।",
+
+  // Recent conversation
+  "Recent conversation": "हाल की बातचीत",
+  "No conversation yet": "अभी कोई बातचीत नहीं",
+  "Nothing has been said yet. The guide is ready whenever you are.":
+    "अभी कुछ कहा नहीं गया। जब आप तैयार हों, गाइड मौजूद है।",
+  "Voice call with your guide": "गाइड से आवाज़ में बात",
+  "Continue voice call": "आवाज़ कॉल जारी रखें",
+  "Open voice call": "आवाज़ कॉल खोलें",
+  "Continue chat": "बातचीत जारी रखें",
+  "Open chat": "चैट खोलें",
+  "Open now": "अभी खुली है",
+  "Closed": "बंद",
+  "In {language}": "{language} में",
+  "Started {when}": "{when} शुरू हुई",
+
+  // Resume
+  "Resume": "रिज़्यूमे",
+  "Not saved yet": "अभी सेव नहीं हुआ",
+  "Nothing saved so far. Write it once and it stays on your account.":
+    "अब तक कुछ सेव नहीं है। एक बार लिखिए, फिर वह आपके अकाउंट में रहेगा।",
+  "Start resume": "रिज़्यूमे बनाएँ",
+  "Saved resume": "सेव किया रिज़्यूमे",
+  "Edit resume": "रिज़्यूमे बदलें",
+  "{n} class": "{n} कक्षा",
+  "{n} classes": "{n} कक्षाएँ",
+  "{n} skill": "{n} स्किल",
+  "{n} skills": "{n} स्किल",
+  "{n} project": "{n} प्रोजेक्ट",
+  "{n} projects": "{n} प्रोजेक्ट",
 };

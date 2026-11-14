@@ -5,8 +5,8 @@ import {
   PublicLangNotice,
   PublicSiteHeader,
 } from "@/components/careers/public-careers-shell";
+import { PageHero } from "@/components/layout/page-hero";
 import { JsonLd } from "@/components/seo/json-ld";
-import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { freshness, listPosts, readingMinutes } from "@/lib/blog";
 import { publicLang } from "@/lib/request-lang";
@@ -97,28 +97,31 @@ export default async function BlogIndexPage({ searchParams }: { searchParams: Pa
   };
 
   return (
-    <div className="min-h-dvh bg-canvas">
+    <div lang={lang === "hi" ? "hi-IN" : "en-IN"} className="min-h-dvh bg-canvas">
       <PublicSiteHeader current="/blog" lang={lang} path="/blog" />
 
-      <main className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-14">
-        <Badge tone="teal" className="mb-5">
-          {t("Guides")}
-        </Badge>
-        <h1 className="text-balance text-3xl font-bold leading-tight tracking-tight text-heading sm:text-4xl">
-          {t("Things worth reading slowly")}
-        </h1>
-        <PublicLangNotice lang={lang} what="guide articles" />
-        <p className="mt-5 max-w-2xl text-base leading-relaxed text-ink sm:text-lg">
-          {t(
-            "The conversation in this app answers a question in a few sentences. These pages are for the questions that need a parent and a student to sit with the same document — how a stream choice works, what an interest test really measures, how to read an exam bulletin.",
-          )}
-        </p>
-        <p className="mt-4 max-w-2xl text-sm leading-relaxed text-muted">
-          {t(
-            "Written by this project, not by a career counsellor. There is no expert on staff who has reviewed them, and nothing here states a fee, a cutoff, a deadline or a salary — those change every year and belong in an official document.",
-          )}
-        </p>
+      <main id="main-content" tabIndex={-1}>
+        <PageHero
+          eyebrow={t("Guides")}
+          title={t("Things worth reading slowly")}
+          notice={<PublicLangNotice lang={lang} what="guide articles" />}
+          lead={
+            <>
+              <p className="text-ink">
+                {t(
+                  "The conversation in this app answers a question in a few sentences. These pages are for the questions that need a parent and a student to sit with the same document — how a stream choice works, what an interest test really measures, how to read an exam bulletin.",
+                )}
+              </p>
+              <p className="mt-3 text-sm">
+                {t(
+                  "Written by this project, not by a career counsellor. There is no expert on staff who has reviewed them, and nothing here states a fee, a cutoff, a deadline or a salary — those change every year and belong in an official document.",
+                )}
+              </p>
+            </>
+          }
+        />
 
+        <div className="mx-auto w-full max-w-reading px-4 pb-10 pt-8 sm:px-6 sm:pb-14 sm:pt-10">
         {posts.length === 0 ? (
           <Card className="mt-8 p-5">
             <h2 className="text-base font-semibold text-heading">{t("No guides published yet")}</h2>
@@ -174,11 +177,12 @@ export default async function BlogIndexPage({ searchParams }: { searchParams: Pa
           </div>
           <a
             href="/onboarding"
-            className="shrink-0 rounded-card bg-brand px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-dark"
+            className="shrink-0 rounded-card bg-brand-solid px-4 py-2 text-sm font-semibold text-on-brand transition-colors hover:bg-brand-dark"
           >
             {t("Start exploring")}
           </a>
         </Card>
+        </div>
       </main>
 
       <JsonLd data={structuredData} />

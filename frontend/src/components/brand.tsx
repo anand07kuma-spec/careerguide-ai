@@ -2,27 +2,66 @@
 
 import { cn } from "@/lib/utils";
 
-/** Original mark: a guide robot under a graduation cap. No emoji, no stock icon. */
-export function BrandMark({ className, tone = "brand" }: { className?: string; tone?: "brand" | "white" }) {
-  const shell = tone === "white" ? "#FFFFFF" : "#2563EB";
-  const face = tone === "white" ? "#0B1730" : "#0B1730";
-  const eye = tone === "white" ? "#60A5FA" : "#60A5FA";
+/**
+ * The approved horizontal artwork, used whole: emblem, name and tagline are all
+ * in the delivered file. Only the outer white margin was removed (and made
+ * transparent), so the wordmark must not be repeated beside it.
+ *
+ * The artwork's lettering is navy, which disappears on a dark header. The dark
+ * file is the same artwork with only that lettering lifted to white; the emblem
+ * keeps its exact pixels. CSS swaps the two files with the theme, so no plate,
+ * card or background ever sits behind the logo.
+ *
+ * `tone="onDark"` pins the white-lettering file for surfaces that stay navy in
+ * both themes — the footer, the app sidebar, the call screen and the auth cards.
+ */
+export function HorizontalLogo({
+  className,
+  tone = "auto",
+  compact = false,
+}: {
+  className?: string;
+  tone?: "auto" | "onDark";
+  compact?: boolean;
+}) {
+  const size = compact ? "h-7 sm:h-8" : "h-9 sm:h-10";
   return (
-    <svg viewBox="0 0 48 48" className={cn("h-9 w-9", className)} role="img" aria-label="CareerGuide AI logo">
-      <path d="M24 3 6 11l18 8 14-6.2V21h4V11L24 3Z" fill={shell} opacity={tone === "white" ? 0.9 : 1} />
-      <path d="M10 20.5V28c0 4.4 6.3 8 14 8s14-3.6 14-8v-7.5l-14 6-14-6Z" fill={shell} />
-      <rect x="12" y="27" width="24" height="16" rx="6" fill={face} />
-      <circle cx="19.5" cy="35" r="2.4" fill={eye} />
-      <circle cx="28.5" cy="35" r="2.4" fill={eye} />
-      <rect x="21.6" y="40" width="4.8" height="1.8" rx="0.9" fill={eye} opacity="0.75" />
-      <rect x="8" y="24" width="3.5" height="8" rx="1.75" fill={shell} opacity="0.7" />
-      <rect x="36.5" y="24" width="3.5" height="8" rx="1.75" fill={shell} opacity="0.7" />
-      <path d="M38 26v6c0 1.5 2.5 2.6 5 2.6" stroke={shell} strokeWidth="2" fill="none" strokeLinecap="round" />
-      <circle cx="43" cy="35.5" r="2" fill="#14B8A6" />
-    </svg>
+    <span
+      role="img"
+      aria-label="CareerGuide AI"
+      className={cn(
+        "cg-horizontal-logo inline-flex max-w-full shrink-0 items-center",
+        tone === "onDark" && "cg-logo-on-dark",
+        className,
+      )}
+    >
+      {/* Served exactly as delivered: `next/image` would re-encode the file. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/careerguide-horizontal-logo.png"
+        alt=""
+        width={726}
+        height={195}
+        className={cn("cg-logo-light w-auto max-w-full object-contain", size)}
+      />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/careerguide-horizontal-logo-dark.png"
+        alt=""
+        width={726}
+        height={195}
+        aria-hidden
+        className={cn("cg-logo-dark w-auto max-w-full object-contain", size)}
+      />
+    </span>
   );
 }
 
+/**
+ * Kept as the one brand component every screen imports. `tone="white"` still
+ * means "this surface is dark in both themes", which now selects the artwork's
+ * white-lettering file instead of recolouring hand-drawn text.
+ */
 export function Wordmark({
   className,
   tone = "brand",
@@ -33,33 +72,11 @@ export function Wordmark({
   compact?: boolean;
 }) {
   return (
-    <div className={cn("flex items-center gap-2.5", className)}>
-      <BrandMark tone={tone === "white" ? "white" : "brand"} className={compact ? "h-7 w-7" : "h-9 w-9"} />
-      <div className="min-w-0 leading-tight">
-        <p
-          className={cn(
-            "truncate font-semibold tracking-tight",
-            compact ? "text-sm" : "text-base",
-            tone === "white" ? "text-white" : "text-brand",
-          )}
-        >
-          CareerGuide AI
-        </p>
-        {!compact ? (
-          // The tagline is decoration, so it yields before a header has to
-          // overflow: at 320px it is the difference between a clipped
-          // "Get started" and one that fits.
-          <p
-            className={cn(
-              "hidden truncate text-[11px] sm:block",
-              tone === "white" ? "text-white/60" : "text-muted",
-            )}
-          >
-            Your Future, Our Guidance
-          </p>
-        ) : null}
-      </div>
-    </div>
+    <HorizontalLogo
+      className={className}
+      tone={tone === "white" ? "onDark" : "auto"}
+      compact={compact}
+    />
   );
 }
 
@@ -125,7 +142,7 @@ export function VoiceWave({ active, className }: { active: boolean; className?: 
         <span
           key={index}
           className={cn(
-            "w-[3px] rounded-full bg-teal transition-all duration-300",
+            "w-[3px] rounded-full bg-teal-bright transition-all duration-300",
             active ? "cg-wave-bar opacity-100" : "opacity-25",
           )}
           style={{

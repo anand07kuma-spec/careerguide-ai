@@ -99,4 +99,27 @@ export const HI: Record<string, string> = {
   "Aiming at": "लक्ष्य",
   "CareerGuide AI — printed {date}. Written by the student named above; not scored, verified or sent anywhere by CareerGuide AI.":
     "CareerGuide AI — {date} को प्रिंट किया गया। यह ऊपर लिखे विद्यार्थी ने खुद लिखा है; CareerGuide AI ने इसे न कोई नंबर दिया, न परखा, न कहीं भेजा।",
+
+  "Resume builder": "रिज़्यूम बिल्डर",
+  "Build Your Student Resume": "अपना स्टूडेंट रिज़्यूम बनाइए",
+  "Unsaved changes": "बदलाव अभी सेव नहीं हुए",
+  "{n} class": "{n} कक्षा",
+  "{n} classes": "{n} कक्षाएँ",
+  "{n} skill": "{n} स्किल",
+  "{n} skills": "{n} स्किल",
+
+  "Preview": "पूर्वावलोकन",
+  "Live preview": "लाइव पूर्वावलोकन",
+  "Resume preview": "रिज़्यूम का पूर्वावलोकन",
+  "This is the sheet your browser prints, including anything not saved yet.":
+    "यह वही कागज़ है जो आपका ब्राउज़र प्रिंट करता है — जो अभी सेव नहीं हुआ, वह भी शामिल है।",
+  "This is the same sheet your browser prints. Unsaved changes are included too, and a long resume continues onto more pages.":
+    "यह वही कागज़ है जो आपका ब्राउज़र प्रिंट करता है। जो बदलाव अभी सेव नहीं हुए, वे भी इसमें हैं, और लंबा रिज़्यूम अगले पन्नों पर चलता जाता है।",
+  "In the print dialog, open More settings and set Headers and footers to Off.":
+    "प्रिंट डायलॉग में More settings खोलिए और Headers and footers को Off कर दीजिए।",
+  "The first A4 page is shown here. The rest continues on the next page in the PDF.":
+    "यहाँ A4 का पहला पन्ना दिख रहा है। बाकी अगले पन्ने पर PDF में चलेगा।",
+  "Your sheet starts here": "आपका कागज़ यहीं से शुरू होता है",
+  "Add a class, skill or project, and it appears on this sheet as you type.":
+    "कोई कक्षा, स्किल या प्रोजेक्ट जोड़िए — टाइप करते ही वह इस कागज़ पर दिखने लगेगा।",
 };

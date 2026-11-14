@@ -13,7 +13,7 @@ are arranged around them rather than around the route list:
   the moment it is registered. A hand-maintained list would go stale in exactly the one way
   that matters.
 * **A list of people that holds no person's data.** Before any asserting, the fixtures plant
-  known sentinel strings in a child's message body, a device id, a come-back hash and a
+  known sentinel strings in a child's message body, a device id, a password hash and a
   family's enquiry text. At the end, every operator response this suite fetched is searched
   for those strings. A field name check alone would not notice a count that was really a
   transcript.
@@ -113,15 +113,13 @@ FAIL: list[str] = []
 # only ever written into a *child's* data, so an operator row that echoes one is a leak.
 SENTINEL_CHILD_TEXT = "SENTINEL-CHILD-ANSWER-TEXT-9f3c"
 SENTINEL_DEVICE_ID = "SENTINELDEVICEID0123456789abcdef"
-SENTINEL_COMEBACK_HASH = "SENTINELcomebackhash0123456789abcdef0123456789abcdef"
+SENTINEL_PASSWORD_HASH = "SENTINELpasswordhash0123456789abcdef0123456789abcdef"
 SENTINEL_ENQUIRY_TEXT = "SENTINEL-FAMILY-ENQUIRY-BODY-77"
 SENTINEL_ENQUIRY_MAIL = "sentinel-family@example.invalid"
 SENTINEL_NEW_SUMMARY = "SENTINEL-CAREER-EDIT-VALUE-12"
 
 FORBIDDEN_KEYS = (
     "device",
-    "comeback",
-    "come_back",
     "token",
     "hash",
     "transcript",
@@ -430,7 +428,7 @@ with SessionLocal() as db:
     db.add(EmailJob(user_id=parent_id, purpose="welcome", ref_key="admin-test", status="pending"))
     db.add(EmailJob(user_id=parent_id, purpose="digest", ref_key="admin-test", status="failed"))
     db.commit()
-    set_columns(student_id, comeback_hash=SENTINEL_COMEBACK_HASH)
+    set_columns(student_id, password_hash=SENTINEL_PASSWORD_HASH)
 
 page = call("get", "/api/admin/users", token=op_token)
 check("the operator can list accounts", page.status_code == 200, page.text[:200])
@@ -458,8 +456,7 @@ bad = sorted(
 check("no account field names a device, a token or a hash", not bad, bad)
 stored = {
     "device_hash",
-    "comeback_hash",
-    "comeback_index",
+    "password_hash",
     "email_confirm_hash",
     "email_confirm_expires_at",
 }
@@ -1435,7 +1432,7 @@ everything = " ".join(str(response.json()) for response in SAMPLES)
 private = {
     "a child's message": SENTINEL_CHILD_TEXT,
     "a device id": SENTINEL_DEVICE_ID,
-    "a come-back hash": SENTINEL_COMEBACK_HASH,
+    "a password hash": SENTINEL_PASSWORD_HASH,
     "a family's enquiry text": SENTINEL_ENQUIRY_TEXT,
 }
 found = sorted(name for name, value in private.items() if value in everything)

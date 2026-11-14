@@ -44,7 +44,7 @@ export function CookieBanner() {
 
   return (
     <section aria-label={t("Storage and privacy")} className="cg-rise fixed inset-x-0 bottom-0 z-[60] print:hidden">
-      <div className="mx-auto max-w-3xl px-3 pb-3 sm:px-6 sm:pb-6">
+      <div className="mx-auto max-w-focus px-3 pb-3 sm:px-6 sm:pb-6">
         <div className="rounded-card border border-line bg-surface p-4 shadow-[var(--shadow-lift)] sm:p-5">
           <p className="text-sm font-semibold text-heading">
             {measurementOn

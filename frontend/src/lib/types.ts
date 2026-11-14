@@ -103,6 +103,9 @@ export interface User {
   role: Role;
   display_name: string;
   preferred_language: string;
+  /** The account's own timestamp, printed as "Member since". Optional so a
+   * caller holding an account shape from an older reply still renders. */
+  created_at?: string;
 }
 
 export interface StudentProfile {
@@ -114,6 +117,11 @@ export interface StudentProfile {
   interest_areas: string[];
   education_context: string | null;
   financial_context: string | null;
+  /** The address the saved photo can be read from, or null when this account has never
+   * uploaded one. The address itself still needs the session, so it says "there is a
+   * picture" rather than making one public — the bytes are fetched by `api.profilePhoto`.
+   * The `v` query carries the server's save time, so a replacement is a new address. */
+  profile_photo_url: string | null;
 }
 
 export interface Settings {
@@ -169,6 +177,23 @@ export interface ClerkStatus {
   linked_at: string | null;
   available: boolean;
   note: string;
+}
+
+/**
+ * Whether *this deployment* can complete a Google sign-in. False is an honest server
+ * state, not a client error: the page says so instead of offering a button that cannot
+ * work. It carries no client id — the flow starts on the server, which is the only
+ * party that holds the secret.
+ */
+export interface GoogleStatus {
+  configured: boolean;
+}
+
+/** Which doors open this account, as the server's own row holds them. */
+export interface SignInMethods {
+  device: boolean;
+  google: boolean;
+  email: boolean;
 }
 
 export interface OnboardingPayload {
@@ -263,6 +288,12 @@ export interface ChatReply {
   audio_error: string | null;
   detected_themes: string[];
   provider: string;
+  /**
+   * Why this reply did not come from the configured model, when it did not. The
+   * server falls back to its own guide on a provider error or timeout and says so
+   * here, so a fallback is never served as if the model had answered it.
+   */
+  error: string | null;
   /** The language the guide answered in — it follows the student, not the account. */
   language: string;
   /** Profile facts this turn taught the app, already saved to the student's profile. */
@@ -550,14 +581,73 @@ export interface ParentChild {
   class_level: string | null;
 }
 
+/** The parent-safe half of a stored report: a note and career names, never quotes. */
+export interface ParentReportSummary {
+  id: number;
+  generated_at: string;
+  note: string | null;
+  career_titles: string[];
+}
+
+/** A plan's outline for a parent: progress and a next step, never its free text. */
+export interface ParentPlanSummary {
+  id: number;
+  title: string;
+  status: string;
+  created_at: string;
+  total_items: number;
+  completed_items: number;
+  next_item_title: string | null;
+}
+
+/** The parent-safe explanation of a direction: theme wording, never a quote. */
+export interface ParentRecommendation {
+  career: CareerSummary;
+  why: string;
+  open_questions: string[];
+  skills_to_try: string[];
+  evidence_level: EvidenceLevel;
+  next_activity: string | null;
+}
+
+/** One direction inside a stored report, re-explained for a parent without quotes. */
+export interface ParentReportDirection {
+  career_id: number | null;
+  career: string;
+  why: string;
+}
+
+/** The newest report's parent-safe half: note, directions, canned next steps. */
+export interface ParentLatestReport extends ParentReportSummary {
+  career_directions: ParentReportDirection[];
+  next_steps: string[];
+}
+
+/** A theme a parent may read: the shared taxonomy's name, never the child's sentence. */
+export interface ParentTheme {
+  theme: ThemeKey;
+  label: string;
+}
+
+/** The child's profile as the parent summary carries it: structured facts only.
+ * The free-text education and cost notes stay on the student's own profile. */
+export interface ParentProfile {
+  class_level: string | null;
+  age: number | null;
+  age_range: string | null;
+  interest_areas: string[];
+}
+
 export interface ParentSummary {
   student: User;
-  profile: StudentProfile | null;
-  themes: Observation[];
-  recommendations: Recommendation[];
+  profile: ParentProfile | null;
+  themes: ParentTheme[];
+  recommendations: ParentRecommendation[];
   saved_careers: SavedCareer[];
   journey: Journey;
-  latest_report: CareerReport | null;
+  latest_report: ParentLatestReport | null;
+  recent_reports: ParentReportSummary[];
+  study_plans: ParentPlanSummary[];
   share_transcripts: boolean;
   recent_sessions: ConversationInfo[];
   guidance_note: string;
@@ -622,6 +712,9 @@ export interface GuardianLink {
   guardianship_id: number;
   name: string;
   relationship: string | null;
+  status: "pending" | "active" | "revoked";
+  consented_at: string | null;
+  withdrawn_at: string | null;
   can_see_summary: boolean;
   can_see_transcripts: boolean;
   linked_at: string;
@@ -1288,7 +1381,7 @@ export interface AdminSummary {
 
 /**
  * One account and its own usage counts. There is deliberately no field for a
- * transcript, an answer value, a device id or a come-back code: the row is what
+ * transcript, an answer value, a device id or a credential: the row is what
  * `AdminUserRowOut` sends, and the server has no way to send the rest.
  */
 export interface AdminUserRow {

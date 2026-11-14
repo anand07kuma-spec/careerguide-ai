@@ -92,7 +92,7 @@ export default function AdminAreaLayout({ children }: { children: ReactNode }) {
 
   if (access === "checking") {
     return (
-      <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
+      <div className="mx-auto w-full max-w-page px-4 py-8 sm:px-6">
         <LoadingPanel label="Checking whether this account runs the site" />
       </div>
     );
@@ -100,7 +100,7 @@ export default function AdminAreaLayout({ children }: { children: ReactNode }) {
 
   if (access !== "admin") {
     return (
-      <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
+      <div className="mx-auto w-full max-w-page px-4 py-8 sm:px-6">
         <ErrorState
           title={access === "offline" ? "The server is not answering" : "These screens are not open to this account"}
           description={
@@ -137,7 +137,7 @@ export default function AdminAreaLayout({ children }: { children: ReactNode }) {
         aria-label={t("Operator screens")}
         className="border-b border-line bg-surface/80"
       >
-        <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-x-1 gap-y-2 px-4 py-2.5 sm:px-6">
+        <div className="mx-auto flex w-full max-w-page flex-wrap items-center gap-x-1 gap-y-2 px-4 py-2.5 sm:px-6">
           <Badge tone="brand" icon={<ShieldCheck className="h-3.5 w-3.5" aria-hidden />}>
             {t("Operator")}
           </Badge>

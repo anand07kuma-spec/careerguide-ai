@@ -303,7 +303,7 @@ export default function JourneyPage() {
                                 <span
                                   className={cn(
                                     "absolute -left-[31px] flex h-6 w-6 items-center justify-center rounded-full ring-4 ring-surface",
-                                    meta?.tint ?? "bg-slate-100 text-slate-500",
+                                    meta?.tint ?? "bg-subtle text-subtle-ink",
                                   )}
                                   aria-hidden
                                 >

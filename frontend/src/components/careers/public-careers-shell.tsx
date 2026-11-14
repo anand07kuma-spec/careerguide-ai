@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 
 import { LangToggle } from "@/components/careers/lang-toggle";
 import { ThemeToggle } from "@/components/careers/theme-toggle";
+import { SiteHeader } from "@/components/layout/site-header";
 import { LinkButton } from "@/components/ui/button";
 import { Wordmark } from "@/components/brand";
 import { makeT, makeTf, type PublicLang } from "@/lib/public-i18n";
@@ -52,18 +53,37 @@ export function PublicSiteHeader({
 }): ReactNode {
   const t = makeT(lang);
   return (
-    <header className="border-b border-line bg-surface/80 px-4 py-4 sm:px-6">
-      <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3">
-        <Wordmark />
-        <nav aria-label={t("Public pages")} className="flex flex-wrap items-center gap-1 text-sm">
+    <SiteHeader width="reading" skipTo="#main-content" skipLabel={t("Skip to content")}>
+      <Wordmark />
+      <div className="ml-auto">
+        <ThemeToggle label={t("Light or dark theme")} />
+      </div>
+
+      {/* Below `lg` the navigation is its own row: four links plus two toggles
+          and the call to action never fitted a 360px header, so they used to
+          wrap into a ragged stack. The row scrolls sideways instead, and the
+          call to action stays pinned at its end. */}
+      <div className="order-3 flex w-full min-w-0 items-center gap-2 lg:order-none lg:w-auto">
+        {path ? (
+          <LangToggle
+            lang={lang}
+            path={path}
+            label={t("Interface language")}
+            keepQuery={keepQuery}
+          />
+        ) : null}
+        <nav
+          aria-label={t("Public pages")}
+          className="cg-scrollbar -mx-1 flex min-w-0 flex-1 items-center gap-1 overflow-x-auto px-1 py-0.5 text-sm"
+        >
           {NAV.map((item) => (
             <a
               key={item.href}
               href={item.href}
               aria-current={current === item.href ? "page" : undefined}
-              className={`rounded-full px-3 py-1.5 transition-colors ${
+              className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 transition-colors ${
                 current === item.href
-                  ? "bg-brand-mist font-semibold text-brand"
+                  ? "bg-brand-mist font-semibold text-brand-dark"
                   : "bg-transparent text-muted hover:bg-canvas hover:text-ink"
               }`}
             >
@@ -71,23 +91,12 @@ export function PublicSiteHeader({
             </a>
           ))}
         </nav>
-        <div className="flex items-center gap-2">
-          {path ? (
-            <LangToggle
-              lang={lang}
-              path={path}
-              label={t("Interface language")}
-              keepQuery={keepQuery}
-            />
-          ) : null}
-          <ThemeToggle label={t("Light or dark theme")} />
-          <LinkButton size="sm" href="/onboarding">
-            {t("Start exploring")}
-            <ArrowRight className="h-4 w-4" aria-hidden />
-          </LinkButton>
-        </div>
+        <LinkButton size="sm" href="/onboarding" className="shrink-0">
+          {t("Start exploring")}
+          <ArrowRight className="h-4 w-4" aria-hidden />
+        </LinkButton>
       </div>
-    </header>
+    </SiteHeader>
   );
 }
 
@@ -164,7 +173,9 @@ export function CareerNotFound({
   slug,
   lang = "en",
 }: {
-  slug: string;
+  /** Known when a page could read the route; a not-found boundary cannot, and
+   * the sentence then simply stops naming the address. */
+  slug?: string;
   lang?: PublicLang;
 }): ReactNode {
   const t = makeT(lang);
@@ -175,10 +186,14 @@ export function CareerNotFound({
         {t("No career is listed under that name")}
       </h1>
       <p className="mt-2 text-sm leading-relaxed text-muted">
-        {tf(
-          "The career “{slug}” is not in the catalogue this deployment has seeded. It may have been renamed, or the link may have come from a different build.",
-          { slug },
-        )}
+        {slug
+          ? tf(
+              "The career “{slug}” is not in the catalogue this deployment has seeded. It may have been renamed, or the link may have come from a different build.",
+              { slug },
+            )
+          : t(
+              "That career is not in the catalogue this deployment has seeded. It may have been renamed, or the link may have come from a different build.",
+            )}
       </p>
       <div className="mt-4">
         <LinkButton size="sm" href="/careers">

@@ -1367,10 +1367,15 @@ def portal_analytics(
     started = db.scalar(
         select(func.count(Assessment.id)).where(Assessment.user_id.in_(user_ids))
     ) or 0
+    # The sitting is finished when the submit route says so: it writes `submitted` and the
+    # completion clock together, and never writes `completed`. Both halves are required
+    # here so a row that is open, or one whose clock was written by anything else, is not
+    # reported as a finished sitting. The count is over assessments alone — one row is one
+    # sitting — so no join can multiply a child into two.
     completed = db.scalar(
         select(func.count(Assessment.id)).where(
             Assessment.user_id.in_(user_ids),
-            Assessment.status == "completed",
+            Assessment.status == "submitted",
             Assessment.completed_at.is_not(None),
         )
     ) or 0

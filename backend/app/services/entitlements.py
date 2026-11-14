@@ -83,11 +83,19 @@ def _family_rows(db: Session, user: User) -> list[Subscription]:
 
     other_ids = set(
         db.scalars(
-            select(Guardianship.student_id).where(Guardianship.parent_id == user.id)
+            select(Guardianship.student_id).where(
+                Guardianship.parent_id == user.id,
+                Guardianship.consent_granted_at.is_not(None),
+                Guardianship.consent_withdrawn_at.is_(None),
+            )
         )
     ) | set(
         db.scalars(
-            select(Guardianship.parent_id).where(Guardianship.student_id == user.id)
+            select(Guardianship.parent_id).where(
+                Guardianship.student_id == user.id,
+                Guardianship.consent_granted_at.is_not(None),
+                Guardianship.consent_withdrawn_at.is_(None),
+            )
         )
     )
     if other_ids:

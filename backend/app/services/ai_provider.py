@@ -485,8 +485,10 @@ async def _openai_compatible_respond(user_text: str, ctx: GuideContext, history:
         turns.append({"role": role, "content": message.content})
     turns.append({"role": "user", "content": user_text})
 
-    url = settings.ai_base_url.rstrip("/") + "/chat/completions"
-    async with httpx.AsyncClient(timeout=45) as client:
+    if not settings.ai_base_url.strip():
+        raise ValueError("no AI base URL is configured")
+    url = settings.ai_base_url.strip().rstrip("/") + "/chat/completions"
+    async with httpx.AsyncClient(timeout=settings.ai_timeout_seconds) as client:
         response = await client.post(
             url,
             headers={"Authorization": f"Bearer {settings.ai_api_key}"},
@@ -536,7 +538,16 @@ async def respond(
     else:
         try:
             reply = await _openai_compatible_respond(user_text, ctx, history)
-        except (httpx.HTTPError, KeyError, IndexError, ValueError) as exc:
+        except httpx.TimeoutException:
+            # Told apart from every other failure because it is the one a student can
+            # cause by simply typing while a model is thinking, and it reads better
+            # than "could not be reached".
+            reply = demo_respond(user_text, ctx)
+            reply.error = (
+                "The configured AI provider took too long to answer, so this reply "
+                "came from the built-in guide instead."
+            )
+        except (httpx.HTTPError, KeyError, IndexError, ValueError):
             reply = demo_respond(user_text, ctx)
             reply.error = (
                 "The configured AI provider could not be reached, so this reply came "

@@ -76,7 +76,7 @@ export function LangToggle({
             aria-current={active ? "true" : undefined}
             onClick={() => persistChoice(code)}
             className={`rounded-full px-2.5 py-1 font-medium transition-colors ${
-              active ? "bg-brand-mist text-brand" : "text-muted hover:text-ink"
+              active ? "bg-brand-mist text-brand-dark" : "text-muted hover:text-ink"
             }`}
           >
             {LABEL[code]}

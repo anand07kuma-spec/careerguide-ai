@@ -497,6 +497,15 @@ with client:
     r = client.post("/api/auth/link-child", json={"code": code, "relationship": "father"}, headers=auth(parent_token))
     check("parent links with the code", r.status_code == 200 and len(r.json()) == 2, r.text[:200])
     r = client.get("/api/parent/summary", params={"student_id": student_id_for_code}, headers=auth(parent_token))
+    check("a pending request reaches no summary", r.status_code == 404, r.text[:200])
+    guardians = client.get("/api/auth/guardians", headers=auth(student_token)).json()
+    pending = next(row for row in guardians if row["status"] == "pending")
+    r = client.post(
+        f"/api/auth/guardians/{pending['guardianship_id']}/approve",
+        headers=auth(student_token),
+    )
+    check("student approval starts the sharing", r.status_code == 200 and r.json()["status"] == "active", r.text[:200])
+    r = client.get("/api/parent/summary", params={"student_id": student_id_for_code}, headers=auth(parent_token))
     check("linked parent can now read the child", r.status_code == 200, r.text[:200])
     guardians = client.get("/api/auth/guardians", headers=auth(student_token)).json()
     check("student sees who is linked", len(guardians) >= 1)
@@ -517,10 +526,59 @@ with client:
     check("student can switch the code off", r.status_code == 200 and r.json()["code"] is None)
 
     section("Transcript deletion")
+    from sqlalchemy import func, select  # noqa: PLC0415
+
+    from app.database import SessionLocal  # noqa: PLC0415
+    from app.models import InterestObservation, Recommendation, StudentProfile  # noqa: PLC0415
+
+    def counts() -> tuple[int, int, int, bool]:
+        with SessionLocal() as db:
+            return (
+                db.scalar(
+                    select(func.count())
+                    .select_from(InterestObservation)
+                    .where(
+                        InterestObservation.student_id == student_id_for_code,
+                        InterestObservation.session_id == session_id,
+                    )
+                ),
+                db.scalar(
+                    select(func.count())
+                    .select_from(InterestObservation)
+                    .where(
+                        InterestObservation.student_id == student_id_for_code,
+                        InterestObservation.source == "interest_activity",
+                    )
+                ),
+                db.scalar(
+                    select(func.count())
+                    .select_from(Recommendation)
+                    .where(Recommendation.student_id == student_id_for_code)
+                ),
+                db.get(StudentProfile, student_id_for_code) is not None,
+            )
+
+    before_notes, before_answers, before_recs, before_profile = counts()
+    check("the conversation left interest notes tied to it", before_notes >= 1, before_notes)
+    check("an independently saved interest answer is there to preserve", before_answers >= 1, before_answers)
+    check("and saved recommendations and a profile beside it", before_recs >= 1 and before_profile,
+          (before_recs, before_profile))
+
     r = client.post(f"/api/conversations/{session_id}/clear", headers=auth(student_token))
     check("transcript cleared", r.status_code == 204)
     r = client.get(f"/api/conversations/{session_id}/messages", headers=auth(student_token))
     check("messages really gone", r.status_code == 200 and len(r.json()) == 0, str(r.json())[:120])
+
+    after_notes, after_answers, after_recs, after_profile = counts()
+    check("its interest notes went with the transcript", after_notes == 0, after_notes)
+    check("interest answers the student saved elsewhere are untouched",
+          after_answers == before_answers, (before_answers, after_answers))
+    check("saved recommendations and the profile are untouched",
+          after_recs == before_recs and after_profile, (before_recs, after_recs, after_profile))
+    r = client.get("/api/conversations", headers=auth(student_token))
+    check("the cleared conversation is no longer listed",
+          r.status_code == 200 and all(row["id"] != session_id for row in r.json()),
+          str(r.json())[:200])
 
     section("Settings and accessibility")
     r = client.patch(

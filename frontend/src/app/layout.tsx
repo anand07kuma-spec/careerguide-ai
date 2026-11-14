@@ -59,8 +59,19 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: "CareerGuide AI" }],
   manifest: "/manifest.webmanifest",
-  // iOS ignores the manifest for the home-screen tile and wants this link.
-  icons: { apple: "/icon-192.png" },
+  // Every one of these is the emblem from the approved horizontal artwork. The
+  // 48px PNG is what search results and browser tabs can actually use; the SVG
+  // and the larger PNGs serve high-density tabs and bookmarks.
+  icons: {
+    icon: [
+      { url: "/icon-48.png", sizes: "48x48", type: "image/png" },
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+      { url: "/icon.svg", type: "image/svg+xml" },
+    ],
+    // iOS ignores the manifest for the home-screen tile and wants this link.
+    apple: { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+  },
   // themeColor lives in the `viewport` export below: Next.js 14 deprecated
   // `metadata.themeColor` in favour of `viewport.themeColor`.
   appleWebApp: {
@@ -168,7 +179,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       // `data-theme` attribute is not something hydration should complain about.
       suppressHydrationWarning
     >
-      <body className="flex min-h-full flex-col">
+      {/* `dvh`, not `100%`: a phone keyboard or a hiding URL bar changes the
+          visible height, and a percentage resolves against a document box that
+          can be taller than the screen — which shows up as a strip you can
+          scroll past the end of the page into. */}
+      <body className="flex min-h-dvh flex-col">
         {/* Paint the chosen theme before anything else, so a student who picked
             Dark does not get a white flash on every visit. `src/lib/theme.ts`
             reads and writes the same `careerguide.theme` key and is the half that

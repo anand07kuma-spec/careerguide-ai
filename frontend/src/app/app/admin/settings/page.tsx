@@ -142,9 +142,9 @@ function DeploymentPanel({ config }: { config: AdminDeployment }) {
           <KeyValue label="Clerk webhook secret present" value={<Yes on={config.has_clerk_webhook_secret} />} />
         </dl>
         <Caption>
-          Clerk is optional. Without it a device is the account, and the come-back code is the way
-          back onto it — which is why the code is stretched through 210,000 PBKDF2 rounds rather
-          than relying on the throttle below.
+          Clerk is optional. Without it a device is the account, and email sign-in opens the same
+          account from another browser — which is why the password is stretched through 210,000
+          PBKDF2 rounds rather than relying on the throttle below.
         </Caption>
       </Card>
 

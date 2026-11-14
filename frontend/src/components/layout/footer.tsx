@@ -84,8 +84,10 @@ const COLUMNS: { title: string; items: Item[] }[] = [
 
 /** The screens that own their whole viewport — a full-height grid with a sticky
  * sidebar, a phone bottom bar, or a focused consent flow. A footer beneath one
- * of those would push its own navigation off the page when it scrolls. */
-const NO_FOOTER = ["/app", "/parent", "/onboarding"];
+ * of those would push its own navigation off the page when it scrolls. The
+ * sign-in page is the same kind of screen: one full-height panel that ends in
+ * its own quiet footer row. */
+const NO_FOOTER = ["/app", "/parent", "/onboarding", "/login", "/reset-password"];
 
 export function Footer() {
   const t = useT();
@@ -97,41 +99,49 @@ export function Footer() {
   }
 
   return (
-    <footer className="mt-10 border-t border-line bg-surface print:hidden">
-      <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
-        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.2fr)_repeat(4,minmax(0,1fr))]">
+    <footer className="relative mt-16 overflow-hidden bg-navy text-white/70 print:hidden">
+      {/* The footer stays navy in both themes: it is the base of the page, and a
+          pale strip under a dark closing section read as a rendering mistake. */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 cg-grid-lines opacity-40" />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -right-24 -top-40 h-96 w-96 rounded-full bg-brand/25 blur-3xl"
+      />
+
+      <div className="relative cg-container py-12 sm:py-14">
+        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.3fr)_repeat(4,minmax(0,1fr))] lg:gap-8">
           <div className="max-w-xs">
-            <Wordmark compact />
-            <p className="mt-3 text-xs leading-relaxed text-muted">
+            <Wordmark tone="white" />
+            <p className="mt-4 text-sm leading-relaxed text-white/75">
               {t(
                 "CareerGuide AI supports exploration. It is not a replacement for a qualified career counsellor, teacher or doctor.",
               )}
             </p>
-            <p className="mt-3 text-xs leading-relaxed text-muted">
+            <p className="mt-3 text-xs leading-relaxed text-white/60">
               {t("A prototype for Indian students from class 6 to 12, and their parents.")}
             </p>
           </div>
 
           {COLUMNS.map((column) => (
             <nav key={column.title} aria-label={t(column.title)}>
-              <p className="text-xs font-semibold uppercase tracking-wide text-heading">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/55">
                 {t(column.title)}
               </p>
-              <ul className="mt-3 space-y-2 text-sm">
+              <ul className="mt-4 space-y-2.5 text-sm">
                 {column.items.map((item) => (
                   <li key={item.label} className="leading-snug">
                     {item.href ? (
                       <Link
-                        className="text-muted underline-offset-2 hover:text-ink hover:underline"
+                        className="text-white/70 underline-offset-4 transition-colors hover:text-white hover:underline"
                         href={item.href}
                       >
                         {t(item.label)}
                       </Link>
                     ) : (
-                      <span className="text-muted/70">
+                      <span className="text-white/60">
                         {t(item.label)}
                         {item.note ? (
-                          <span className="ml-1 text-xs italic text-muted/70">({t(item.note)})</span>
+                          <span className="ml-1 text-xs italic text-white/45">({t(item.note)})</span>
                         ) : null}
                       </span>
                     )}
@@ -142,20 +152,20 @@ export function Footer() {
           ))}
         </div>
 
-        <div className="mt-8 flex flex-col gap-2 border-t border-line pt-5 text-xs text-muted sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-10 flex flex-col gap-3 border-t border-white/10 pt-6 text-xs text-white/55 sm:flex-row sm:items-center sm:justify-between">
           <p>
             © {year} CareerGuide AI · {t("Prototype — no compliance claims")}
           </p>
-          <p className="flex items-center gap-1.5">
+          <p className="flex items-center gap-2">
             {t("Made in India")}
             <a
               href={REPO_URL}
               target="_blank"
               rel="noreferrer noopener"
               aria-label={t("GitHub repository")}
-              className="text-muted hover:text-ink"
+              className="rounded-full border border-white/15 p-1.5 text-white/70 transition-colors hover:border-white/30 hover:text-white"
             >
-              <GitBranch className="h-4 w-4" aria-hidden />
+              <GitBranch className="h-3.5 w-3.5" aria-hidden />
             </a>
           </p>
         </div>

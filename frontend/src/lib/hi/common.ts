@@ -42,10 +42,12 @@ export const HI: Record<string, string> = {
   Menu: "मेन्यू",
   "Open menu": "मेन्यू खोलें",
   "Close menu": "मेन्यू बंद करें",
+  "Skip to content": "मुख्य सामग्री पर जाएँ",
   "Quick navigation": "जल्दी जाने के लिए",
   "Profile and settings": "प्रोफ़ाइल और सेटिंग्स",
   "Main menu": "मुख्य मेन्यू",
   Main: "मुख्य नेविगेशन",
+  Sections: "अनुभाग",
   "Parent account": "अभिभावक खाता",
   "Getting your dashboard ready…": "आपका डैशबोर्ड तैयार हो रहा है…",
 
@@ -104,6 +106,7 @@ export const HI: Record<string, string> = {
 
   // Common buttons and states
   Save: "सेव करें",
+  Confirm: "पुष्टि करें",
   Cancel: "रद्द करें",
   Close: "बंद करें",
   "Close dialog": "डायलॉग बंद करें",

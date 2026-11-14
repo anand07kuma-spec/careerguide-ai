@@ -130,6 +130,7 @@ export type PublicPage = {
 /** The hand-written half of the sitemap. Careers and blog posts are appended by `app/sitemap.ts`. */
 export const PUBLIC_PAGES: PublicPage[] = [
   { path: "/", changeFrequency: "weekly", priority: 0.9 },
+  { path: "/get-started", changeFrequency: "monthly", priority: 0.8 },
   { path: "/pricing", changeFrequency: "monthly", priority: 0.8 },
   { path: "/careers", changeFrequency: "weekly", priority: 0.8 },
   { path: "/study-abroad", changeFrequency: "monthly", priority: 0.7 },
@@ -167,6 +168,7 @@ export const DISALLOWED_PATHS = [
   "/join",
   "/welcome",
   "/onboarding",
+  "/login",
   "/sign-in",
   "/sign-up",
   "/account",

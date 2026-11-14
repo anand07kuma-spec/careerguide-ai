@@ -74,6 +74,16 @@ class User(Base, TimestampMixin):
         Index("ix_users_contact_email", "contact_email", unique=True),
         # The confirmation route has to find the row from the token alone.
         Index("ix_users_email_confirm_hash", "email_confirm_hash"),
+        # One Google identity, one account. A unique *index* rather than a constraint
+        # for the same migration reason as `clerk_user_id` above; SQLite and Postgres
+        # both allow many rows with NULL here, so accounts that never used Google are
+        # unaffected.
+        Index("ix_users_google_sub", "google_sub", unique=True),
+        # One address, one password account. Unique for the same migration reason as
+        # the two above, and NULL for every account that signs in another way.
+        Index("ix_users_login_email", "login_email", unique=True),
+        # The reset route finds the row from the mailed token alone.
+        Index("ix_users_password_reset_hash", "password_reset_hash"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -118,12 +128,6 @@ class User(Base, TimestampMixin):
     # an indexed lookup key. Nothing on the wire changed — migration `0010` renames the
     # column and hashes the rows already in it, so no device has to start over.
     device_hash: Mapped[str | None] = mapped_column(String(64), index=True)
-    # A come-back code lets the same account be reached again from another
-    # browser, which a device token alone cannot do. Only derived values are
-    # stored: an unsalted index to find the row, and a salted PBKDF2 digest to
-    # check it. The code itself is never recoverable from the database.
-    comeback_index: Mapped[str | None] = mapped_column(String(64), index=True)
-    comeback_hash: Mapped[str | None] = mapped_column(String(128))
     # Optional, and deliberately tiny: the id of a Clerk account a student or
     # guardian chose to attach to this account, so their work can be opened again
     # on a phone this browser has never met. Clerk keeps the password, the email
@@ -134,6 +138,44 @@ class User(Base, TimestampMixin):
     # ever needs to show it.
     clerk_user_id: Mapped[str | None] = mapped_column(String(40))
     clerk_linked_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
+    # Google's own stable subject id, and nothing else about the Google account.
+    # The email address is deliberately not stored: this app's privacy promise is that
+    # no address is kept here, and the subject is the only value the callback needs to
+    # recognise the same person on a later visit. Unverified email is never used to
+    # merge accounts — a claim an identity provider has not confirmed is not a way in.
+    #
+    # Nullable with a unique index: an account that has never used Google keeps NULL,
+    # and two accounts can never point at the same Google identity. The column is set
+    # only after the identity token's signature, issuer, audience, expiry and nonce
+    # have all been checked, or when an already-signed-in account deliberately links.
+    google_sub: Mapped[str | None] = mapped_column(String(255))
+    google_linked_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
+    # --- Email + password sign-in -------------------------------------------------
+    # A separate address from `contact_email` on purpose. That one is a notification
+    # choice, switched on by confirming a link; this one is a credential — the name of
+    # the account — and it is set only by registering with it or by a completed
+    # password reset. Keeping them apart means turning off email messages, or erasing
+    # a confirmed notification address, cannot remove the way somebody signs in.
+    #
+    # It is never used to match an existing Google or Clerk account. An address typed
+    # at sign-up proves nothing about who owns it, so registering creates a new account
+    # or is refused; linking identities is a deliberate act on a signed-in device, not
+    # something inferred from a string that happens to be equal.
+    login_email: Mapped[str | None] = mapped_column(String(254))
+    # Argon2id digest from app/services/passwords.py. The password itself is never
+    # stored, logged, or returned; the digest carries its own salt and work factors.
+    password_hash: Mapped[str | None] = mapped_column(String(255))
+    password_updated_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
+    # SHA-256 of a single-use reset token, plus when it stops being accepted and when
+    # it was redeemed. The mailed string is never stored; redeeming clears the digest
+    # and stamps the date, so a second use finds nothing to match.
+    password_reset_hash: Mapped[str | None] = mapped_column(String(64))
+    password_reset_expires_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
+    password_reset_used_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
+    # Consecutive wrong passwords, and the moment a lockout lifts. NULL on both reads
+    # as "no failures, not locked", so every existing row starts in the ordinary state.
+    failed_login_count: Mapped[int | None] = mapped_column(Integer)
+    locked_until: Mapped[datetime | None] = mapped_column(UTCDateTime)
     # The site owner's own account, and nothing else. There is no admin sign-up, no
     # admin role in a token and no way to ask for it through an endpoint: the flag is
     # set in the database by `scripts/admin_grant.py`, which is run by somebody who
@@ -151,7 +193,7 @@ class User(Base, TimestampMixin):
     # their records whatever a person asks — `payments` is a money ledger and
     # `audit_events` is the log of who did what — and deleting the row would cascade
     # both away. Everything that made this row a person is removed at the same moment
-    # this stamp is set: name, address, device digest, come-back code, Clerk pointer,
+    # this stamp is set: name, address, device digest, Clerk pointer,
     # every conversation and every result. What is left is a shell with a date on it.
     erased_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
 
@@ -200,8 +242,44 @@ class StudentProfile(Base, TimestampMixin):
     user: Mapped[User] = relationship(back_populates="profile")
 
 
+class ProfilePhoto(Base):
+    """The one picture an account may show beside its name.
+
+    The bytes live in this table rather than on a disk for the same reason
+    `report_pdfs.pdf_bytes` does: a hosted deployment rebuilds its filesystem on every
+    push, so a path would be a picture that disappears overnight — and a second place a
+    family's data can be left behind after an erasure. One row per account, keyed by the
+    account itself, so replacing a photo is an UPDATE of a row this table already owns
+    and there is no orphaned object to sweep.
+
+    The image is normalised before it arrives here (see `services/profile_photos.py`):
+    a square JPEG of a bounded size, with the camera's EXIF block discarded. Nothing
+    reads `image` without first proving the caller owns the row.
+    """
+
+    __tablename__ = "profile_photos"
+
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    content_type: Mapped[str] = mapped_column(String(32))
+    image: Mapped[bytes] = mapped_column(LargeBinary)
+    width: Mapped[int] = mapped_column(Integer)
+    height: Mapped[int] = mapped_column(Integer)
+    byte_size: Mapped[int] = mapped_column(Integer)
+    # Also the cache-busting version: the URL the profile hands out carries it, so a
+    # replaced photo is a new URL rather than yesterday's picture from the browser cache.
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+
+
 class Guardianship(Base, TimestampMixin):
-    """Links a parent account to a student account they may support."""
+    """Links a parent account to a student account they may support.
+
+    A row is a *request* first and sharing only after the student says so. The two
+    timestamps below are that history: `consent_granted_at` empty means the student has
+    not agreed yet, and `consent_withdrawn_at` means they once did and later took it back.
+    Neither column is a boolean because "no access" needs to say which of those two it is.
+    """
 
     __tablename__ = "guardianships"
     __table_args__ = (UniqueConstraint("parent_id", "student_id", name="uq_guard"),)
@@ -212,6 +290,21 @@ class Guardianship(Base, TimestampMixin):
     relationship: Mapped[str | None] = mapped_column(String(32))
     # Parents only see what the student chose to share, plus summary data.
     share_conversation_transcripts: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Deliberately no default: a row created without a decision is pending, never shared.
+    consent_granted_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
+    consent_withdrawn_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
+
+    @property
+    def status(self) -> str:
+        if self.consent_withdrawn_at is not None:
+            return "revoked"
+        if self.consent_granted_at is not None:
+            return "active"
+        return "pending"
+
+    @property
+    def is_active(self) -> bool:
+        return self.status == "active"
 
 
 class ConsentRecord(Base, TimestampMixin):

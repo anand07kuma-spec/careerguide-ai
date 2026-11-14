@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, StringConstraints, field_validator
 
 Role = Literal["student", "parent"]
 Language = Literal["en", "hi", "hinglish"]
@@ -77,9 +77,6 @@ class SessionOut(BaseModel):
     user: "UserOut"
     profile: "ProfileOut | None"
     settings: "SettingsOut"
-    # Present only in the one response that mints a fresh code. The server keeps
-    # just a salted digest, so a code can never be read back out afterwards.
-    comeback_code: str | None = None
 
 
 class RefreshOut(BaseModel):
@@ -110,22 +107,82 @@ class GuestOut(BaseModel):
     session: SessionOut | None = None
 
 
-class LoginIn(StrictIn):
-    code: str = Field(min_length=5, max_length=40)
-    # This browser's own id, so signing in with a code once means the device is the
-    # account afterwards rather than a code to type again. Optional: a client with no
-    # usable storage signs in exactly as it did before and keeps the session it is given.
+class EmailRegisterIn(StrictIn):
+    """A new account named by an address and a password.
+
+    The role is asked for because the two dashboards are genuinely different, and it is
+    the only thing in this body that is ever trusted — the address is checked again
+    against the unique index, and the password is checked against `passwords.py`, not
+    against anything the client says about it.
+    """
+
+    role: Role
+    display_name: str = Field(min_length=1, max_length=80)
+    email: EmailStr
+    # Length is bounded here so a paste cannot cost the hash function megabytes; the
+    # actual policy (minimum, character classes, common strings) lives in the service,
+    # which is what produces the sentence a person reads.
+    password: str = Field(max_length=200)
+    preferred_language: Language = "hinglish"
+    device_id: str | None = Field(default=None, pattern=DEVICE_ID_PATTERN)
+
+    @field_validator("display_name")
+    @classmethod
+    def name_is_not_blank(cls, value: str) -> str:
+        name = value.strip()
+        if not name:
+            raise ValueError("Please enter a name.")
+        return name
+
+
+class EmailLoginIn(StrictIn):
+    email: EmailStr
+    password: str = Field(max_length=200)
     device_id: str | None = Field(default=None, pattern=DEVICE_ID_PATTERN)
 
 
-class ComebackCodeOut(BaseModel):
-    code: str
-    note: str
+class PasswordForgotIn(StrictIn):
+    email: EmailStr
 
 
-class ComebackStatusOut(BaseModel):
-    has_code: bool
-    note: str
+class PasswordResetIn(StrictIn):
+    token: str = Field(min_length=20, max_length=200)
+    password: str = Field(max_length=200)
+
+
+class PasswordResetRequestOut(BaseModel):
+    """One answer for every address, whether or not an account uses it.
+
+    The wording is deliberately not "we sent you a link": saying that only for
+    registered addresses would turn this endpoint into a way to ask which addresses
+    have accounts here.
+    """
+
+    message: str
+
+
+class GoogleStatusOut(BaseModel):
+    """Whether *this deployment* can complete a Google sign-in.
+
+    A false here is not a broken feature — it is the honest state of a server without
+    Google credentials, and the login page says so instead of painting a button that
+    would fail after somebody had already chosen a Google account.
+    """
+
+    configured: bool
+
+
+class SignInMethodsOut(BaseModel):
+    """Which doors open this account, as the server actually holds them.
+
+    Settings prints this rather than guessing from local state: `device` is the browser
+    handshake, `google` a verified Google identity and `email` the optional Clerk pointer.
+    None of them is read from a URL.
+    """
+
+    device: bool
+    google: bool
+    email: bool
 
 
 class UserOut(ORMModel):
@@ -133,6 +190,9 @@ class UserOut(ORMModel):
     role: Role
     display_name: str
     preferred_language: str
+    # When this account first existed. The profile prints it as "Member since";
+    # it is the row's own timestamp, never a date inferred from a sign-in.
+    created_at: datetime
 
 
 class ProfileOut(ORMModel):
@@ -142,6 +202,10 @@ class ProfileOut(ORMModel):
     interest_areas: list[str]
     education_context: str | None
     financial_context: str | None
+    # Where the saved photo can be read from, or None when this account has never
+    # uploaded one. The route behind the address still checks the session, so the
+    # field says "there is a picture" rather than making one public.
+    profile_photo_url: str | None = None
 
 
 class SettingsOut(ORMModel):
@@ -268,6 +332,11 @@ class GuardianOut(BaseModel):
     guardianship_id: int
     name: str
     relationship: str | None
+    # pending: the parent asked, the student has not agreed. active: approved and
+    # sharing. revoked: once approved, later withdrawn by the student.
+    status: Literal["pending", "active", "revoked"]
+    consented_at: datetime | None
+    withdrawn_at: datetime | None
     can_see_summary: bool
     can_see_transcripts: bool
     linked_at: datetime
@@ -401,6 +470,10 @@ class ChatOut(BaseModel):
     audio_error: str | None = None
     detected_themes: list[str] = Field(default_factory=list)
     provider: str
+    # Why this reply did not come from the configured model, when it did not. The
+    # screen shows it beside the demo label; a reply that fell back without saying
+    # so is the one thing this field exists to prevent.
+    error: str | None = None
     # The guide already decided whether this message sounds like a child asking for
     # help, so the reply carries that verdict: a second request that fails would
     # otherwise decide whether the helpline card appears.
@@ -845,14 +918,116 @@ class ReportOut(BaseModel):
     content: dict
 
 
+class ParentReportSummaryOut(BaseModel):
+    """A report row a parent may see: what it says, never who said it.
+
+    `career_titles` and `note` come from the stored report, but the fields that
+    quote the child's own words stay out of this DTO. The full report is still
+    available to the student through their own screens.
+    """
+
+    id: int
+    generated_at: datetime
+    note: str | None
+    career_titles: list[str]
+
+
+class ParentReportDirectionOut(BaseModel):
+    """One direction from a stored report, as a parent may read it.
+
+    `career` is the stored title, which is catalogue text. `why` is regenerated
+    for the parent rather than copied from the stored report, because the stored
+    sentence can quote the child's own statement.
+    """
+
+    career_id: int | None
+    career: str
+    why: str
+
+
+class ParentLatestReportOut(ParentReportSummaryOut):
+    """The newest report's parent-safe half: note, directions and canned next steps.
+
+    The stored content also carries `activities_enjoyed`, `themes_observed[].evidence`
+    and `recommendations[].supporting_statements`; none of those fields are read into
+    this DTO. `next_steps` is the report's own fixed guidance, not a child statement.
+    """
+
+    career_directions: list[ParentReportDirectionOut]
+    next_steps: list[str]
+
+
+class ParentStudyPlanSummaryOut(BaseModel):
+    """A plan's outline as a parent may see it: progress without the child's words.
+
+    `goal`, item detail and resource links are the child's own writing and stay
+    out of this DTO. `next_item_title` names the first pending or in-progress
+    step in the plan's own order; it is null when no such step is left.
+    """
+
+    id: int
+    title: str
+    status: str
+    created_at: datetime
+    total_items: int
+    completed_items: int
+    next_item_title: str | None
+
+
+class ParentRecommendationOut(BaseModel):
+    """A recommendation as a guardian may see it: the direction and its guidance.
+
+    `supporting_statements`, `qualifications_to_check` and `alternatives` are left
+    out on purpose: the first quotes the child, and the other two are unused by the
+    parent dashboard. `why` is the quote-free `parent_why` sentence produced by the
+    recommender, never the student-facing `_why` that may quote a statement.
+    """
+
+    career: CareerSummaryOut
+    why: str
+    open_questions: list[str]
+    skills_to_try: list[str]
+    evidence_level: Literal["early", "some", "good"]
+    next_activity: str | None
+
+
+class ParentThemeOut(BaseModel):
+    """One interest theme as a parent may read it: taxonomy wording only.
+
+    `InterestObservation.evidence` is the child's own sentence and never enters
+    this DTO. `theme` is the stored taxonomy key and `label` its fixed display
+    name from the shared `THEMES` table, so an unexpected stored theme cannot
+    turn into free text either.
+    """
+
+    theme: str
+    label: str
+
+
+class ParentProfileOut(BaseModel):
+    """The child's profile as a parent may read it: structured facts only.
+
+    `education_context` and `financial_context` are free text the family wrote
+    for the guide, so they stay out of the parent summary. The student's own
+    profile route still returns them unchanged.
+    """
+
+    class_level: str | None
+    age: int | None
+    age_range: str | None
+    interest_areas: list[str]
+
+
 class ParentSummaryOut(BaseModel):
     student: UserOut
-    profile: ProfileOut | None
-    themes: list[ObservationOut]
-    recommendations: list[RecommendationOut]
+    profile: ParentProfileOut | None
+    themes: list[ParentThemeOut]
+    recommendations: list[ParentRecommendationOut]
     saved_careers: list[SavedCareerOut]
     journey: JourneyOut
-    latest_report: ReportOut | None
+    latest_report: ParentLatestReportOut | None
+    recent_reports: list[ParentReportSummaryOut]
+    study_plans: list[ParentStudyPlanSummaryOut]
     share_transcripts: bool
     recent_sessions: list[SessionOutInfo]
     guidance_note: str
@@ -1780,9 +1955,8 @@ class AnalyticsOut(BaseModel):
 # routes enforce them rather than relying on a screen to hide a field:
 #
 # * No credential material, and no column that behaves like one. A guest account is
-#   reached with a device id and a come-back code, so `device_id`, `comeback_hash`,
-#   `comeback_index` and any token or invite hash are absent from these models by
-#   construction — not filtered at render time.
+#   reached with a device id, so `device_id` and any token or invite hash are absent from
+#   these models by construction — not filtered at render time.
 # * No conversation content. `Message.content` never appears, and neither does a
 #   transcript excerpt. Chats are counted here, not read; reading one takes the
 #   guardian's own route and the guardian's own token.
@@ -1890,7 +2064,7 @@ class AdminUserRowOut(BaseModel):
     """One account, with its own usage counts and none of its secrets.
 
     This is the row a search returns, so it is worth naming what is missing: no device
-    id, no come-back code or hash, no token, no transcript, no answer values. A person
+    id, no credential or its hash, no token, no transcript, no answer values. A person
     at this screen can find an account, see how much it has used the app, and change
     whether it is open. Anything inside the conversations needs that account's own
     session.

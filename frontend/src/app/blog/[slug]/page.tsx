@@ -212,10 +212,10 @@ export default async function BlogPostPage({
   ];
 
   return (
-    <div className="min-h-dvh bg-canvas">
+    <div lang={lang === "hi" ? "hi-IN" : "en-IN"} className="min-h-dvh bg-canvas">
       <PublicSiteHeader current="/blog" lang={lang} path={`/blog/${post.slug}`} />
 
-      <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6 sm:py-14">
+      <main id="main-content" tabIndex={-1} className="mx-auto max-w-focus px-4 py-10 sm:px-6 sm:py-14">
         <nav aria-label={t("Breadcrumb")} className="text-sm text-muted">
           <Link href={`/blog${qs}`} className="hover:text-brand hover:underline">
             {t("Guides")}

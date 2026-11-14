@@ -207,8 +207,8 @@ check(
     == read_identity(_req({"authorization": "Bearer " + ("a" * 43)})),
 )
 # …and a *write* bucket stays deaf to the cookie. That is the half that keeps this file
-# worth trusting: a rotating `cg_session` would otherwise buy a fresh set of guesses at a
-# come-back code, a fresh mail quota, and a fresh room to hammer the payment routes.
+# worth trusting: a rotating `cg_session` would otherwise buy a fresh set of password
+# guesses, a fresh mail quota, and a fresh room to hammer the payment routes.
 check(
     "a session cookie does not move a write bucket off the address",
     client_identity(_req({}, cookies={SESSION_COOKIE: "t" * 43})) == "address:203.0.113.9",
@@ -560,22 +560,83 @@ check("the third lookup in a minute is still served", third_guest.status_code ==
 fourth_guest = client.post("/api/auth/guest", json={"device_id": "device-" + "d" * 24})
 check("the fourth is throttled", _throttled(fourth_guest), f"{fourth_guest.status_code} {fourth_guest.text[:160]}")
 
-# --- the come-back code: the route a stranger would brute force
-for attempt in (1, 2):
-    bad_login = client.post("/api/auth/login", json={"code": f"AAAA-BBBB-{attempt}"})
-    check(
-        f"come-back attempt {attempt} answers on the account, not on the guess",
-        bad_login.status_code in (400, 401, 404) and "rate" not in bad_login.text.lower(),
-        f"{bad_login.status_code} {bad_login.text[:120]}",
+# --- the email door: one auth rule, counted per route
+# slowapi counts each decorated endpoint separately, so each route in this section
+# starts at zero and is shown to be refused on its own third attempt in the same minute
+# (this file runs the rule at two a minute, so the third is the first one over the line).
+register_attempts = [
+    client.post(
+        "/api/auth/email/register",
+        json={
+            "role": "student",
+            "display_name": "Throttled",
+            "email": "throttled@example.com",
+            "password": "MangoTree42",
+        },
     )
-hammer = client.post("/api/auth/login", json={"code": "CCCC-DDDD-3"})
-check("a third come-back code in a minute is refused outright", _throttled(hammer), f"{hammer.status_code} {hammer.text[:160]}")
+    for _ in range(3)
+]
 check(
-    "a throttled sign-in does not say whether the code was right",
-    "correct" not in hammer.text.lower() and "found" not in hammer.text.lower(),
-    hammer.text[:160],
+    "the first email sign-up in a minute is served and the second is a plain duplicate refusal",
+    register_attempts[0].status_code == 201 and register_attempts[1].status_code == 409,
+    f"{register_attempts[0].status_code} / {register_attempts[1].status_code}",
 )
-check("the token never appears in a 429 body", token_a not in hammer.text)
+register_hammer = register_attempts[2]
+check("email sign-up is throttled on the third attempt", _throttled(register_hammer),
+      f"{register_hammer.status_code} {register_hammer.text[:160]}")
+login_attempts = [
+    client.post(
+        "/api/auth/email/login",
+        json={"email": "throttled@example.com", "password": "MangoTree42"},
+    )
+    for _ in range(3)
+]
+check(
+    "two email sign-ins in a minute are answered",
+    login_attempts[0].status_code == 200 and login_attempts[1].status_code == 200,
+    f"{login_attempts[0].status_code} / {login_attempts[1].status_code}",
+)
+email_login_hammer = login_attempts[2]
+check("email sign-in is throttled on the third attempt", _throttled(email_login_hammer),
+      f"{email_login_hammer.status_code} {email_login_hammer.text[:160]}")
+reset_attempts = [
+    client.post(
+        "/api/auth/password/reset",
+        json={"token": "x" * 32, "password": "MangoTree42"},
+    )
+    for _ in range(3)
+]
+check(
+    "two reset attempts in a minute are answered as invalid links rather than throttled",
+    reset_attempts[0].status_code == 400 and reset_attempts[1].status_code == 400,
+    f"{reset_attempts[0].status_code} / {reset_attempts[1].status_code}",
+)
+reset_hammer = reset_attempts[2]
+check("password reset is throttled on the third attempt", _throttled(reset_hammer),
+      f"{reset_hammer.status_code} {reset_hammer.text[:160]}")
+check(
+    "neither the password nor the token is repeated in a throttle body",
+    "MangoTree42" not in email_login_hammer.text
+    and "x" * 32 not in reset_hammer.text
+    and token_a not in email_login_hammer.text,
+    f"{email_login_hammer.text[:80]} / {reset_hammer.text[:80]}",
+)
+
+# Forgot lives in the mail bucket, not the auth one: it is the route that spends the
+# deployment's email quota, and it has to stop after ten a minute even though mail is
+# not configured here (each allowed request answers 503 and sends nothing).
+for _ in range(10):
+    allowed_forgot = client.post("/api/auth/password/forgot", json={"email": "throttled@example.com"})
+    check("forgot is served while the mail bucket has room", allowed_forgot.status_code == 503,
+          allowed_forgot.text[:160])
+throttled_forgot = client.post("/api/auth/password/forgot", json={"email": "throttled@example.com"})
+check("the eleventh forgot in a minute is throttled", _throttled(throttled_forgot),
+      f"{throttled_forgot.status_code} {throttled_forgot.text[:160]}")
+check(
+    "a throttled reset request names no account and repeats no address verdict",
+    "account" not in throttled_forgot.text.lower() and "not registered" not in throttled_forgot.text.lower(),
+    throttled_forgot.text[:160],
+)
 
 # --- chat: two students on one machine must not share a ceiling
 convo_a = client.post("/api/conversations", json={"kind": "chat"}, headers=head_a)

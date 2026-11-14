@@ -261,8 +261,8 @@ export const HI: Record<string, string> = {
   // Captions on the deployment panel
   "Neither speech provider is a guaranteed offline path, and the browser falls back to its own voice when the server has no key. Which one spoke is stated on the screen that uses it, not here.":
     "कोई भी स्पीच प्रोवाइडर पक्का ऑफ़लाइन रास्ता नहीं है, और सर्वर के पास की न हो तो ब्राउज़र अपनी आवाज़ इस्तेमाल करता है। किसने बोया यह उसी स्क्रीन पर बताया जाता है जहाँ इसका इस्तेमाल हो, यहाँ नहीं।",
-  "Clerk is optional. Without it a device is the account, and the come-back code is the way back onto it — which is why the code is stretched through 210,000 PBKDF2 rounds rather than relying on the throttle below.":
-    "Clerk ज़रूरी नहीं है। इसके बिना एक डिवाइस ही खाता होता है, और वापसी कोड ही उस पर लौटने का रास्ता है — इसीलिए कोड को 210,000 PBKDF2 राउंड से मज़बूत किया जाता है, नीचे दिए थ्रॉटल पर निर्भर न होकर।",
+  "Clerk is optional. Without it a device is the account, and email sign-in opens the same account from another browser — which is why the password is stretched through 210,000 PBKDF2 rounds rather than relying on the throttle below.":
+    "Clerk ज़रूरी नहीं है। इसके बिना एक डिवाइस ही खाता होता है, और ईमेल साइन इन उसी खाते को दूसरे ब्राउज़र से खोलता है — इसीलिए पासवर्ड को 210,000 PBKDF2 राउंड से मज़बूत किया जाता है, नीचे दिए थ्रॉटल पर निर्भर न होकर।",
   "The counters live in this process’s memory. One instance means honest limits; a hosted deployment that runs several has a ceiling of the rule times however many are warm, which is a brake rather than a wall.":
     "गिनती इस प्रोसेस की मेमोरी में रहती है। एक इंस्टेंस का मतलब सच्ची सीमाएँ; कई इंस्टेंस पर चली होस्टेड तैनाती की छत नियम गुना चलते इंस्टेंस होती है, जो दीवार नहीं ब्रेक जैसी है।",
 

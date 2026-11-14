@@ -13,6 +13,13 @@ python-multipart==0.0.32
 httpx==0.28.1
 edge-tts==7.3.1
 
+# Verifying the identity token Google sends back after a sign-in. The token is a
+# signed JWT, and checking its signature locally is what makes "this is who Google
+# says it is" a statement this server can stand behind — a decoded-but-unverified
+# token is a claim anyone can write. `crypto` brings `cryptography`, which supplies
+# the RS256 implementation; both ship wheels, so no system toolchain is needed.
+PyJWT[crypto]==2.10.1
+
 # PostgreSQL driver — only needed when DATABASE_URL points at Postgres
 # (e.g. a Supabase project). SQLite works without it.
 psycopg[binary]==3.3.6
@@ -50,6 +57,26 @@ redis==7.4.0
 # CLERK_WEBHOOK_SIGNING_SECRET the endpoint refuses every delivery and this package
 # is never imported.
 svix==1.83.0
+
+# Password hashing for the email + password sign-in. Argon2id is the algorithm
+# current password-storage guidance names, and `argon2-cffi` is the reference
+# binding for it. Passwords are never stored, logged or returned — only this
+# library's digest of them, with a per-password salt and tunable work factors
+# (see app/services/passwords.py). Ships wheels, so no compiler is needed.
+argon2-cffi==23.1.0
+
+# Address validation for sign-up and password reset. `EmailStr` in the request
+# schemas uses it to refuse a string that is not an address before any row or
+# message is touched. It checks shape and domain, not ownership — proving the
+# address belongs to the person is what the confirmation mail does.
+email-validator==2.2.0
+
+# Profile photos. Pillow is what proves an uploaded file really is a JPEG, PNG or WebP
+# — a filename and a browser-supplied content type are claims, not evidence — and it
+# is what re-encodes the picture as a bounded square JPEG with the camera's EXIF block
+# (much of which describes where a child was standing) left behind. Ships wheels, so
+# no system libraries are needed on the Linux host. See app/services/profile_photos.py.
+Pillow==13.0.0
 
 # Email HTML. The six messages in app/templates/emails are Jinja2 templates rather
 # than string concatenation, because they interpolate an address, a child's result

@@ -87,7 +87,7 @@ export function QuestionCard({
                   aria-hidden
                   className={cn(
                     "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border",
-                    selected ? "border-brand bg-brand text-white" : "border-line bg-canvas",
+                    selected ? "border-brand bg-brand-solid text-on-brand" : "border-line bg-canvas",
                   )}
                 >
                   {selected ? <Check className="h-3 w-3" aria-hidden /> : null}

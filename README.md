@@ -63,10 +63,10 @@ Both features are **built and switched off**, and the app says so on screen rath
 - **Payments.** The Razorpay checkout, the pricing page and the plan limits all exist, but no
   `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` is set on this project, so the order route answers `503`
   naming the two variables and no card can be charged. Nothing here takes money.
-- **Auth.** There is no password and no email login in use. The app recognises the device with an
-  opaque device id and a hashed session cookie, and a student can move to another device with a
-  come-back code. Clerk email sign-in is fully wired but dormant — its four routes return `503`
-  until `CLERK_SECRET_KEY` and a publishable key are set (see §4 of the docs).
+- **Auth.** The app recognises the device with an opaque device id and a hashed session cookie, and a
+  student can open the same account from another browser with Google or with an email and password.
+  Clerk email sign-in is fully wired but dormant — its four routes return `503` until
+  `CLERK_SECRET_KEY` and a publishable key are set (see §4 of the docs).
 
 Add the keys in `backend/.env` when you are ready; both features turn on from config alone, with no
 code change. Until then, treat accounts as single-device and payments as unavailable.

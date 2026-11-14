@@ -50,6 +50,7 @@ from ..models import (
     Membership,
     Message,
     PdfReport,
+    ProfilePhoto,
     Recommendation,
     Response as Answer,
     Result,
@@ -130,6 +131,9 @@ def _removals(user_id: int) -> list[tuple[str, object]]:
         ("study_plans", delete(StudyPlan).where(StudyPlan.student_id == user_id)),
         ("journey_events", delete(JourneyEvent).where(JourneyEvent.student_id == user_id)),
         ("interest_observations", delete(InterestObservation).where(InterestObservation.student_id == user_id)),
+        # A photo is a picture of a child, so it leaves with the profile rather than
+        # waiting for the cascade the rest of this function deliberately does not trust.
+        ("profile_photo", delete(ProfilePhoto).where(ProfilePhoto.user_id == user_id)),
         ("profile", delete(StudentProfile).where(StudentProfile.user_id == user_id)),
         ("settings", delete(UserSettings).where(UserSettings.user_id == user_id)),
         ("consents", delete(ConsentRecord).where(ConsentRecord.user_id == user_id)),
@@ -210,18 +214,30 @@ def erase_account(
     user.role = "erased"
     user.display_name = ""
     user.is_active = False
-    # The three ways back in, all removed. Without the device digest this browser is a
+    # The ways back in, all removed. Without the device digest this browser is a
     # stranger again, which is the point: a new visit from it makes a new account rather
     # than finding this one.
     user.device_hash = None
-    user.comeback_index = None
-    user.comeback_hash = None
     user.contact_email = None
     user.email_confirm_hash = None
     user.email_confirm_expires_at = None
     user.email_confirmed_at = None
     user.clerk_user_id = None
     user.clerk_linked_at = None
+    user.google_sub = None
+    user.google_linked_at = None
+    # The password door, and everything that could open it without the password: the
+    # address that names the account, the digest, the reset token, and the lockout
+    # counters. Clearing only the digest would leave a reset link live against a row
+    # nobody can sign in to.
+    user.login_email = None
+    user.password_hash = None
+    user.password_updated_at = None
+    user.password_reset_hash = None
+    user.password_reset_expires_at = None
+    user.password_reset_used_at = None
+    user.failed_login_count = None
+    user.locked_until = None
     user.is_admin = False
     user.erased_at = now
     db.commit()

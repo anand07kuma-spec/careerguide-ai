@@ -218,7 +218,7 @@ export default function InterestsPage() {
                       className={cn(
                         "flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
                         active
-                          ? "border-brand bg-brand text-white"
+                          ? "border-brand bg-brand-solid text-on-brand"
                           : done
                             ? "border-teal/40 bg-teal-mist text-teal hover:border-teal"
                             : "border-line bg-surface text-muted hover:border-brand-light hover:text-ink",

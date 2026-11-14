@@ -97,7 +97,25 @@ export const HI: Record<string, string> = {
   "Payment is not switched on for this deployment, so the button above that would take a card is disabled rather than dead.": "इस डिप्लॉयमेंट पर भुगतान चालू नहीं है, इसलिए ऊपर का कार्ड लेने वाला बटन बेकार दिखने के बजाय बंद रखा गया है।",
   "Nothing on this screen takes a card. Online payment is not switched on for this deployment, so the paid plans are described rather than sold.": "इस स्क्रीन पर कहीं कार्ड से भुगतान नहीं लिया जाता। इस डिप्लॉयमेंट पर ऑनलाइन भुगतान चालू नहीं है, इसलिए पेड प्लान बेचे नहीं, सिर्फ़ बताए गए हैं।",
 
+  // ------------------------------------------- /app/billing: the plan overview
+  "Ended": "समाप्त",
+  "The period has ended.": "अवधि समाप्त हो चुकी है।",
+
   // -------------------------------------------------- /app/billing: usage card
+  "Usage": "उपयोग",
+  "What this plan is being used for": "इस प्लान का इस्तेमाल किस लिए हो रहा है",
+  "Counted from this account's own conversations and results. A cap that is only published is marked as such, not painted as a wall.": "इस खाते की अपनी बातचीत और नतीजों से गिना गया। जो सीमा सिर्फ़ बताई गई है, उसे वही कहा गया है — दीवार की तरह नहीं दिखाया गया।",
+  "Not capped": "कोई सीमा नहीं",
+  "Cap enforced": "सीमा लागू है",
+  "Published cap, not enforced": "बताई गई सीमा, अभी लागू नहीं",
+  "Today, counted in India time": "आज, भारत के समय में गिना गया",
+  "started today": "आज शुरू हुई",
+  "This plan does not cap conversations.": "यह प्लान बातचीत पर कोई सीमा नहीं लगाता।",
+  "This account is past the published cap of {n}.": "यह खाता बताई गई सीमा {n} से आगे है।",
+  "Interest, personality and aptitude": "रुचि, व्यक्तित्व और योग्यता",
+  "finished so far": "अब तक पूरी",
+  "This plan does not cap questionnaires.": "यह प्लान प्रश्नावली पर कोई सीमा नहीं लगाता।",
+  "The caps shown here are what the plan publishes. This server is not turning anyone away at them yet.": "यहाँ दिखाई गई सीमाएँ वही हैं जो प्लान बताता है। यह सर्वर अभी इन पर किसी को रोकता नहीं है।",
   "Used so far": "अब तक इस्तेमाल",
   "The caps the server applies to this plan.": "वे सीमाएँ जो सर्वर इस प्लान पर लागू करता है।",
   "The caps this plan publishes. This server is not enforcing them yet.": "इस प्लान की बताई गई सीमाएँ। यह सर्वर उन्हें अभी लागू नहीं कर रहा है।",
@@ -143,6 +161,17 @@ export const HI: Record<string, string> = {
   "nothing, because this plan is not capped": "कुछ नहीं, क्योंकि इस प्लान पर कोई सीमा नहीं है",
   "The period you already paid for would have lasted until {date}.": "जिस अवधि का आपने भुगतान कर दिया है, वह {date} तक चलती।",
 
+  // --------------------------------------------- /app/billing: the comparison
+  "What each plan costs and includes, read from the same price list the checkout uses.": "हर प्लान की कीमत और उसमें शामिल चीज़ें — वही सूची जो भुगतान के समय इस्तेमाल होती है।",
+
+  // ------------------------------------------ /app/billing: payment history
+  "Payment history": "भुगतान इतिहास",
+  "No payments yet": "अभी कोई भुगतान नहीं",
+  "Date": "तारीख़",
+  "Amount": "रकम",
+  "Status": "स्थिति",
+  "The refund policy says what happens to money already paid, and every order above carries a receipt that identifies it.": "रिफ़ंड नीति बताती है कि पहले दिए गए पैसे का क्या होता है, और ऊपर के हर ऑर्डर की अपनी रसीद है जिससे उसे पहचाना जा सके।",
+
   // ------------------------------------------------------------ the plan card
   "Current": "मौजूदा",
   "Most chosen": "सबसे ज़्यादा चुना गया",
@@ -166,6 +195,7 @@ export const HI: Record<string, string> = {
   "Custom": "कस्टम",
   "Free": "मुफ़्त",
   "Your plan": "आपका प्लान",
+  "Best value": "सबसे बढ़िया वैल्यू",
 
   // ---------------------------------------------------------- checkout dialog
   "Pay for": "भुगतान करें:",

@@ -20,9 +20,9 @@ Two things a reader should know before trusting this file:
 * **The counter lives in this process's memory** unless `RATE_LIMIT_REDIS_URL` is set.
   One instance, honest limits. Serverless hosting starts several instances and a visitor
   can be routed between them, so the real ceiling on a hosted deployment is the rule times
-  however many instances are warm. It is a brake, not a wall — which is why the come-back
-  code is stretched through 210,000 PBKDF2 rounds in `security.py` instead of relying
-  on this file to stop guessing.
+  however many instances are warm. It is a brake, not a wall — which is why passwords are
+  stretched through PBKDF2 in `services/passwords.py` instead of relying on this file to
+  stop guessing.
 * **A write bucket is keyed on the bearer header or the address, never on the session
   cookie.** A school or a family behind one router would otherwise be limited as if it
   were one student — but a cookie is a string the caller types, so a bucket that believed
@@ -84,9 +84,9 @@ def client_identity(request: Request) -> str:
 
     Deliberately blind to the session cookie, even though the cookie is what a browser
     normally sends. A cookie is a string the caller types, not a proof: a script rotating
-    `cg_session=<random 43 characters>` per request would get a fresh bucket for every
-    guess at a come-back code, a fresh quota for every invitation it mails, and a fresh
-    room in which to hammer `/api/email`. Addressing is the only key it cannot forge, so
+    `cg_session=<random 43 characters>` per request would get a fresh quota for every
+    sign-in guess, a fresh quota for every invitation it mails, and a fresh room in which
+    to hammer `/api/email`. Addressing is the only key it cannot forge, so
     every bucket that guards a *write* stays keyed on it. Reads get their own function —
     see `read_identity`.
     """
@@ -161,6 +161,15 @@ else:
 
 def _rule(attribute: str, fallback: str) -> str:
     return getattr(get_settings(), attribute) or fallback
+
+
+photo_limit = limiter.limit(
+    _rule("rate_limit_photo", "10 per minute"),
+    error_message=(
+        "A few photo saves in a minute is plenty. Wait a moment and try the same "
+        "picture again — the photo already saved has not been touched."
+    ),
+)
 
 
 # One decorator per area, each with the sentence its caller will see. A student who

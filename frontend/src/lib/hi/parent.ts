@@ -12,6 +12,8 @@ export const HI: Record<string, string> = {
   "Something went wrong loading this part of the dashboard.":
     "इस डैशबोर्ड का यह हिस्सा खोलते समय कुछ गड़बड़ हो गई।",
   "Welcome, {name}": "{name}, आपका स्वागत है",
+  "A calm look at what {name} is exploring, and simple ways to support their learning journey.":
+    "{name} क्या-क्या खोज रहे हैं, इस पर एक शांत नज़र — और उनकी सीख की यात्रा में साथ देने के आसान तरीके।",
   Welcome: "आपका स्वागत है",
   "Parent dashboard": "अभिभावक डैशबोर्ड",
   "For parents": "अभिभावकों के लिए",
@@ -70,11 +72,34 @@ export const HI: Record<string, string> = {
     "{name} ने अभी-अभी शुरू किया है। एक बार गाइड से बात करने के लिए दोस्ताना कहना ही काफ़ी है — ज़ोर देने से ऐसी बातचीतें बंद हो जाती हैं।",
   "Read the family access notes": "परिवार की पहुँच की बातें पढ़ें",
   "Themes their conversations keep touching": "वे विषय जिनपर उनकी बातें बार-बार रुकती हैं",
-  "Short quotes are what the guide noticed — signals to talk about, not conclusions.":
-    "छोटे उद्धरण बताते हैं कि गाइड ने क्या देखा — ये बात करने के संकेत हैं, नतीजे नहीं।",
+  "Themes from what your child chose to talk about — a starting point for conversation, not a conclusion.":
+    "आपके बच्चे ने जिन विषयों पर बात करना चुना, वही यहाँ दिखते हैं — यह बातचीत की शुरुआत है, कोई नतीजा नहीं।",
+  "Making, imagining and designing things.":
+    "चीज़ें बनाना, कल्पना करना और डिज़ाइन करना।",
+  "Puzzles, logic and working things out step by step.":
+    "पहेलियाँ, तर्क और कदम-दर-कदम हल निकालना।",
+  "Building, fixing and assembling things by hand.":
+    "हाथों से चीज़ें बनाना, ठीक करना और जोड़ना।",
+  "Explaining ideas, performing and working with others.":
+    "अपनी बात समझाना, मंच पर प्रस्तुति देना और दूसरों के साथ काम करना।",
+  "Supporting, caring for and standing up for people.":
+    "लोगों का सहारा बनना, देखभाल करना और उनके लिए खड़े होना।",
+  "Moving, playing and staying active.":
+    "हिलना-डुलना, खेलना और सक्रिय रहना।",
+  "Asking how the natural world and science work.":
+    "यह समझने की कोशिश कि प्रकृति और विज्ञान कैसे काम करते हैं।",
+  "Planning, organising and leading a group.":
+    "योजना बनाना, व्यवस्था करना और समूह का नेतृत्व करना।",
   "Directions worth a family conversation": "वे रास्ते जिनपर परिवार में बात करना अच्छा रहे",
   "Starting points based on exploration so far — never a verdict on who suits what.":
     "अब तक की खोज पर बनी शुरुआती जगहें — इससे कभी फ़ैसला नहीं होता कि किसके लिए क्या सही है।",
+  "More details": "और जानकारी",
+  "Show less": "कम दिखाएँ",
+  "What to try next": "आगे क्या आज़माएँ",
+  "Questions worth asking": "पूछने लायक सवाल",
+  "Skills to try": "आज़माने लायक हुनर",
+  "Loading {name}'s summary… The faded cards below are from the child you were just viewing.":
+    "{name} का सारांश आ रहा है… नीचे धुँधले दिख रहे कार्ड उस बच्चे के हैं जिसे आपने अभी देखा था।",
   "Careers they saved themselves": "जो करियर उन्होंने खुद सेव किए",
   "These are their own choices to discuss with you — not approvals that need your sign-off.":
     "ये उनकी अपनी पसंद हैं जिनपर आपसे बात की जा सकती है — इन्हें मंज़ूरी के लिए आपके दस्तख़त की ज़रूरत नहीं है।",
@@ -89,6 +114,14 @@ export const HI: Record<string, string> = {
     "छोटे-छोटे {total} कामों में से {done} पूरे हुए। रुकना और दोबारा शुरू करना आम बात है।",
 
   // The exploration report card
+  "Recent career reports": "हाल की करियर रिपोर्टें",
+  "Short snapshots your child chose to generate. They describe interests, not a destiny — and each full report stays in your child's account.":
+    "आपके बच्चे ने अपनी मर्ज़ी से बनाए छोटे सारांश। ये रुचियाँ बताते हैं, क़िस्मत नहीं — और हर पूरी रिपोर्ट आपके बच्चे के ही अकाउंट में रहती है।",
+  "No career report yet": "अभी कोई करियर रिपोर्ट नहीं है",
+  "Reports are made from your child's own Reports screen once they have explored a little. Nothing is created automatically.":
+    "रिपोर्टें आपके बच्चे की अपनी रिपोर्ट्स स्क्रीन से बनती हैं, जब वे थोड़ा और देख-समझ लेते हैं। अपने आप कुछ नहीं बनता।",
+  "Generated {time}": "{time} को बनी",
+  "Newest": "सबसे नई",
   "A career exploration report exists": "करियर एक्सप्लोरेशन की एक रिपोर्ट बनी है",
   "Generated {time} from what your child chose to explore. It describes interests, not a destiny — and it belongs to their account, so the full version stays with them.":
     "आपके बच्चे ने जो देखना चुना, उसी से {time} यह रिपोर्ट बनी। इसमें रुचियाँ बताई गई हैं, क़िस्मत नहीं — और यह उनके ही अकाउंट की चीज़ है, इसलिए पूरी रिपोर्ट उनके पास ही रहती है।",
@@ -98,6 +131,39 @@ export const HI: Record<string, string> = {
   "Gentle next steps it suggests": "इसके सुझाए हुए आसान अगले कदम",
   "Only your child can open the full report, from their own Reports screen.":
     "पूरी रिपोर्ट सिर्फ़ आपका बच्चा ही खोल सकता है, अपनी रिपोर्ट्स स्क्रीन से।",
+
+  // Plans they are working through
+  "Plans they are working through": "जो योजनाएँ वे पूरी कर रहे हैं",
+  "Small steps your child chose for themselves. A plan is their curiosity, not an assignment — you can see how it is going without grading it.":
+    "आपके बच्चे ने अपने लिए चुने छोटे कदम। योजना उनकी जिज्ञासा है, कोई असाइनमेंट नहीं — आप देख सकते हैं कि काम कैसे चल रहा है, बिना उसे कोई नंबर दिए।",
+  "Plan completed": "योजना पूरी हुई",
+  "Active": "चालू",
+  "Started {time}": "{time} शुरू हुई",
+  "{done} of {total} step done": "{total} में से {done} कदम पूरा",
+  "{done} of {total} steps done": "{total} में से {done} कदम पूरे",
+  "No steps added yet — that is completely fine at the beginning.":
+    "अभी कोई कदम नहीं जोड़ा गया — शुरुआत में यह बिल्कुल ठीक है।",
+  "Every step in this plan is finished.": "इस योजना का हर कदम पूरा हो गया है।",
+  "Next step: {title}": "अगला कदम: {title}",
+  "Plans are made by your child, from their own Plans screen. Nothing is assigned to them.":
+    "योजनाएँ आपका बच्चा अपनी ही योजनाएँ स्क्रीन से बनाता है। उस पर कुछ भी थोपा नहीं जाता।",
+  "Plans belong to your child. They decide what goes in them and how fast to move — you can read progress here, not change it.":
+    "योजनाएँ आपके बच्चे की हैं। उनमें क्या होगा और कितनी तेज़ी से बढ़ना है, यह वे तय करते हैं — यहाँ आप प्रगति देख सकते हैं, उसे बदल नहीं सकते।",
+
+  // Recent AI Conversations
+  "Recent AI Conversations": "हाल की AI बातचीतें",
+  "When your child talks to the guide, the date and type of each conversation appear here. What they said is not shown.":
+    "जब आपका बच्चा गाइड से बात करता है, तो हर बातचीत की तारीख और तरह यहाँ दिखती है। उन्होंने जो कहा, वह नहीं दिखाया जाता।",
+  "Voice conversation": "आवाज़ में बातचीत",
+  "Text conversation": "लिखित बातचीत",
+  "In progress": "चल रही है",
+  "Ended": "पूरी हुई",
+  "Transcript cleared": "बातचीत का पाठ हटाया गया",
+  "No conversations yet": "अभी कोई बातचीत नहीं",
+  "When your child starts a conversation with the guide, its date and type will appear here. Nothing they say is shown.":
+    "जब आपका बच्चा गाइड से बातचीत शुरू करेगा, तो उसकी तारीख और तरह यहाँ दिखेगी। वे जो कहेंगे, वह नहीं दिखाया जाएगा।",
+  "This list shows when a conversation happened and how it ended — never what your child typed or said.":
+    "यह सूची बताती है कि बातचीत कब हुई और कैसे खत्म हुई — यह कभी नहीं कि आपके बच्चे ने क्या लिखा या कहा।",
 
   // Asking about a family concern
   "I have a concern about…": "मुझे इस बारे में चिंता है…",

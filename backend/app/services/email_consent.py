@@ -76,9 +76,9 @@ class AddressChange:
 
 
 def _token_hash(token: str) -> str:
-    # A plain SHA-256, not the PBKDF2 the come-back code uses: this value is 32
-    # random bytes the server made, not a human's guessable word, so there is
-    # nothing for stretching to defend against.
+    # A plain SHA-256, not the PBKDF2 passwords use: this value is 32 random bytes the
+    # server made, not a human's guessable word, so there is nothing for stretching to
+    # defend against.
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 

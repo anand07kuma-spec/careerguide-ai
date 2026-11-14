@@ -9,6 +9,15 @@
 export const HI: Record<string, string> = {
   // ------------------------------------------------------------------ the list
   Assessments: "आकलन",
+  "Discover yourself": "अपने आप को जानें",
+  "Discover what makes you, you.": "जानिए, आप में क्या खास है।",
+  "There are no right answers — the point is to notice what feels true to you, not to pass.":
+    "यहाँ कोई सही या गलत जवाब नहीं है — मक़सद यह देखना है कि आपको क्या सच में अपना लगता है, कोई परीक्षा पास करना नहीं।",
+  "About these questionnaires": "इन प्रश्न-पत्रों के बारे में",
+  "The three questionnaires": "तीनों प्रश्न-पत्र",
+  "Interests & exploration": "रुचियाँ और खोज",
+  "Work preferences": "काम करने का ढंग",
+  "Logic & reasoning": "तर्क और सोच",
   "Self-questionnaires, not diagnoses": "खुद पर छोटे प्रश्न-पत्र, किसी निदान के लिए नहीं",
   "Three short questionnaires about what you are drawn to, how you tend to work, and puzzles you enjoy. Each one takes six to ten minutes, nothing is timed, and every answer saves as you go.":
     "तीन छोटे प्रश्न-पत्र — आपको क्या अच्छा लगता है, आप काम कैसे करते हैं, और कौन-सी पहेलियाँ जँचती हैं। हर एक में छह से दस मिनट लगते हैं, कोई समय सीमा नहीं है, और हर जवाब तुरंत सेव हो जाता है।",

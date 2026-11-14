@@ -232,8 +232,8 @@ export const HI: Record<string, string> = {
     "जो सेशन बच्चे के डेटा तक पहुँच की छूट देता है, वह एक कुकी है जिसे ब्राउज़र भेजता है और पेज का कोई स्क्रिप्ट उसे पढ़ नहीं सकता। सर्वर उसका सिर्फ़ पढ़ने-लायक़ न हो ऐसा सार रखता है, इसलिए डेटाबेस की कॉपी खातों में घुसने की सूची नहीं बनती। हर डेटा अनुरोध में मालिकाना हक जाँचा जाता है: जिस अनुरोध में दूसरे विद्यार्थी की आईडी हो, उसे 401 मिलता है — अनुमति बैकएंड पर लागू होती है, सिर्फ़ इंटरफ़ेस में छिपाई नहीं जाती।",
   "An email sign-in authorises nothing by itself. Clerk proves which email is being used; this app still only serves a child's answers to its own session token, and that token is issued for the account the email was connected from. A Clerk session alone reaches no data.":
     "ईमेल साइन इन ख़ुद में कोई अधिकार नहीं देता। Clerk इतना सिद्ध करता है कि कौन सा ईमेल इस्तेमाल हो रहा है; यह ऐप तब भी बच्चे के उत्तर सिर्फ़ उसके अपने सेशन टोकन को देता है, और वह टोकन उसी खाते के लिए जारी होता है जिससे ईमेल जोड़ा गया। अकेले Clerk सेशन से कोई डेटा नहीं खुलता।",
-  "Come-back codes are stored as an index plus a salted, iterated hash, not as the code itself.":
-    "कम-बैक कोड ख़ुद नहीं सहेजे जाते; बस एक इंडेक्स और नमक देकर बार-बार हश किए गए मान की सहेजी जाती है।",
+  "An email password is stored only as a salted, stretched hash, never as the password itself.":
+    "ईमेल का पासवर्ड सिर्फ़ नमक और स्ट्रेचिंग वाले हैश के रूप में सहेजा जाता है, पासवर्ड के रूप में कभी नहीं।",
   "Model API keys live only in server-side environment variables. They are never placed in frontend code, in browser storage, or in a Git commit.":
     "मॉडल की API कुंजियाँ सिर्फ़ सर्वर-साइड एनवायरनमेंट वेरिएबल में रहती हैं। वे कभी frontend कोड, ब्राउज़र स्टोरेज या Git commit में नहीं रखी जातीं।",
   "Logs record that a call failed and what kind of failure it was. They do not record the contents of a child’s conversation, and no code writes raw audio to disk.":

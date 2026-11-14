@@ -57,8 +57,14 @@ interface SessionValue {
   isStudent: boolean;
   isParent: boolean;
   completeOnboarding: (payload: OnboardingPayload) => Promise<Session>;
+  /** Land a session the server has just minted, from an email sign-up or sign-in. The
+   * cookie already carries it; this keeps the header copy for the browsers that drop a
+   * cross-site cookie, then lets the page's normal role redirect run. */
+  adopt: (session: Session) => void;
   /** Forget this device on the server and get a brand-new identity here. */
   startOver: () => Promise<void>;
+  /** End this session on the server, then forget this browser's identity. */
+  signOut: () => Promise<void>;
   saveSettings: (patch: Partial<Settings>) => Promise<void>;
   saveProfile: (patch: Record<string, unknown>) => Promise<void>;
   reload: () => Promise<void>;
@@ -197,6 +203,16 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     [apply],
   );
 
+  const adopt = useCallback(
+    (next: Session) => {
+      // In memory only, like every other token this app handles. The cookie is the copy
+      // that survives a reload; this one is the fallback for a browser that refused it.
+      setAuthToken(next.token);
+      apply(next);
+    },
+    [apply],
+  );
+
   const startOver = useCallback(async () => {
     try {
       await api.logout();
@@ -205,6 +221,21 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
     // Revoking the session is not enough: the device id would still be recognised on
     // the next page load and the same student would silently come back.
+    setAuthToken(null);
+    rotateDeviceId();
+    clear();
+  }, [clear]);
+
+  /**
+   * Sign out, without pretending otherwise.
+   *
+   * The server is asked first, and if that fails the error is raised instead of
+   * carrying on: rotating the device id while the cookie is still live would let the
+   * next page load sign the same account back in, which is the opposite of signing out.
+   * Only a revoked session is followed by forgetting this browser's identity.
+   */
+  const signOut = useCallback(async () => {
+    await api.logout();
     setAuthToken(null);
     rotateDeviceId();
     clear();
@@ -237,7 +268,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       isStudent: user?.role === "student",
       isParent: user?.role === "parent",
       completeOnboarding,
+      adopt,
       startOver,
+      signOut,
       saveSettings,
       saveProfile,
       reload,
@@ -248,7 +281,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       profile,
       settings,
       completeOnboarding,
+      adopt,
       startOver,
+      signOut,
       saveSettings,
       saveProfile,
       reload,

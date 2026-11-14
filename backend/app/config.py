@@ -152,6 +152,9 @@ class Settings(BaseSettings):
     ai_api_key: str = ""
     ai_model: str = ""
     ai_base_url: str = "https://api.openai.com/v1"
+    # A slow model is a failed turn: the student is waiting on a one-sentence reply,
+    # and the built-in guide answers in the meantime with the reason shown.
+    ai_timeout_seconds: int = 45
 
     # Text-to-speech voices. Hindi and English. The same Microsoft neural voice
     # ids work on both transports below.
@@ -231,6 +234,21 @@ class Settings(BaseSettings):
             raise ValueError("AUTH_COOKIE_SAMESITE must be 'lax', 'strict' or 'none'")
         return mode
 
+    # --- Email + password sign-in -------------------------------------------------
+    # A reset link is a one-use credential that arrives by mail, so it lasts minutes,
+    # not the day a session does: long enough to open a mail app, short enough that a
+    # forwarded message is not a second way in tomorrow. The token is stored as a
+    # SHA-256 digest, never as the string in the link.
+    password_reset_ttl_minutes: int = 30
+    # Wrong passwords are counted per account. The rate limit below bounds guesses
+    # per address per minute; this bounds them per account wherever they come from,
+    # so ten machines are not ten times as many guesses. The lockout lifts on its own,
+    # is cleared by a successful sign-in or a password reset, and answers with the
+    # remaining minutes. An address with no account is answered like a wrong password
+    # and never counted, so one guess still learns nothing about who is registered.
+    password_lockout_attempts: int = 10
+    password_lockout_minutes: int = 15
+
     # --- Rate limiting ----------------------------------------------------------
     # Every rule is a `limits` expression, so a deployment under a school's shared
     # network can be loosened without a code change. A rule that does not parse is
@@ -304,6 +322,11 @@ class Settings(BaseSettings):
     # pace rather than for "once, then think about it" like the roadmap: a student who is
     # mid-answer must not be the one who pays for the bucket.
     rate_limit_interview: str = "12 per minute"
+    # `POST /api/profile/photo`. Decoding and re-encoding an image is the most CPU a
+    # request can spend in this app, so the bucket is tighter than the read routes but
+    # still room for a family trying a few files. A replacement is a new request, which
+    # is why it is not "once, then think about it".
+    rate_limit_photo: str = "10 per minute"
     # Where the counters live. Blank — the default, and what every deployment so far
     # uses — means this process's own memory, which is honest for one instance and a
     # soft ceiling on serverless hosting (see `app/middleware/rate_limit.py`).
@@ -351,6 +374,7 @@ class Settings(BaseSettings):
         "rate_limit_resume",
         "rate_limit_roadmap",
         "rate_limit_interview",
+        "rate_limit_photo",
     )
     @classmethod
     def rule_is_a_real_limit(cls, value: str) -> str:
@@ -373,6 +397,48 @@ class Settings(BaseSettings):
     clerk_secret_key: str = ""
     clerk_api_base: str = "https://api.clerk.com"
     clerk_webhook_signing_secret: str = ""
+
+    # --- Google sign-in -----------------------------------------------------------
+    # The browser asks this server to begin the flow; this server is the only party
+    # that ever sees the client secret, exchanges the one-time code and reads the
+    # signed identity token. Blank is a supported state, exactly like Clerk: the
+    # login page asks `/api/auth/google/status` and, when the answer is false, shows
+    # an honest "not switched on here" line instead of a button that cannot work.
+    #   GOOGLE_CLIENT_ID       …apps.googleusercontent.com — public, but kept here so
+    #                          one setting decides both the consent screen and the
+    #                          audience check.
+    #   GOOGLE_CLIENT_SECRET   server-side only. It signs the state cookie and proves
+    #                          this server is the app Google issued the code to.
+    #                          Never in a bundle, never in a commit, never in chat.
+    #   GOOGLE_REDIRECT_URI    the exact callback registered under "Authorised redirect
+    #                          URIs" in the Google Cloud console. Google compares it
+    #                          character for character, so it is configuration rather
+    #                          than something derived from a request header.
+    google_client_id: str = ""
+    google_client_secret: str = ""
+    google_redirect_uri: str = ""
+    # The three endpoints. They are Google's real ones; override only to point a test
+    # at a stub, which is how the suite proves the checks without a network.
+    google_auth_url: str = "https://accounts.google.com/o/oauth2/v2/auth"
+    google_token_url: str = "https://oauth2.googleapis.com/token"
+    google_jwks_url: str = "https://www.googleapis.com/oauth2/v3/certs"
+    google_timeout_seconds: int = 15
+
+    @property
+    def google_configured(self) -> bool:
+        """All three values, and a callback address a browser could actually reach.
+
+        Half a configuration is worse than none: it would render a button that fails
+        after the person has already chosen a Google account. Requiring an absolute
+        http(s) redirect URI here means the page can be honest before anything is
+        clicked, and `start` re-checks rather than trusting that the property was read.
+        """
+        redirect = self.google_redirect_uri.strip().lower()
+        return bool(
+            self.google_client_id.strip()
+            and self.google_client_secret.strip()
+            and (redirect.startswith("https://") or redirect.startswith("http://"))
+        )
 
     # --- Email ------------------------------------------------------------------
     # Resend, for the six messages in app/services/email.py. Both values are blank
@@ -475,7 +541,15 @@ class Settings(BaseSettings):
 
     @property
     def ai_configured(self) -> bool:
-        return self.ai_provider.lower() != "demo" and bool(self.ai_api_key)
+        """All three halves, or demo mode. A key with no model name sends an empty
+        `model` to the provider and every turn fails, so that is not configured
+        either — it is a setup mistake that should read as demo mode, not as an
+        AI chat that keeps apologising."""
+        return (
+            self.ai_provider.lower() != "demo"
+            and bool(self.ai_api_key.strip())
+            and bool(self.ai_model.strip())
+        )
 
     @property
     def email_enabled(self) -> bool:

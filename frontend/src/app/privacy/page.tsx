@@ -157,7 +157,7 @@ const RIGHTS = [
 const SECURITY = [
   "The session that authorises a child's data is a cookie the browser sends and no page script can read. The server keeps only an unreadable digest of it, so a copy of the database is not a list of ways into an account. Ownership is checked on every data request: a request that names another student’s id is answered with 401 — permission is enforced on the backend, not only hidden in the interface.",
   "An email sign-in authorises nothing by itself. Clerk proves which email is being used; this app still only serves a child's answers to its own session token, and that token is issued for the account the email was connected from. A Clerk session alone reaches no data.",
-  "Come-back codes are stored as an index plus a salted, iterated hash, not as the code itself.",
+  "An email password is stored only as a salted, stretched hash, never as the password itself.",
   "Model API keys live only in server-side environment variables. They are never placed in frontend code, in browser storage, or in a Git commit.",
   "Logs record that a call failed and what kind of failure it was. They do not record the contents of a child’s conversation, and no code writes raw audio to disk.",
 ];

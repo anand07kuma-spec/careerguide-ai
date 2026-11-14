@@ -35,8 +35,8 @@ const ICONS = {
 };
 
 const TONES: Record<ToastTone, string> = {
-  success: "border-success/30 bg-success-mist text-green-900",
-  error: "border-danger/30 bg-danger-mist text-red-900",
+  success: "border-success/30 bg-success-mist text-success",
+  error: "border-danger/30 bg-danger-mist text-danger",
   info: "border-brand-light/40 bg-brand-mist text-brand-dark",
 };
 
@@ -72,7 +72,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       <div
         aria-live="polite"
         aria-atomic="false"
-        className="pointer-events-none fixed inset-x-0 bottom-20 z-[60] flex flex-col items-center gap-2 px-4 sm:bottom-6 sm:items-end sm:px-6"
+        className="pointer-events-none fixed inset-x-0 bottom-20 z-[60] flex flex-col items-center gap-2 px-4 sm:bottom-6 sm:items-end sm:px-6 print:hidden"
       >
         {items.map((item) => {
           const Icon = ICONS[item.tone];

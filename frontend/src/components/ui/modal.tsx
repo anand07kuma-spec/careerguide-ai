@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useId, useRef, type ReactNode } from "react";
 import { X } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -14,6 +14,9 @@ const FOCUSABLE =
 
 function reachable(element: HTMLElement): boolean {
   if (element.getAttribute("aria-hidden") === "true") return false;
+  // The backdrop is a button so a pointer can dismiss the dialog, but it must
+  // not become a stop in the tab ring or steal focus from the close control.
+  if (element.tabIndex < 0) return false;
   // `offsetWidth` is zero for anything hidden by an ancestor too, which is how a footer that
   // closed but stayed mounted would otherwise end up in the tab ring.
   return Boolean(element.offsetWidth || element.offsetHeight || element.getClientRects().length);
@@ -32,11 +35,14 @@ export function Modal({
   onClose: () => void;
   title: ReactNode;
   description?: ReactNode;
-  children: ReactNode;
+  /** A confirmation can stand on its title and description alone. */
+  children?: ReactNode;
   footer?: ReactNode;
   size?: "sm" | "md" | "lg";
 }) {
   const t = useT();
+  const titleId = useId();
+  const descriptionId = useId();
   const frame = useRef<HTMLDivElement>(null);
   const panel = useRef<HTMLDivElement>(null);
 
@@ -100,44 +106,56 @@ export function Modal({
   const shownDescription = typeof description === "string" ? t(description) : description;
 
   return (
+    // A dialog is screen furniture. Printing while one is open must still produce
+    // the page underneath, not a screenshot of the dialog.
     <div
       ref={frame}
-      className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-6"
+      className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-6 print:hidden"
     >
       <button
         type="button"
+        tabIndex={-1}
         aria-label={t("Close dialog")}
         onClick={onClose}
-        className="absolute inset-0 bg-navy/45 backdrop-blur-[2px]"
+        className="absolute inset-0 bg-overlay backdrop-blur-[2px]"
       />
       <div
         ref={panel}
         role="dialog"
         aria-modal="true"
         tabIndex={-1}
-        aria-label={typeof shownTitle === "string" ? shownTitle : undefined}
+        aria-labelledby={titleId}
+        aria-describedby={shownDescription ? descriptionId : undefined}
         className={cn(
-          "relative flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-3xl bg-surface shadow-[var(--shadow-lift)] outline-none sm:rounded-3xl",
+          "relative flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-3xl bg-surface pb-[env(safe-area-inset-bottom)] shadow-[var(--shadow-lift)] outline-none sm:rounded-3xl sm:pb-0",
           width,
         )}
       >
         <div className="flex items-start justify-between gap-4 border-b border-line px-5 py-4">
           <div className="min-w-0">
-            <h2 className="text-base font-semibold text-ink">{shownTitle}</h2>
+            <h2 id={titleId} className="text-base font-semibold text-heading">
+              {shownTitle}
+            </h2>
             {shownDescription ? (
-              <p className="mt-1 text-sm text-muted">{shownDescription}</p>
+              <p id={descriptionId} className="mt-1 text-sm text-muted">
+                {shownDescription}
+              </p>
             ) : null}
           </div>
           <button
             type="button"
             onClick={onClose}
             aria-label={t("Close")}
-            className="-mr-1 -mt-1 rounded-full p-2 text-muted hover:bg-canvas hover:text-ink"
+            className="-mr-1 -mt-1 flex h-11 w-11 items-center justify-center rounded-full text-muted hover:bg-canvas hover:text-ink"
           >
             <X className="h-4 w-4" aria-hidden />
           </button>
         </div>
-        <div className="cg-scrollbar flex-1 overflow-y-auto px-5 py-4">{children}</div>
+        {children ? (
+          <div className="cg-scrollbar flex-1 overflow-y-auto overscroll-contain px-5 py-4">
+            {children}
+          </div>
+        ) : null}
         {footer ? (
           <div className="flex flex-wrap items-center justify-end gap-2 border-t border-line bg-canvas/60 px-5 py-3">
             {footer}

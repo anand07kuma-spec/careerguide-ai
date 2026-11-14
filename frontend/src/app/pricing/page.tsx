@@ -5,11 +5,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChevronDown, CircleDollarSign, Info, Lock, ShieldCheck, Sparkles } from "lucide-react";
 import { Wordmark } from "@/components/brand";
+import { PageHero } from "@/components/layout/page-hero";
+import { SiteHeader } from "@/components/layout/site-header";
 import { JsonLd } from "@/components/seo/json-ld";
 import { CheckoutDialog } from "@/components/pricing/checkout-dialog";
 import { FeatureTable } from "@/components/pricing/FeatureTable";
 import { PlanCard } from "@/components/pricing/PlanCard";
-import { Badge } from "@/components/ui/badge";
 import { LinkButton } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ErrorState, LoadingPanel } from "@/components/ui/feedback";
@@ -165,42 +166,41 @@ export default function PricingPage() {
 
   return (
     <div className="min-h-dvh bg-canvas">
-      <header className="border-b border-line bg-surface/80 px-4 py-4 sm:px-6">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-3">
-          <Link href="/" aria-label={t("CareerGuide AI home")}>
-            <Wordmark />
-          </Link>
-          <div className="flex items-center gap-2">
-            <LinkButton size="sm" variant="ghost" href="/about">
-              {t("How it works")}
-            </LinkButton>
-            <LinkButton size="sm" variant="outline" href="/app">
-              {t("Open your dashboard")}
-            </LinkButton>
-          </div>
+      <SiteHeader width="reading" skipTo="#main-content" skipLabel={t("Skip to content")}>
+        <Link href="/" aria-label={t("CareerGuide AI home")}>
+          <Wordmark />
+        </Link>
+        <div className="ml-auto flex items-center gap-2">
+          <LinkButton size="sm" variant="ghost" href="/about">
+            {t("How it works")}
+          </LinkButton>
+          <LinkButton size="sm" variant="outline" href="/app">
+            {t("Open your dashboard")}
+          </LinkButton>
         </div>
-      </header>
+      </SiteHeader>
 
-      <main className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-14">
-        <section>
-          <Badge tone="teal" className="mb-5">
-            {t("Plans and pricing")}
-          </Badge>
-          <h1 className="text-balance text-3xl font-bold leading-tight tracking-tight text-heading sm:text-4xl">
-            {t("The conversation can cost money. The information cannot.")}
-          </h1>
-          <p className="mt-5 max-w-2xl text-base leading-relaxed text-ink sm:text-lg">
-            {t(
-              "Everything about careers — every career, stream, exam, resource, scholarship and institute — is free, and stays free on every plan. A paid plan adds more conversation, more questionnaires, a printed report and a parent's view of progress.",
-            )}
-          </p>
-          <p className="mt-4 max-w-2xl leading-relaxed text-muted">
-            {t(
-              "Prices below are rupee figures the server itself quotes, in paise, and the limits beside them are the ones the server enforces. Nothing on this page is a copy of a number kept somewhere else.",
-            )}
-          </p>
-        </section>
+      <main id="main-content" tabIndex={-1}>
+        <PageHero
+          eyebrow={t("Plans and pricing")}
+          title={t("The conversation can cost money. The information cannot.")}
+          lead={
+            <>
+              <p className="text-ink">
+                {t(
+                  "Everything about careers — every career, stream, exam, resource, scholarship and institute — is free, and stays free on every plan. A paid plan adds more conversation, more questionnaires, a printed report and a parent's view of progress.",
+                )}
+              </p>
+              <p className="mt-3 text-sm">
+                {t(
+                  "Prices below are rupee figures the server itself quotes, in paise, and the limits beside them are the ones the server enforces. Nothing on this page is a copy of a number kept somewhere else.",
+                )}
+              </p>
+            </>
+          }
+        />
 
+        <div className="mx-auto w-full max-w-reading px-4 pb-10 pt-8 sm:px-6 sm:pb-14 sm:pt-10">
         {pricing.state === "loading" ? (
           <Card className="mt-10">
             <LoadingPanel label="Loading the price list" />
@@ -396,6 +396,7 @@ export default function PricingPage() {
             </div>
           </Card>
         </section>
+        </div>
       </main>
 
       {chosen ? (

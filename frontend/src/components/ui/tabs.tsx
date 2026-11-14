@@ -103,16 +103,16 @@ export function Tabs({
             tabIndex={active ? 0 : -1}
             onClick={() => onChange(item.value)}
             className={cn(
-              "flex shrink-0 items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-medium transition-colors",
-              active ? "bg-brand text-white shadow-sm" : "text-muted hover:bg-canvas hover:text-ink",
+              "flex shrink-0 items-center gap-1.5 rounded-control px-3.5 py-2 text-sm font-medium transition-colors",
+              active ? "bg-brand-solid text-on-brand shadow-sm" : "text-muted hover:bg-canvas hover:text-ink",
             )}
           >
             {t(item.label)}
             {typeof item.count === "number" ? (
               <span
                 className={cn(
-                  "rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
-                  active ? "bg-white/20" : "bg-canvas text-muted",
+                  "rounded-full px-1.5 py-0.5 text-2xs font-semibold",
+                  active ? "bg-surface text-brand-dark" : "bg-canvas text-muted",
                 )}
               >
                 {item.count}
@@ -150,7 +150,7 @@ export function PillGroup({
             className={cn(
               "flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors",
               active
-                ? "border-brand bg-brand text-white"
+                ? "border-brand-solid bg-brand-solid text-on-brand"
                 : "border-line bg-surface text-muted hover:border-brand-light hover:text-ink",
             )}
           >

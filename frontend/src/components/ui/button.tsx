@@ -9,15 +9,17 @@ type Variant = "primary" | "secondary" | "ghost" | "danger" | "success" | "outli
 type Size = "sm" | "md" | "lg" | "icon";
 
 const VARIANTS: Record<Variant, string> = {
+  // `brand-solid` and `on-brand` are a pair because the readable bright blue in
+  // the dark theme needs dark ink on top of it, not white.
   primary:
-    "bg-brand text-white hover:bg-brand-dark active:translate-y-px disabled:hover:bg-brand",
+    "bg-brand-solid text-on-brand shadow-[0_10px_24px_-12px_rgb(37_99_235/0.75)] hover:bg-brand-dark hover:shadow-[0_14px_28px_-12px_rgb(37_99_235/0.8)] active:translate-y-px",
   secondary:
     "bg-navy text-white hover:bg-navy-600 active:translate-y-px",
   ghost: "bg-transparent text-ink hover:bg-brand-mist/60",
-  danger: "bg-danger text-white hover:bg-red-700 active:translate-y-px",
-  success: "bg-success text-white hover:bg-green-700 active:translate-y-px",
+  danger: "bg-danger-solid text-white hover:bg-danger-solid/90 active:translate-y-px",
+  success: "bg-success-solid text-white hover:bg-success-solid/90 active:translate-y-px",
   outline:
-    "bg-surface text-ink border border-line hover:border-brand-light hover:bg-canvas",
+    "bg-surface text-ink border border-line hover:border-brand/50 hover:bg-canvas hover:text-brand",
 };
 
 /**
@@ -31,11 +33,13 @@ const VARIANTS: Record<Variant, string> = {
 const BASE =
   "inline-flex select-none items-center justify-center text-center font-medium tracking-[-0.01em] transition-colors";
 
+/* Small still clears a 40px touch target and the icon size clears 44px: the
+   header controls and the bottom bar are pressed with a thumb, not a cursor. */
 const SIZES: Record<Size, string> = {
-  sm: "min-h-9 px-3 py-2 text-sm gap-1.5 rounded-xl",
-  md: "min-h-11 px-4 py-2.5 text-sm gap-2 rounded-xl",
-  lg: "min-h-13 px-6 py-3 text-base gap-2.5 rounded-xl",
-  icon: "h-10 w-10 shrink-0 justify-center rounded-full",
+  sm: "min-h-10 px-4 py-2 text-sm gap-1.5 rounded-full",
+  md: "min-h-11 px-5 py-2.5 text-sm gap-2 rounded-full",
+  lg: "min-h-13 px-7 py-3 text-base gap-2.5 rounded-full",
+  icon: "h-11 w-11 shrink-0 justify-center rounded-full",
 };
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {

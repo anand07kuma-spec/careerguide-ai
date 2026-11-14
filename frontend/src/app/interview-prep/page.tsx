@@ -181,48 +181,97 @@ export default function InterviewPrepPage() {
         description="One friendly interviewer, five questions about you, and a few things to try next time. Pick a job and start when you are ready."
         badge={<Badge tone="brand">{t("Interview practice")}</Badge>}
       >
-        <Card className="max-w-xl space-y-5">
-          <Select
-            label="Which job do you want to practise for?"
-            placeholder="Choose a job…"
-            options={[
-              ...ROLE_OPTIONS.map((value) => ({ value, label: value })),
-              { value: OTHER, label: "Something else — I will type it" },
-            ]}
-            value={chosen}
-            onChange={(event) => setChosen(event.target.value)}
-          />
-          {chosen === OTHER ? (
-            <Input
-              label="The job, in your own words"
-              hint="Any job works — “cricket commentator”, “hotel manager”, “machine repair”."
-              maxLength={120}
-              value={typed}
-              onChange={(event) => setTyped(event.target.value)}
-              placeholder="What should the interviewer ask about?"
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,30rem)_minmax(0,1fr)] lg:items-start">
+          <Card className="space-y-5">
+            <Select
+              label="Which job do you want to practise for?"
+              placeholder="Choose a job…"
+              options={[
+                ...ROLE_OPTIONS.map((value) => ({ value, label: value })),
+                { value: OTHER, label: "Something else — I will type it" },
+              ]}
+              value={chosen}
+              onChange={(event) => setChosen(event.target.value)}
             />
-          ) : null}
+            {chosen === OTHER ? (
+              <Input
+                label="The job, in your own words"
+                hint="Any job works — “cricket commentator”, “hotel manager”, “machine repair”."
+                maxLength={120}
+                value={typed}
+                onChange={(event) => setTyped(event.target.value)}
+                placeholder="What should the interviewer ask about?"
+              />
+            ) : null}
 
-          <ul className="space-y-2">
-            {PROMISES.map((promise) => (
-              <li key={promise} className="flex items-start gap-2 text-xs leading-relaxed text-muted">
-                <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-teal" aria-hidden />
-                {t(promise)}
-              </li>
-            ))}
-          </ul>
+            <ul className="space-y-2">
+              {PROMISES.map((promise) => (
+                <li key={promise} className="flex items-start gap-2 text-xs leading-relaxed text-muted">
+                  <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-teal" aria-hidden />
+                  {t(promise)}
+                </li>
+              ))}
+            </ul>
 
-          {error ? (
-            <p className="rounded-card bg-danger-mist px-3 py-2 text-xs text-danger" role="alert">
-              {error}
-            </p>
-          ) : null}
+            {error ? (
+              <p className="rounded-card bg-danger-mist px-3 py-2 text-xs text-danger" role="alert">
+                {error}
+              </p>
+            ) : null}
 
-          <Button onClick={start} disabled={busy || job.length < 2}>
-            <MessagesSquare className="h-4 w-4" aria-hidden />
-            {busy ? t("Getting your first question…") : t("Start Mock Interview")}
-          </Button>
-        </Card>
+            <Button onClick={start} disabled={busy || job.length < 2} className="w-full sm:w-auto">
+              <MessagesSquare className="h-4 w-4" aria-hidden />
+              {busy ? t("Getting your first question…") : t("Start Mock Interview")}
+            </Button>
+          </Card>
+
+          {/* What the other half of the desk would show: the shape of the practice,
+              written before it starts rather than discovered as it goes. */}
+          <aside className="relative overflow-hidden rounded-card bg-navy p-6 text-white shadow-lift">
+            <div aria-hidden className="pointer-events-none absolute inset-0 cg-aurora opacity-70" />
+            <div className="relative">
+              <p className="text-2xs font-semibold uppercase tracking-[0.16em] text-brand-light">
+                {t("How this works")}
+              </p>
+              <h2 className="mt-2 text-lg font-semibold leading-snug">
+                {t("Five questions, no audience")}
+              </h2>
+              <ol className="mt-5 space-y-4">
+                {[
+                  {
+                    title: "Pick any job",
+                    body: "Choose from the list, or type one in your own words. There is no wrong choice.",
+                  },
+                  {
+                    title: "Answer as yourself",
+                    body: "One question at a time, typed at your own pace. A short answer is a real answer.",
+                  },
+                  {
+                    title: "Read the note, then the list",
+                    body: "A short line after each answer, and a few things to try next time. No score.",
+                  },
+                ].map((step, index) => (
+                  <li key={step.title} className="flex gap-3">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/10 text-xs font-semibold text-white">
+                      {index + 1}
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block text-sm font-semibold text-white">{t(step.title)}</span>
+                      <span className="mt-0.5 block text-xs leading-relaxed text-white/60">
+                        {t(step.body)}
+                      </span>
+                    </span>
+                  </li>
+                ))}
+              </ol>
+              <p className="mt-5 border-t border-white/10 pt-4 text-xs leading-relaxed text-white/50">
+                {t(
+                  "Closing this tab ends the practice. Nothing you type is kept on the server.",
+                )}
+              </p>
+            </div>
+          </aside>
+        </div>
       </Screen>
     );
   }
@@ -306,7 +355,7 @@ export default function InterviewPrepPage() {
 
                 {entry.answer ? (
                   <div className="flex justify-end">
-                    <div className="max-w-[88%] rounded-card bg-brand px-4 py-3 text-sm leading-relaxed text-white shadow-card sm:max-w-[76%]">
+                    <div className="max-w-[88%] rounded-card bg-brand-solid px-4 py-3 text-sm leading-relaxed text-on-brand shadow-card sm:max-w-[76%]">
                       {entry.answer}
                     </div>
                   </div>

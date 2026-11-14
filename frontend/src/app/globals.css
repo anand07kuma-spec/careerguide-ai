@@ -15,7 +15,10 @@
   --color-brand-dark: #1d4ed8;
   --color-brand-light: #60a5fa;
   --color-brand-mist: #e8f0fe;
-  --color-teal: #14b8a6;
+  /* `teal` is the readable ink; `teal-bright` is the accent that sits on navy
+     or beside a status ring, where a lighter cyan has to stay visible. */
+  --color-teal: #0f766e;
+  --color-teal-bright: #0d9488;
   --color-teal-mist: #ccfbf1;
   --color-canvas: #f6f7f9;
   --color-surface: #ffffff;
@@ -23,25 +26,102 @@
   --color-ink: #1c2536;
   --color-muted: #5d6879;
   --color-line: #e4e7ec;
-  --color-success: #16a34a;
+  /* A surface border is decorative and can be a hairline; a control's edge is
+     the only thing telling a finger where the input starts, so it clears 3:1
+     against the surface on both themes. */
+  --color-field-line: #7c8798;
+  --color-subtle: #f1f5f9;
+  --color-subtle-ink: #475569;
+  --color-skeleton: #e2e8f0;
+  --color-success: #15803d;
   --color-success-mist: #dcfce7;
-  --color-warning: #f59e0b;
+  --color-warning: #b45309;
   --color-warning-mist: #fef3c7;
-  --color-danger: #dc2626;
+  --color-danger: #b91c1c;
   --color-danger-mist: #fee2e2;
 
-  --radius-card: 16px;
+  /* A filled control is a pair: the solid colour and the ink that sits on it.
+     They are separate tokens because a bright brand blue is readable on a dark
+     surface but needs dark ink when it becomes a button fill. */
+  --color-brand-solid: #2563eb;
+  --color-on-brand: #ffffff;
+  --color-success-solid: #15803d;
+  --color-danger-solid: #b91c1c;
+  --color-on-teal: #ffffff;
+  --color-overlay: rgb(4 10 22 / 0.55);
+
+  /* The profile screen's own ramp. It is a separate family rather than more
+     steps on the app's grey surfaces because that screen is one blue composition:
+     a pale blue page whose cards are white, with a hero that keeps the navy-to-
+     electric-blue gradient so white type on it reads the same in both themes.
+     `accent-ink` is the readable step on a card; `accent-solid` is the fill a
+     white label sits on, so the two are not interchangeable. */
+  --color-profile-page: #eef3fb;
+  --color-profile-card: #ffffff;
+  --color-profile-card-2: #f4f8ff;
+  --color-profile-line: #d9e4f7;
+  --color-profile-ink: #0b1c46;
+  --color-profile-muted: #56658c;
+  --color-profile-accent: #1677ff;
+  --color-profile-accent-ink: #0f5fd6;
+  --color-profile-accent-solid: #0f62d6;
+  --color-profile-accent-soft: #e3edff;
+  --color-profile-gold: #ef9f00;
+  --color-profile-gold-soft: #fff4d6;
+  --color-profile-violet: #7c3aed;
+  --color-on-profile-violet: #ffffff;
+  --color-profile-hero-from: #071a45;
+  --color-profile-hero-mid: #0e2f86;
+  --color-profile-hero-to: #1a4fd0;
+  --color-profile-online: #22c55e;
+  --color-profile-track: #c9d8f0;
+
+  /* The Settings landing has its own quiet composition — a warm ivory page,
+     white cards and one pastel tile per row. Scoped to /app/settings so the rest
+     of the signed-in app keeps its cool grey canvas. */
+  --color-settings-page: #f6f2e9;
+  --color-settings-line: #e9e3d5;
+  --color-settings-hover: #faf6ef;
+  --color-tile-lavender: #eee6fb;
+  --color-on-tile-lavender: #6d4fc4;
+  --color-tile-blue: #e2ecfc;
+  --color-on-tile-blue: #2f6fd0;
+  --color-tile-mint: #dcf2ea;
+  --color-on-tile-mint: #1f7a66;
+  --color-tile-green: #e7f3d9;
+  --color-on-tile-green: #4f7a2b;
+  --color-tile-peach: #fde9db;
+  --color-on-tile-peach: #b25f2d;
+  --color-tile-slate: #e7edf5;
+  --color-on-tile-slate: #4a6484;
+  --color-tile-yellow: #fbf1ca;
+  --color-on-tile-yellow: #8a6a1c;
+
+  /* Three widths, one purpose each: the app and marketing page, a reading
+     column, and a focused single-task flow. */
+  --container-page: 72rem;
+  --container-reading: 64rem;
+  --container-focus: 48rem;
+
+  --radius-card: 20px;
+  --radius-control: 12px;
 
   /* Surfaces sit almost flat: a hairline border does the separating, and shadow
      is reserved for things that genuinely float (menus, toasts, a hovered tile). */
-  --shadow-card: 0 1px 2px rgb(16 24 40 / 0.04);
-  --shadow-lift: 0 2px 4px rgb(16 24 40 / 0.05), 0 16px 32px -16px rgb(16 24 40 / 0.14);
+  --shadow-card: 0 1px 2px rgb(16 24 40 / 0.04), 0 1px 3px rgb(16 24 40 / 0.03);
+  --shadow-lift: 0 4px 8px -4px rgb(16 24 40 / 0.08), 0 20px 40px -20px rgb(16 24 40 / 0.22);
+  --shadow-float: 0 32px 64px -32px rgb(4 10 22 / 0.45);
 
   --font-sans: var(--font-geist-sans), var(--font-noto-devanagari);
+  /* Geist Mono was already loaded by the root layout; without this mapping
+     `font-mono` fell back to the browser's default monospace. */
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
 
   /* A reading scale, not a UI scale: body copy is 15px with room for Devanagari
      matras above and below the line. Every step carries its own line-height so a
      heading never inherits the paragraph's looseness. */
+  --text-2xs: 0.6875rem;
+  --text-2xs--line-height: 1.45;
   --text-xs: 0.8125rem;
   --text-xs--line-height: 1.55;
   --text-sm: 0.9375rem;
@@ -56,6 +136,10 @@
   --text-2xl--line-height: 1.3;
   --text-3xl: 2rem;
   --text-3xl--line-height: 1.2;
+  --text-4xl: 2.5rem;
+  --text-4xl--line-height: 1.12;
+  --text-5xl: 3.25rem;
+  --text-5xl--line-height: 1.05;
 }
 
 @layer base {
@@ -74,10 +158,18 @@
     overflow-x: hidden;
   }
 
+  /* `border-radius` used to be set here, which visibly snapped a pill or an
+     avatar to a 6px square for as long as it held keyboard focus. The outline
+     already follows the element's own radius. */
   *:focus-visible {
     outline: 2px solid var(--color-brand);
     outline-offset: 2px;
-    border-radius: 6px;
+  }
+
+  /* A skip link focuses `<main>` so the next Tab starts inside the page. That
+     target is not a control, so it should not paint a ring around the article. */
+  main:focus-visible {
+    outline: none;
   }
 
   /* Ragged-right paragraphs and balanced headings read calmer than either
@@ -94,7 +186,22 @@
 
   ::selection {
     background: var(--color-brand-mist);
+    color: var(--color-heading);
   }
+}
+
+/* Devanagari knots several consonants into one matra-heavy glyph. The negative
+   tracking the Latin headings use crowds those glyphs, so a Hindi heading keeps
+   the font's natural spacing. Outside a cascade layer on purpose: this has to
+   win over a `tracking-tight` utility on the same element. */
+/* `:lang(hi)` reads the inherited language, so this works whether Hindi is set
+   on `<html>` by the interface store or on a public page's wrapper element. */
+:is(h1, h2, h3):lang(hi) {
+  letter-spacing: 0;
+}
+
+body:lang(hi) {
+  line-height: 1.65;
 }
 
 /* Honour the in-app accessibility switch as well as the OS setting. */
@@ -103,6 +210,7 @@
   *::before,
   *::after {
     animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
   }
@@ -117,13 +225,27 @@ html[data-reduced-motion="true"] *::after {
   scroll-behavior: auto !important;
 }
 
-html[data-high-contrast="true"] {
+/* High contrast follows the active theme: darkening the muted ink on a dark
+   canvas would make the text harder to read, not easier. */
+html[data-high-contrast="true"]:not([data-theme="dark"]) {
   --color-muted: #334155;
   --color-line: #94a3b8;
+  --color-field-line: #475569;
+}
+
+html[data-high-contrast="true"][data-theme="dark"] {
+  --color-muted: #c3cddd;
+  --color-line: #5b6b85;
+  --color-field-line: #8fa1bd;
 }
 
 html[data-high-contrast="true"] .cg-card {
   border-color: #475569;
+}
+
+html[data-high-contrast="true"] *:focus-visible {
+  outline-width: 3px;
+  outline-color: var(--color-heading);
 }
 
 /* Dark theme.
@@ -152,6 +274,7 @@ html[data-high-contrast="true"] .cg-card {
     --color-ink: #e6ebf2;
     --color-muted: #9aa5b4;
     --color-line: #232b38;
+    --color-field-line: #5b6b85;
 
     /* A saturated brand blue on a dark surface is loud enough; the two steps
        below it exist to be read *on* a dark surface, so they move up the ramp. */
@@ -160,7 +283,12 @@ html[data-high-contrast="true"] .cg-card {
     --color-brand-light: #93c5fd;
     --color-brand-mist: #172a49;
     --color-teal: #2dd4bf;
+    --color-teal-bright: #2dd4bf;
     --color-teal-mist: #0c2b28;
+
+    --color-subtle: #17223a;
+    --color-subtle-ink: #c3cddd;
+    --color-skeleton: #1c2636;
 
     --color-success: #4ade80;
     --color-success-mist: #102a1c;
@@ -168,6 +296,60 @@ html[data-high-contrast="true"] .cg-card {
     --color-warning-mist: #2d2411;
     --color-danger: #f87171;
     --color-danger-mist: #34171b;
+
+    /* Filled controls keep a dark ink on the brighter dark-theme blues and
+       reds; the solid steps stay dark enough for white text. */
+    --color-brand-solid: #3b82f6;
+    --color-on-brand: #06101f;
+    --color-success-solid: #15803d;
+    --color-danger-solid: #dc2626;
+    --color-on-teal: #04211d;
+    --color-overlay: rgb(2 6 14 / 0.7);
+
+    /* The profile composition at night: the page is the reference's midnight
+       navy, the cards one step above it, and the same deep-blue hero. The accent
+       ink steps up so a link or icon stays legible on the dark card, while the
+       solid fill keeps a white label readable. */
+    --color-profile-page: #070d20;
+    --color-profile-card: #0a1638;
+    --color-profile-card-2: #0b1b45;
+    --color-profile-line: rgb(126 165 255 / 0.22);
+    --color-profile-ink: #f5f8ff;
+    --color-profile-muted: #b8c9e8;
+    --color-profile-accent: #2995ff;
+    --color-profile-accent-ink: #7cc0ff;
+    --color-profile-accent-solid: #1266e8;
+    --color-profile-accent-soft: rgb(41 149 255 / 0.14);
+    --color-profile-gold: #fbbf24;
+    --color-profile-gold-soft: rgb(251 191 36 / 0.12);
+    --color-profile-violet: #8b5cf6;
+    --color-on-profile-violet: #0b1030;
+    --color-profile-hero-from: #081a45;
+    --color-profile-hero-mid: #0d2c78;
+    --color-profile-hero-to: #1746c0;
+    --color-profile-online: #34d399;
+    --color-profile-track: rgb(184 201 232 / 0.35);
+
+    /* Settings at night: the ivory page becomes midnight, the card one step up,
+       and each pastel tile keeps its hue at a depth that still separates from
+       the card. Icon inks step up so they stay readable on those tints. */
+    --color-settings-page: #0b1019;
+    --color-settings-line: #242c39;
+    --color-settings-hover: #16202e;
+    --color-tile-lavender: #2a2340;
+    --color-on-tile-lavender: #c9b8f5;
+    --color-tile-blue: #1a2a44;
+    --color-on-tile-blue: #9cc4fb;
+    --color-tile-mint: #14302b;
+    --color-on-tile-mint: #7fe0c6;
+    --color-tile-green: #22301b;
+    --color-on-tile-green: #c2e08f;
+    --color-tile-peach: #35251b;
+    --color-on-tile-peach: #f3b98d;
+    --color-tile-slate: #222b37;
+    --color-on-tile-slate: #c4d0e0;
+    --color-tile-yellow: #322a15;
+    --color-on-tile-yellow: #f2d98a;
 
     --color-slate-50: #0f1828;
     --color-slate-100: #17223a;
@@ -193,40 +375,188 @@ html[data-high-contrast="true"] .cg-card {
   }
 }
 
+/* The horizontal lockup has a transparent background. Its lettering is navy,
+   so the dark theme swaps in a version where only the text is white; the
+   emblem itself is pixel-identical. No plate, card or box sits behind it.
+   `.cg-logo-on-dark` is for surfaces that stay navy in both themes, where the
+   white-lettering file is the readable one regardless of the page theme. */
+.cg-logo-dark {
+  display: none;
+}
+
+html[data-theme="dark"] .cg-logo-light {
+  display: none;
+}
+
+html[data-theme="dark"] .cg-logo-dark {
+  display: block;
+}
+
+.cg-logo-on-dark .cg-logo-light {
+  display: none;
+}
+
+.cg-logo-on-dark .cg-logo-dark {
+  display: block;
+}
+
 @utility cg-scrollbar {
   scrollbar-width: thin;
   scrollbar-color: var(--color-line) transparent;
 }
 
-/* The chat thread is the one panel that owns its own scroll: the messages move
-   inside it while the composer stays put below them. So its height is the
-   viewport minus the chrome around it, and that chrome differs by breakpoint —
-   the sticky header and the bottom tab bar only exist below `lg`.
-
-   Below `lg`: header, the screen's heading, the voice row above the thread, the
-   tab bar, and whatever the phone reserves at the bottom edge — measured at
-   ~20rem on a 390x844 screen.
-   From `lg`: neither bar exists, but the screen padding grows and the voice row
-   sits on one line — measured at ~22rem on a 1440x900 screen.
-
-   The floor is what keeps the thread usable on a short window: below it the
-   page scrolls instead, which is better than a composer with no messages above
-   it. A pinned plan or a safety notice adds height above the thread, and then
-   the page scrolls too; the thread itself never shrinks below the floor. */
-.cg-thread {
-  height: calc(100dvh - 20rem - env(safe-area-inset-bottom));
-  min-height: 22rem;
+/* The landing and catalogue heroes are one navy composition in both themes:
+   two soft light sources, then a faint grid that fades out before it reaches
+   the content. Purely decorative, so it carries no text and no contrast duty. */
+@utility cg-aurora {
+  background-image:
+    radial-gradient(58% 70% at 12% 8%, rgb(37 99 235 / 0.5), transparent 62%),
+    radial-gradient(48% 60% at 88% 0%, rgb(13 148 136 / 0.35), transparent 60%);
 }
 
-@media (min-width: 1024px) {
-  .cg-thread {
-    height: calc(100dvh - 22rem);
-    min-height: 26rem;
+/* The profile hero and the cards under it. Both are gradients rather than flat
+   fills so the screen keeps the reference's depth, and both read their stops
+   from the theme tokens above. */
+@utility cg-profile-hero {
+  background-image:
+    radial-gradient(110% 150% at 88% 0%, rgb(41 149 255 / 0.5), transparent 56%),
+    radial-gradient(90% 130% at 0% 100%, rgb(5 14 40 / 0.85), transparent 62%),
+    linear-gradient(
+      112deg,
+      var(--color-profile-hero-from) 0%,
+      var(--color-profile-hero-mid) 52%,
+      var(--color-profile-hero-to) 100%
+    );
+}
+
+@utility cg-profile-panel {
+  background-image: linear-gradient(
+    155deg,
+    var(--color-profile-card-2) 0%,
+    var(--color-profile-card) 62%
+  );
+}
+
+/* The call screen is one navy room in both themes: a cool wash from above and a
+   faint teal floor-glow give the empty middle depth. Both stay under 0.2 alpha
+   so no part of the surface reads as a different, brighter colour. */
+@utility cg-call-aurora {
+  background-image:
+    radial-gradient(55% 45% at 50% -6%, rgb(59 130 246 / 0.18), transparent 70%),
+    radial-gradient(65% 55% at 50% 106%, rgb(13 148 136 / 0.08), transparent 72%);
+}
+
+@utility cg-grid-lines {
+  background-image:
+    linear-gradient(to right, rgb(255 255 255 / 0.07) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(255 255 255 / 0.07) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: linear-gradient(to bottom, black, transparent 82%);
+}
+
+@utility cg-lift {
+  transition: transform 200ms ease-out, box-shadow 200ms ease-out,
+    border-color 200ms ease-out;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lift);
   }
 }
 
-/* Shared surface recipe so cards look identical across every screen. */
+/* Fixed navy surfaces — the sidebar, the call screen — keep white text in both
+   themes. These are the readable steps against --color-navy, defined once so a
+   screen does not invent a new opacity for the same job. */
+@utility cg-navy-panel {
+  background-color: rgb(255 255 255 / 0.06);
+  border: 1px solid rgb(255 255 255 / 0.12);
+}
+
+@utility cg-on-navy {
+  color: #ffffff;
+}
+
+@utility cg-on-navy-muted {
+  color: rgb(255 255 255 / 0.64);
+}
+
+/* The chat screen fills the app shell's content column exactly, so the composer
+   sits at the bottom edge and the page never scrolls. On a phone that column is
+   the viewport minus the shell header (69px) and the room `main` reserves for the
+   tab bar; the bottom inset is subtracted here because `main` adds that same
+   inset to its clearance. From `lg` the tab bar is gone, `main` reserves nothing,
+   and the screen takes the whole viewport. One spare pixel per case keeps
+   rounding from creating a scrollbar. Below the floor the page scrolls instead,
+   which is better than a transcript with no room above it. */
+.cg-chat-screen {
+  height: calc(100dvh - 166px - env(safe-area-inset-bottom));
+  min-height: 18rem;
+}
+
+@media (min-width: 1024px) {
+  .cg-chat-screen {
+    height: calc(100dvh - 1px);
+    min-height: 22rem;
+  }
+}
+
+/* The signed-in shell owns the whole viewport, so a rubber-band past its last
+   row reveals nothing but empty canvas. Refusing the bounce makes the page stop
+   where its content does. Scoped to the app shell so the public pages keep the
+   browser's ordinary edge behaviour. */
+@media screen {
+  html:has(.cg-app-shell) {
+    overscroll-behavior-y: none;
+  }
+}
+
+/* One page width and one gutter for every public shell. The header, the page
+   body and the footer of the same page used to disagree (5xl, 6xl, 5xl), which
+   left the columns visibly out of line on a wide screen. */
 @layer components {
+  .cg-container {
+    width: 100%;
+    margin-inline: auto;
+    max-width: var(--container-page);
+    padding-inline: 1rem;
+  }
+
+  @media (min-width: 640px) {
+    .cg-container {
+      padding-inline: 1.5rem;
+    }
+  }
+
+  /* Keyboard users should be able to leave the header without tabbing every
+     navigation row. The link is off-screen until it holds focus. */
+  .cg-skip-link {
+    position: fixed;
+    top: 0.75rem;
+    left: 0.75rem;
+    z-index: 100;
+    transform: translateY(-200%);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-control);
+    background: var(--color-surface);
+    color: var(--color-ink);
+    padding: 0.625rem 0.875rem;
+    font-size: var(--text-sm);
+    font-weight: 600;
+    box-shadow: var(--shadow-lift);
+    transition: transform 150ms ease-out;
+  }
+
+  .cg-skip-link:focus-visible {
+    transform: translateY(0);
+  }
+
+  /* The inverse of Tailwind's `print:hidden`: content that belongs only on
+     paper, such as a document's full title, stays out of the screen layout. */
+  .cg-print-only {
+    display: none;
+  }
+
+  /* Shared surface recipe so cards look identical across every screen. */
   .cg-card {
     background: var(--color-surface);
     border: 1px solid var(--color-line);
@@ -245,6 +575,53 @@ html[data-high-contrast="true"] .cg-card {
     border-radius: 9999px;
     border: 1px solid rgb(96 165 250 / 0.35);
     animation: cg-pulse 2.4s ease-out infinite;
+  }
+}
+
+@media print {
+  /* A4 everywhere the app prints. The resume preview draws its sheet at exactly
+     these margins (12mm sides, 14mm top and bottom), so the miniature on screen
+     and the page out of the printer share a measure. */
+  @page {
+    size: A4;
+    margin: 14mm 12mm;
+  }
+
+  .cg-print-only {
+    display: revert;
+  }
+
+  /* The skip link hides itself with a transform, which still lands a fixed
+     element on page one of a print job. It is navigation, not paper. */
+  .cg-skip-link {
+    display: none !important;
+  }
+
+  /* Paper is paper in both themes: a resume printed from the dark theme still
+     comes out as dark ink on white, margins included. */
+  html,
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  /* The dashboard shell paints its canvas down the window. Forced white here so a
+     print dialog with "Background graphics" turned on still produces paper, not a
+     grey block behind the resume. */
+  body div.min-h-dvh.bg-canvas {
+    background: #fff !important;
+  }
+
+  /* A resume is a list of lines, not a poster: headings stay with the entries they
+     introduce, and an entry is never cut in half across a page boundary. Line
+     lengths are short enough that a whole line still fits on one A4 column. */
+  .cg-resume-sheet h3 {
+    break-after: avoid-page;
+  }
+
+  .cg-resume-sheet header,
+  .cg-resume-sheet li {
+    break-inside: avoid;
   }
 }
 
@@ -274,6 +651,41 @@ html[data-high-contrast="true"] .cg-card {
   transform-origin: center;
 }
 
+/* The indicator's halo breathes only while the call is actually live, and the
+   ring leaves the microphone only while it is capturing speech. The app and OS
+   reduced-motion rules above flatten both to a single frame. */
+@keyframes cg-call-halo {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(0.94);
+  }
+  50% {
+    opacity: 0.95;
+    transform: scale(1.03);
+  }
+}
+
+.cg-call-halo {
+  animation: cg-call-halo 4s ease-in-out infinite;
+}
+
+@keyframes cg-call-ring {
+  0% {
+    opacity: 0.5;
+    transform: scale(0.94);
+  }
+  75%,
+  100% {
+    opacity: 0;
+    transform: scale(1.4);
+  }
+}
+
+.cg-call-ring {
+  animation: cg-call-ring 2.8s ease-out infinite;
+}
+
 /* The storage notice slides up as it mounts. An animation on mount rather than
    a state flip in an effect, so the first paint never shows it already in
    place and nothing has to be settled twice. */
@@ -288,4 +700,226 @@ html[data-high-contrast="true"] .cg-card {
 
 .cg-rise {
   animation: cg-rise 260ms ease-out;
+}
+
+/* The sign-in scene: an original watercolour study desk, painted in SVG and
+   coloured entirely by these variables. The same drawing turns from daylight
+   to dusk with the theme switch, and detail stays at the edges so the middle
+   is quiet beneath the card. */
+.cg-login-scene {
+  --scene-sky-top: #f8f1e7;
+  --scene-sky-mid: #e6eef7;
+  --scene-sky-bottom: #ccddec;
+  --scene-bloom-a: #acc9e5;
+  --scene-bloom-b: #efd4bd;
+  --scene-bloom-c: #b6d0e9;
+  --scene-desk-top: #e3ccb2;
+  --scene-desk-bottom: #cdb08c;
+  --scene-ink: rgb(43 61 91 / 0.38);
+  --scene-object: rgb(198 216 234 / 0.62);
+  --scene-object-2: #dbe6f0;
+  --scene-paper: #f6ecdc;
+  --scene-book-a: #8fb3cf;
+  --scene-book-b: #c98a6e;
+  --scene-book-c: #e9d6b8;
+  --scene-terracotta: #c9785a;
+  --scene-teal: #7fa8b8;
+  --scene-vignette: rgb(30 44 70 / 0.2);
+  --scene-grain: 0.26;
+  --scene-glow: 0.25;
+}
+
+html[data-theme="dark"] .cg-login-scene {
+  --scene-sky-top: #0a1526;
+  --scene-sky-mid: #0d1f3c;
+  --scene-sky-bottom: #071222;
+  --scene-bloom-a: #15345c;
+  --scene-bloom-b: #1d2d55;
+  --scene-bloom-c: #102a4a;
+  --scene-desk-top: #132845;
+  --scene-desk-bottom: #091527;
+  --scene-ink: rgb(196 216 242 / 0.24);
+  --scene-object: rgb(40 72 116 / 0.55);
+  --scene-object-2: #2a4a74;
+  --scene-paper: #e6dcc8;
+  --scene-book-a: #2f547c;
+  --scene-book-b: #8e4b34;
+  --scene-book-c: #d8c3a2;
+  --scene-terracotta: #a9502f;
+  --scene-teal: #2f6875;
+  --scene-vignette: rgb(2 7 16 / 0.6);
+  --scene-grain: 0.3;
+  --scene-glow: 0.34;
+}
+
+/* Homepage section vignettes. Same painted language as the hero and the sign-in
+   scene, with their own daylight/dusk palette so the artwork belongs to the
+   page around it and the theme switch repaints it rather than leaving a bright
+   panel on a dark page. */
+.cg-vignette {
+  --vg-sky-top: #f8f1e7;
+  --vg-sky-mid: #e7eff8;
+  --vg-sky-bottom: #cfdfee;
+  --vg-bloom-a: #a9c8e6;
+  --vg-bloom-b: #efd4bd;
+  --vg-bloom-c: #b9d2ea;
+  --vg-sun: #f2b66d;
+  --vg-desk-top: #e6d0b7;
+  --vg-desk-bottom: #d0b28e;
+  --vg-figure: #2c4266;
+  --vg-rim: #fff6e8;
+  --vg-ink: #2b3d5b;
+  --vg-line: rgb(43 61 91 / 0.3);
+  --vg-object: #dbe6f0;
+  --vg-object-2: #c3d6e9;
+  --vg-paper: #f8f0e3;
+  --vg-terracotta: #c9785a;
+  --vg-teal: #6f9fb0;
+  --vg-brand: #2563eb;
+  --vg-grain: 0.22;
+}
+
+html[data-theme="dark"] .cg-vignette {
+  --vg-sky-top: #0a1526;
+  --vg-sky-mid: #0d1f3c;
+  --vg-sky-bottom: #071222;
+  --vg-bloom-a: #15345c;
+  --vg-bloom-b: #1d2d55;
+  --vg-bloom-c: #102a4a;
+  --vg-sun: #e8a566;
+  --vg-desk-top: #183250;
+  --vg-desk-bottom: #0b1b2f;
+  --vg-figure: #050c18;
+  --vg-rim: #eab57f;
+  --vg-ink: #c4d8f2;
+  --vg-line: rgb(196 216 242 / 0.25);
+  --vg-object: #23405f;
+  --vg-object-2: #2c4c72;
+  --vg-paper: #e6dcc8;
+  --vg-terracotta: #c47757;
+  --vg-teal: #4c8b99;
+  --vg-brand: #60a5fa;
+  --vg-grain: 0.3;
+}
+
+/* The card stays navy glass in both themes; only its transparency moves, so it
+   keeps white text legible over the pale daylight scene as well. */
+.cg-login-card {
+  background: rgb(8 21 43 / 0.84);
+}
+
+html[data-theme="dark"] .cg-login-card {
+  background: rgb(6 16 32 / 0.8);
+}
+
+html[data-high-contrast="true"] .cg-login-card {
+  border-color: rgb(255 255 255 / 0.7);
+}
+
+/* Get-started backdrop: one painted scene, washed almost back to the page
+   colour so the role cards stay the focus. Tall screens get a portrait crop of
+   the same scene rather than the panorama's quiet centre, and the dark theme
+   darkens the artwork and remixes the wash to the dusk canvas so it reads as
+   evening instead of a dimmed daylight. */
+.cg-getstarted-art {
+  overflow: hidden;
+}
+
+.cg-getstarted-art img {
+  opacity: 0.95;
+}
+
+.cg-getstarted-art .cg-art-tall {
+  display: none;
+}
+
+.cg-getstarted-wash {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(
+      130% 100% at 50% 40%,
+      rgb(246 247 249 / 0.84) 0%,
+      rgb(246 247 249 / 0.76) 42%,
+      rgb(246 247 249 / 0.46) 76%,
+      rgb(246 247 249 / 0.32) 100%
+    ),
+    linear-gradient(
+      180deg,
+      rgb(246 247 249 / 0.42) 0%,
+      rgb(246 247 249 / 0.05) 34%,
+      rgb(246 247 249 / 0.05) 70%,
+      rgb(246 247 249 / 0.42) 100%
+    );
+}
+
+@media (max-width: 640px), (max-aspect-ratio: 3/4) {
+  .cg-getstarted-art .cg-art-wide {
+    display: none;
+  }
+
+  .cg-getstarted-art .cg-art-tall {
+    display: block;
+  }
+
+  .cg-getstarted-wash {
+    background:
+      radial-gradient(
+        130% 100% at 50% 40%,
+        rgb(246 247 249 / 0.7) 0%,
+        rgb(246 247 249 / 0.6) 42%,
+        rgb(246 247 249 / 0.3) 76%,
+        rgb(246 247 249 / 0.18) 100%
+      ),
+      linear-gradient(
+        180deg,
+        rgb(246 247 249 / 0.32) 0%,
+        rgb(246 247 249 / 0.04) 34%,
+        rgb(246 247 249 / 0.04) 70%,
+        rgb(246 247 249 / 0.32) 100%
+      );
+  }
+}
+
+html[data-theme="dark"] .cg-getstarted-art img {
+  filter: brightness(0.62) saturate(0.88);
+  opacity: 0.9;
+}
+
+html[data-theme="dark"] .cg-getstarted-wash {
+  background:
+    radial-gradient(
+      130% 100% at 50% 40%,
+      rgb(10 14 21 / 0.87) 0%,
+      rgb(10 14 21 / 0.78) 42%,
+      rgb(10 14 21 / 0.54) 76%,
+      rgb(10 14 21 / 0.44) 100%
+    ),
+    linear-gradient(
+      180deg,
+      rgb(10 14 21 / 0.55) 0%,
+      rgb(10 14 21 / 0.08) 34%,
+      rgb(10 14 21 / 0.08) 70%,
+      rgb(10 14 21 / 0.55) 100%
+    );
+}
+
+@media (max-width: 640px), (max-aspect-ratio: 3/4) {
+  html[data-theme="dark"] .cg-getstarted-wash {
+    background:
+      radial-gradient(
+        130% 100% at 50% 40%,
+        rgb(10 14 21 / 0.74) 0%,
+        rgb(10 14 21 / 0.64) 42%,
+        rgb(10 14 21 / 0.38) 76%,
+        rgb(10 14 21 / 0.26) 100%
+      ),
+      linear-gradient(
+        180deg,
+        rgb(10 14 21 / 0.45) 0%,
+        rgb(10 14 21 / 0.06) 34%,
+        rgb(10 14 21 / 0.06) 70%,
+        rgb(10 14 21 / 0.45) 100%
+      );
+  }
 }
