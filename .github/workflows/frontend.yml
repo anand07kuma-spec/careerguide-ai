@@ -10,6 +10,10 @@ name: Frontend
 #
 #  * `npm ci` — installs exactly `package-lock.json`, and fails if the lock file does not
 #    match `package.json`. A hand-edited dependency version is caught here.
+#  * `next typegen` — writes `next-env.d.ts` and the route types. Both are generated files
+#    and gitignored, so a fresh checkout has neither; the first is where
+#    `next/image-types/global` comes from, which is what declares `*.webp` to TypeScript.
+#    Without it `tsc` fails on every image import even though the files are tracked.
 #  * `tsc --noEmit` — the types the screens are written against.
 #  * `eslint` — this repository's own rules, including the React hook rules that a
 #    setState-in-effect bug depends on.
@@ -83,6 +87,9 @@ jobs:
 
       - name: Install exactly what the lock file names
         run: npm ci --no-audit --no-fund
+
+      - name: Generate the Next.js type files
+        run: npx next typegen
 
       - name: Types
         run: npx tsc --noEmit
