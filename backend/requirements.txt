@@ -56,7 +56,7 @@ redis==7.4.0
 # dependency of the optional email sign-in, not of the device account. Without a
 # CLERK_WEBHOOK_SIGNING_SECRET the endpoint refuses every delivery and this package
 # is never imported.
-svix==1.83.0
+svix==2.10.0
 
 # Password hashing for the email + password sign-in. Argon2id is the algorithm
 # current password-storage guidance names, and `argon2-cffi` is the reference
