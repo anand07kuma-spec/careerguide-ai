@@ -3,13 +3,13 @@
 #   python -m venv .venv
 #   .venv\Scripts\python.exe -m pip install -r requirements.txt
 
-fastapi==0.143.0
-uvicorn[standard]==0.46.0
-sqlalchemy==2.0.49
-pydantic==2.13.4
-pydantic-settings==2.14.2
+fastapi==0.162.5
+uvicorn[standard]==0.54.0
+sqlalchemy==2.1.8
+pydantic==2.14.3
+pydantic-settings==2.16.2
 python-dotenv==1.2.4
-python-multipart==0.0.32
+python-multipart==0.0.33
 httpx==0.28.1
 edge-tts==7.3.1
 
@@ -18,25 +18,25 @@ edge-tts==7.3.1
 # says it is" a statement this server can stand behind — a decoded-but-unverified
 # token is a claim anyone can write. `crypto` brings `cryptography`, which supplies
 # the RS256 implementation; both ship wheels, so no system toolchain is needed.
-PyJWT[crypto]==2.10.1
+PyJWT[crypto]==2.15.1
 
 # PostgreSQL driver — only needed when DATABASE_URL points at Postgres
 # (e.g. a Supabase project). SQLite works without it.
-psycopg[binary]==3.3.6
+psycopg[binary]==3.3.9
 
 # Schema migrations. The app does not import Alembic at runtime — a fresh database
 # is still created on first boot — but changing the shape of a database that holds
 # real answers is done with `alembic revision` / `alembic upgrade`. See the README
 # section "Changing the schema (Alembic)".
-alembic==1.16.4
+alembic==1.20.1
 
 # PDF reports. `reportlab` draws the pages; it needs `uharfbuzz` to shape Devanagari,
 # because ReportLab has no text shaper of its own and Hindi conjuncts come from the
 # font's OpenType substitutions. Both ship plain wheels, so the same code runs on a
 # laptop and on serverless hosting — unlike WeasyPrint, which needs system Pango
 # libraries that the deploy target does not have.
-reportlab==5.0.1
-uharfbuzz==0.56.3
+reportlab==5.1.0
+uharfbuzz==0.57.0
 
 # Rate limiting. `slowapi` wraps the `limits` library, which counts requests in
 # this process's memory — see app/middleware/rate_limit.py for what that means on
@@ -69,7 +69,7 @@ argon2-cffi==23.1.0
 # schemas uses it to refuse a string that is not an address before any row or
 # message is touched. It checks shape and domain, not ownership — proving the
 # address belongs to the person is what the confirmation mail does.
-email-validator==2.2.0
+email-validator==2.3.0
 
 # Profile photos. Pillow is what proves an uploaded file really is a JPEG, PNG or WebP
 # — a filename and a browser-supplied content type are claims, not evidence — and it
