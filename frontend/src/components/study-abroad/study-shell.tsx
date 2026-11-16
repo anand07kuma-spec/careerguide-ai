@@ -155,7 +155,7 @@ export function OfficialPortal({ url, label, kind, lang = "en" }: { url: string;
         href={url}
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex shrink-0 items-center gap-1.5 rounded-card bg-brand-mist px-3 py-2 text-xs font-semibold text-brand-dark transition-colors hover:bg-brand hover:text-white"
+        className="inline-flex shrink-0 items-center gap-1.5 rounded-card bg-brand-mist px-3 py-2 text-xs font-semibold text-brand-dark transition-colors hover:bg-brand-solid hover:text-on-brand"
       >
         {t("Official site")}
         <ExternalLink className="h-3.5 w-3.5" aria-hidden />

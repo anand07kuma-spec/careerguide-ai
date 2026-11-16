@@ -21,7 +21,7 @@ import type { AdminUserRow } from "@/lib/types";
  * It finds accounts and changes two things about them — whether they are open, and whether
  * they hold the operator flag. That is the complete extent of it, and it is the extent of
  * what the server offers too: there is no route in `/api/admin` that reads a conversation,
- * edits a plan, resets a come-back code, deletes a person, or searches by email address.
+ * edits a plan, resets a sign-in credential, deletes a person, or searches by email address.
  *
  * Three things this page says out loud rather than leaving implied:
  *

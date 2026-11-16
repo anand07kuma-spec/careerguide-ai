@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from ..database import get_db
@@ -259,6 +259,7 @@ async def send_message(
         detected_themes=new_themes,
         needs_support=reply.safety_flag,
         provider=reply.provider,
+        error=reply.error,
         language=session.language,
         profile_updates=learned,
     )
@@ -312,6 +313,25 @@ def _persist_observations(
     return added
 
 
+def _clear_conversation_observations(
+    db: Session, student_id: int, session_id: int
+) -> None:
+    """Remove the interest notes this conversation produced.
+
+    A note written by the guide from something the child said is part of that
+    conversation's record, so deleting the transcript deletes it too. Only rows tied
+    to this session and tagged as conversation-sourced are touched: a theme saved from
+    an assessment, a profile field, and notes another conversation produced all stay.
+    """
+    db.execute(
+        delete(InterestObservation).where(
+            InterestObservation.student_id == student_id,
+            InterestObservation.session_id == session_id,
+            InterestObservation.source == "conversation",
+        )
+    )
+
+
 @router.get("/{session_id}/messages", response_model=list[MessageOut])
 def get_messages(
     session_id: int,
@@ -342,9 +362,11 @@ def end_session(
         )
         if not ensure_settings(db, student_id).save_history:
             # "Don't keep my conversations" must actually mean that,
-            # so the transcript is removed once the conversation closes.
+            # so the transcript and the interest notes it produced are removed once
+            # the conversation closes.
             for message in list(session.messages):
                 db.delete(message)
+            _clear_conversation_observations(db, student_id, session.id)
         db.commit()
         db.refresh(session)
     return SessionOutInfo.model_validate(session)
@@ -356,10 +378,11 @@ def clear_session(
     student_id: int = Depends(require_student),
     db: Session = Depends(get_db),
 ) -> None:
-    """Delete the transcript. The student stays signed in."""
+    """Delete the transcript and the interest notes it produced. The student stays signed in."""
     session = _load_session(db, session_id, student_id)
     for message in list(session.messages):
         db.delete(message)
+    _clear_conversation_observations(db, student_id, session.id)
     session.status = "cleared"
     db.commit()
 
@@ -373,7 +396,10 @@ def list_sessions(
     rows = list(
         db.scalars(
             select(ConversationSession)
-            .where(ConversationSession.student_id == student_id)
+            .where(
+                ConversationSession.student_id == student_id,
+                ConversationSession.status != "cleared",
+            )
             .order_by(ConversationSession.id.desc())
             .limit(limit)
         )

@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   AlertTriangle,
-  Captions,
   CircleStop,
   Headphones,
   Keyboard,
@@ -21,13 +20,12 @@ import {
   X,
 } from "lucide-react";
 import { GuideAvatar, VoiceWave, Wordmark } from "@/components/brand";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { api, ApiError, BACKEND_URL, isOffline } from "@/lib/api";
 import { useT, useTf } from "@/lib/i18n";
 import { useSession } from "@/lib/session";
 import { cn } from "@/lib/utils";
-import { THEME_LABELS, type ConversationInfo, type ThemeKey } from "@/lib/types";
+import type { ConversationInfo } from "@/lib/types";
 import {
   MIC_ERROR_TEXT,
   cancelBrowserTts,
@@ -64,7 +62,7 @@ const STATE_COPY: Record<CallState, { label: string; hint: string; tone: string 
   ready: {
     label: "Ready to call",
     hint: "The microphone stays off until you press the button.",
-    tone: "text-white/70",
+    tone: "text-white/85",
   },
   connecting: {
     label: "Connecting…",
@@ -94,7 +92,7 @@ const STATE_COPY: Record<CallState, { label: string; hint: string; tone: string 
   paused: {
     label: "Voice paused",
     hint: "Press Play to hear the rest, or Talk to answer now.",
-    tone: "text-white/80",
+    tone: "text-white/90",
   },
   silence: {
     label: "Didn't catch that",
@@ -109,7 +107,7 @@ const STATE_COPY: Record<CallState, { label: string; hint: string; tone: string 
   ended: {
     label: "Call ended",
     hint: "Everything you said is on your Journey page.",
-    tone: "text-white/70",
+    tone: "text-white/85",
   },
 };
 
@@ -136,7 +134,6 @@ export default function VoiceCallPage() {
   const [session, setSession] = useState<ConversationInfo | null>(null);
   const [captions, setCaptions] = useState<Caption[]>([]);
   const [muted, setMuted] = useState(false);
-  const [captionsOn, setCaptionsOn] = useState(true);
   const [notice, setNotice] = useState<string | null>(null);
   const [micProblem, setMicProblem] = useState<MicErrorKind | null>(null);
   const [needVoiceConsent, setNeedVoiceConsent] = useState(false);
@@ -153,7 +150,6 @@ export default function VoiceCallPage() {
   const onFinalRef = useRef<(text: string) => void>(() => {});
   const onMicErrorRef = useRef<(kind: MicErrorKind) => void>(() => {});
   const onEndedRef = useRef<() => void>(() => {});
-  const scrollRef = useRef<HTMLDivElement | null>(null);
 
   // These three refs hold the newest values for callbacks that fire from browser
   // events (recognition results, audio ending, a timer). They are written after
@@ -227,7 +223,7 @@ export default function VoiceCallPage() {
         if (handled) {
           setNotice(`${reason} ${t("Your browser's own voice is reading this one.")}`);
         } else {
-          setNotice(`${reason} ${t("Spoken replies are off right now; captions still work.")}`);
+          setNotice(`${reason} ${t("Spoken replies are off right now; you can still type your answer.")}`);
           if (settings.continuous_conversation) beginListening();
           else go("ready");
         }
@@ -269,6 +265,17 @@ export default function VoiceCallPage() {
             themes: answer.detected_themes,
           },
         ]);
+        // The call has no transcript to hang a badge on, so the status line is where a
+        // fallback says so. Without it a scripted reply would sound like the model.
+        if (answer.reply.demo_generated) {
+          setNotice(
+            answer.error ??
+              t("Demo mode: this reply came from the built-in guide, not an AI model."),
+          );
+        } else {
+          // A real reply means last turn's fallback reason is stale.
+          setNotice(null);
+        }
 
         if (answer.audio_url && !mutedRef.current) {
           go("speaking");
@@ -330,10 +337,6 @@ export default function VoiceCallPage() {
       else go("blocked");
     };
   }, [beginListening, clearSilenceTimer, go, sendTurn, settings.continuous_conversation, stt]);
-
-  useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [captions]);
 
   useEffect(
     () => () => {
@@ -449,6 +452,17 @@ export default function VoiceCallPage() {
   const Central = centralAction().icon;
   const copy = STATE_COPY[state];
   const busy = state === "connecting" || state === "thinking";
+  const guideTalking = state === "speaking" || state === "greeting";
+  const avatarLive = state === "connecting" || state === "thinking" || guideTalking || state === "listening";
+  const waveActive = state === "listening" || guideTalking;
+  const halo =
+    state === "listening"
+      ? "bg-teal/25"
+      : guideTalking
+        ? "bg-brand-light/25"
+        : busy
+          ? "bg-brand/20"
+          : "bg-brand/10";
   const avatarState =
     state === "listening"
       ? "listening"
@@ -465,70 +479,103 @@ export default function VoiceCallPage() {
               : "idle";
 
   return (
-    <div className="min-h-dvh bg-navy text-white lg:h-dvh">
-      <div className="mx-auto flex h-full w-full max-w-3xl flex-col px-4 py-5 sm:px-6">
-        <header className="flex items-center justify-between gap-3">
-          <Wordmark tone="white" compact />
-          <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={() => setMuted((current) => !current)}
-              aria-pressed={muted}
-              className={cn(
-                "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
-                muted ? "bg-white/15 text-white" : "bg-white/8 text-white/70 hover:bg-white/12",
-              )}
-            >
-              {muted ? <VolumeX className="h-3.5 w-3.5" aria-hidden /> : <Volume2 className="h-3.5 w-3.5" aria-hidden />}
-              {muted ? t("Voice off") : t("Voice on")}
-            </button>
-            <button
-              type="button"
-              onClick={() => setCaptionsOn((current) => !current)}
-              aria-pressed={captionsOn}
-              className={cn(
-                "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
-                captionsOn ? "bg-white/15 text-white" : "bg-white/8 text-white/70 hover:bg-white/12",
-              )}
-            >
-              <Captions className="h-3.5 w-3.5" aria-hidden />
-              {t("Captions")}
-            </button>
-            <Link
-              href="/app"
-              aria-label={t("Back to dashboard")}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/8 text-white/70 transition-colors hover:bg-white/12 hover:text-white"
-            >
-              <X className="h-4 w-4" aria-hidden />
-            </Link>
-          </div>
-        </header>
+    // The call is the screen, not a panel on it: the navy surface covers the
+    // whole viewport, the stage takes the free height, and the controls sit on
+    // the bottom edge. Nothing here is centred inside a max-width page column.
+    <div className="relative isolate flex h-dvh flex-col overflow-hidden overscroll-none bg-navy text-white antialiased">
+      {/* Two very low-alpha light sources keep the navy from reading as a flat
+          rectangle; both live behind every control and take no layout space. */}
+      <div aria-hidden className="cg-call-aurora pointer-events-none absolute inset-0 -z-10" />
 
-        <div className="flex flex-1 flex-col items-center justify-center gap-5 py-6 text-center">
-          <div className="relative">
-            <GuideAvatar state={avatarState} className="h-28 w-28 sm:h-32 sm:w-32" />
-            {state === "listening" ? (
-              <span className="absolute inset-0 -z-10 animate-ping rounded-full bg-teal/20" aria-hidden />
-            ) : null}
-          </div>
+      <header className="flex shrink-0 items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-10 lg:py-4">
+        <Wordmark tone="white" compact />
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => setMuted((current) => !current)}
+            aria-pressed={muted}
+            aria-label={muted ? t("Voice off") : t("Voice on")}
+            className={cn(
+              "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/80",
+              muted
+                ? "border-white/15 bg-white/12 text-white hover:bg-white/16"
+                : "border-white/10 bg-white/[0.06] text-white/75 hover:border-white/20 hover:bg-white/10 hover:text-white",
+            )}
+          >
+            {muted ? <VolumeX className="h-3.5 w-3.5" aria-hidden /> : <Volume2 className="h-3.5 w-3.5" aria-hidden />}
+            <span className="hidden sm:inline">{muted ? t("Voice off") : t("Voice on")}</span>
+          </button>
+          <Link
+            href="/app"
+            aria-label={t("Back to dashboard")}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-white/70 transition-colors hover:border-white/20 hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/80"
+          >
+            <X className="h-4 w-4" aria-hidden />
+          </Link>
+        </div>
+      </header>
 
-          <div>
-            <p className={cn("text-lg font-semibold sm:text-xl", copy.tone)} role="status">
+      {/* One centred column at every width: the call itself, nothing else. */}
+      <section className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 px-4 py-2 text-center sm:gap-4 sm:px-6 lg:gap-5 lg:px-10">
+          {/* An alert is the whole message: the avatar and the idle wave would
+              only take the space the card needs to stay on one screen. */}
+          {state === "blocked" || safety ? null : (
+            <div className="relative flex shrink-0 items-center justify-center">
+              {/* A soft ambient glow, tinted by whoever is active: teal while the
+                  microphone captures, blue while the guide speaks or thinks. It
+                  only breathes while the call is live. */}
+              <span
+                aria-hidden
+                className={cn(
+                  "pointer-events-none absolute -inset-10 rounded-full blur-2xl transition-colors duration-700",
+                  halo,
+                  avatarLive && "cg-call-halo",
+                )}
+              />
+              {/* The ring leaves the microphone only while it is capturing. */}
+              {state === "listening" ? (
+                <span
+                  aria-hidden
+                  className="cg-call-ring pointer-events-none absolute -inset-2 rounded-full border border-teal-bright/60"
+                />
+              ) : null}
+              {/* A hairline rim so the sphere catches light like glass instead of
+                  ending on a hard navy edge. */}
+              <span className="relative rounded-full bg-gradient-to-b from-white/25 via-white/10 to-white/[0.03] p-px shadow-[0_24px_70px_-28px_rgba(37,99,235,0.8)]">
+                <GuideAvatar state={avatarState} className="h-24 w-24 sm:h-28 sm:w-28 lg:h-36 lg:w-36" />
+              </span>
+            </div>
+          )}
+
+          <div className="shrink-0">
+            <p
+              className={cn("text-balance text-[1.375rem] font-semibold leading-tight sm:text-[1.75rem]", copy.tone)}
+              role="status"
+            >
               {t(copy.label)}
             </p>
-            <p className="mt-1 text-xs leading-relaxed text-white/55">{t(copy.hint)}</p>
+            <p className="mx-auto mt-1.5 max-w-md text-pretty text-sm leading-relaxed text-white/65">{t(copy.hint)}</p>
           </div>
 
-          <VoiceWave active={state === "listening" || state === "speaking" || state === "greeting"} />
+          {state === "blocked" || safety ? null : (
+            <div
+              className={cn(
+                "shrink-0 transition-opacity duration-500",
+                waveActive ? "opacity-100 [filter:drop-shadow(0_0_10px_rgba(45,212,191,0.4))]" : "opacity-80",
+              )}
+            >
+              <VoiceWave active={waveActive} />
+            </div>
+          )}
 
           {stt.interim ? (
-            <p className="max-w-md rounded-card bg-white/10 px-4 py-2 text-sm text-white/90">
+            <p className="max-w-md shrink-0 rounded-card bg-white/10 px-4 py-2 text-sm text-white/90">
               {stt.interim}…
             </p>
           ) : null}
 
           {state === "blocked" ? (
-            <div className="w-full max-w-md space-y-3 text-left">
+            <div className="w-full max-w-md shrink-0 space-y-3 text-left">
               {needVoiceConsent ? (
                 <div className="rounded-card border border-amber-400/40 bg-amber-400/10 p-4">
                   <p className="flex items-center gap-2 text-sm font-semibold text-amber-200">
@@ -542,7 +589,7 @@ export default function VoiceCallPage() {
                   </p>
                   <Link
                     href="/app/settings"
-                    className="mt-3 inline-flex rounded-full bg-brand px-4 py-2 text-xs font-semibold text-white"
+                    className="mt-3 inline-flex rounded-full bg-brand-solid px-4 py-2 text-xs font-semibold text-on-brand"
                   >
                     {t("Open Settings")}
                   </Link>
@@ -576,11 +623,11 @@ export default function VoiceCallPage() {
           ) : null}
 
           {notice ? (
-            <p className="max-w-md text-xs leading-relaxed text-white/60">{notice}</p>
+            <p className="max-w-md shrink-0 text-xs leading-relaxed text-white/60">{notice}</p>
           ) : null}
 
           {offline ? (
-            <p className="max-w-md text-xs leading-relaxed text-white/60">
+            <p className="max-w-md shrink-0 text-xs leading-relaxed text-white/60">
               {/localhost|127\.0\.0\.1/.test(BACKEND_URL) ? (
                 <>
                   {tf("The CareerGuide server at {api} is not reachable.", {
@@ -597,108 +644,95 @@ export default function VoiceCallPage() {
               )}
             </p>
           ) : null}
-        </div>
+      </section>
 
-        {captionsOn ? (
-          <div
-            ref={scrollRef}
-            className="cg-scrollbar max-h-[26vh] min-h-[92px] space-y-2.5 overflow-y-auto rounded-card bg-black/25 p-4"
-          >
-            {captions.length === 0 ? (
-              <p className="text-xs text-white/45">
-                {t("Captions appear here as you speak, so you can always follow along in text.")}
-              </p>
-            ) : (
-              captions.map((item) => (
-                <div key={item.id} className={cn("flex", item.from === "you" ? "justify-end" : "justify-start")}>
-                  <div className="max-w-[88%]">
-                    <p
-                      className={cn(
-                        "rounded-2xl px-3.5 py-2 text-sm leading-relaxed",
-                        item.from === "you" ? "bg-brand text-white" : "bg-white/12 text-white/95",
-                      )}
-                    >
-                      {item.text}
-                    </p>
-                    {item.from === "guide" ? (
-                      <div className="mt-1 flex flex-wrap items-center gap-1.5 justify-start">
-                        {item.demo ? <Badge tone="warning">{t("Demo guide")}</Badge> : null}
-                        {item.themes?.map((theme) => (
-                          <Badge key={theme} tone="teal">
-                            {THEME_LABELS[theme as ThemeKey]
-                              ? t(THEME_LABELS[theme as ThemeKey])
-                              : theme}
-                          </Badge>
-                        ))}
-                      </div>
-                    ) : null}
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        ) : null}
+      <footer className="shrink-0 px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-2 sm:px-6 lg:px-10">
+        {/* One connected control group: pause and end sit beside the primary
+            button instead of at opposite edges. Both side slots keep the same
+            width whether or not their button is showing, so the microphone
+            never drifts off centre. */}
+        <div className="mx-auto flex w-fit flex-col items-center">
+          <div className="flex items-center gap-4 sm:gap-6">
+            <div className="flex w-10 items-center justify-center">
+              {state === "speaking" || state === "greeting" || state === "paused" ? (
+                <Button
+                  variant="secondary"
+                  size="icon"
+                  aria-label={state === "paused" ? t("Resume the voice") : t("Pause the voice")}
+                  className="border border-white/12 bg-white/[0.07] text-white/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-sm hover:border-white/20 hover:bg-white/10 hover:text-white active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/80"
+                  onClick={() => {
+                    if (stateRef.current === "paused") {
+                      player.toggle();
+                      go(prePauseRef.current);
+                    } else {
+                      prePauseRef.current = stateRef.current;
+                      player.toggle();
+                      go("paused");
+                    }
+                  }}
+                >
+                  {state === "paused" ? (
+                    <Play className="h-4 w-4" aria-hidden />
+                  ) : (
+                    <Pause className="h-4 w-4" aria-hidden />
+                  )}
+                </Button>
+              ) : null}
+            </div>
 
-        <div className="mt-5 flex items-center justify-center gap-3">
-          {state === "speaking" || state === "greeting" || state === "paused" ? (
-            <Button
-              variant="secondary"
-              size="icon"
-              aria-label={state === "paused" ? t("Resume the voice") : t("Pause the voice")}
-              onClick={() => {
-                if (stateRef.current === "paused") {
-                  player.toggle();
-                  go(prePauseRef.current);
-                } else {
-                  prePauseRef.current = stateRef.current;
-                  player.toggle();
-                  go("paused");
-                }
-              }}
-            >
-              {state === "paused" ? (
-                <Play className="h-4 w-4" aria-hidden />
-              ) : (
-                <Pause className="h-4 w-4" aria-hidden />
+            <button
+              type="button"
+              onClick={centralAction().run}
+              disabled={busy || (!isStudent && state === "ready")}
+              className={cn(
+                "relative flex h-18 w-18 items-center justify-center overflow-hidden rounded-full text-white transition-all duration-300 active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/85 disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100 sm:h-20 sm:w-20",
+                state === "listening"
+                  ? "bg-[linear-gradient(180deg,#2dd4bf,#0d9488)] shadow-[0_0_0_8px_rgba(20,184,166,0.12),0_18px_44px_-14px_rgba(13,148,136,0.85)] hover:brightness-105"
+                  : busy
+                    ? "bg-white/10 text-white/60 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
+                    : "bg-[linear-gradient(180deg,#3b82f6,#2563eb)] shadow-[0_0_0_1px_rgba(147,197,253,0.25),0_18px_44px_-14px_rgba(37,99,235,0.9),inset_0_1px_0_rgba(255,255,255,0.25)] hover:brightness-110",
               )}
-            </Button>
-          ) : null}
+              aria-label={centralAction().label}
+            >
+              {/* A top-lit gloss gives the circle depth without a second border. */}
+              <span
+                aria-hidden
+                className="pointer-events-none absolute inset-0 rounded-full bg-[radial-gradient(120%_70%_at_50%_0%,rgba(255,255,255,0.30),transparent_58%)] opacity-80"
+              />
+              <Central className="relative h-7 w-7 sm:h-8 sm:w-8" aria-hidden />
+            </button>
 
-          <button
-            type="button"
-            onClick={centralAction().run}
-            disabled={busy || (!isStudent && state === "ready")}
-            className={cn(
-              "flex h-18 w-18 items-center justify-center rounded-full transition-all",
-              state === "listening"
-                ? "bg-teal text-white shadow-[0_0_0_10px_rgba(20,184,166,0.18)]"
-                : busy
-                  ? "bg-white/15 text-white/60"
-                  : "bg-brand text-white shadow-[0_10px_30px_-10px_rgba(37,99,235,0.9)] hover:bg-brand-dark",
-            )}
-            aria-label={centralAction().label}
-          >
-            <Central className="h-7 w-7" aria-hidden />
-          </button>
-
-          {state !== "ready" && state !== "ended" ? (
-            <Button variant="danger" size="icon" aria-label={t("End the call")} onClick={() => void endCall()}>
-              <PhoneOff className="h-4 w-4" aria-hidden />
-            </Button>
-          ) : null}
+            <div className="flex w-10 items-center justify-center">
+              {state !== "ready" && state !== "ended" ? (
+                <Button
+                  variant="danger"
+                  size="icon"
+                  aria-label={t("End the call")}
+                  className="border border-red-300/30 bg-red-600 text-white shadow-[0_10px_26px_-12px_rgba(239,68,68,0.8),inset_0_1px_0_rgba(255,255,255,0.18)] hover:border-red-200/40 hover:bg-red-500 active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-200"
+                  onClick={() => void endCall()}
+                >
+                  <PhoneOff className="h-4 w-4" aria-hidden />
+                </Button>
+              ) : null}
+            </div>
+          </div>
+          <p className="mt-2 text-sm font-medium text-white/85">{centralAction().label}</p>
         </div>
 
-        <p className="mt-2 text-center text-sm font-medium text-white/80">{centralAction().label}</p>
-
-        <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-          <Button variant="ghost" size="sm" className="text-white/70 hover:bg-white/10 hover:text-white" onClick={speakAgain}>
+        <div className="mx-auto mt-2 flex w-full max-w-5xl flex-wrap items-center justify-center gap-x-1 gap-y-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-white/60 hover:bg-white/[0.08] hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/70"
+            onClick={speakAgain}
+          >
             <RefreshCw className="h-3.5 w-3.5" aria-hidden />
             {t("Say that again")}
           </Button>
           <Button
             variant="ghost"
             size="sm"
-            className="text-white/70 hover:bg-white/10 hover:text-white"
+            className="text-white/60 hover:bg-white/[0.08] hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/70"
             onClick={() => {
               player.stop();
               cancelBrowserTts();
@@ -712,7 +746,7 @@ export default function VoiceCallPage() {
           </Button>
           <Link
             href="/app/chat"
-            className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-white/70 hover:bg-white/10 hover:text-white"
+            className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-white/60 transition-colors hover:bg-white/[0.08] hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/70"
           >
             <Keyboard className="h-3.5 w-3.5" aria-hidden />
             {t("Chat by typing instead")}
@@ -720,7 +754,7 @@ export default function VoiceCallPage() {
         </div>
 
         <form
-          className="mt-4 flex items-center gap-2"
+          className="mx-auto mt-2.5 flex w-full max-w-2xl items-center gap-2"
           onSubmit={(event) => {
             event.preventDefault();
             void sendTurn(typed);
@@ -731,19 +765,19 @@ export default function VoiceCallPage() {
             onChange={(event) => setTyped(event.target.value)}
             placeholder={t("Or type your answer here…")}
             aria-label={t("Type your answer")}
-            className="min-h-[46px] flex-1 rounded-card border border-white/15 bg-white/10 px-4 py-2.5 text-sm text-white outline-none placeholder:text-white/40 focus:border-brand-light"
+            className="min-h-[46px] flex-1 rounded-card border border-white/12 bg-white/[0.07] px-4 py-2.5 text-sm text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition-colors placeholder:text-white/35 focus:border-brand-light/70 focus:bg-white/[0.09] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-light"
           />
-          <Button type="submit" size="icon" aria-label={t("Send your message")} disabled={!typed.trim() || busy}>
+          <Button
+            type="submit"
+            size="icon"
+            aria-label={t("Send your message")}
+            disabled={!typed.trim() || busy}
+            className="focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/80"
+          >
             <Send className="h-4 w-4" aria-hidden />
           </Button>
         </form>
-
-        <p className="mt-4 pb-6 text-center text-[11px] leading-relaxed text-white/40">
-          {t(
-            "The microphone only records while the call screen is listening — never in the background, and raw audio is not stored. Speech recognition is your browser's, spoken replies come from the server's speech service over the internet (Settings names which one), and this is not full-duplex streaming: one voice speaks at a time.",
-          )}
-        </p>
-      </div>
+      </footer>
     </div>
   );
 }

@@ -222,7 +222,7 @@ export default function CareerDetail() {
             className={cn(
               "inline-flex h-9 items-center gap-1.5 rounded-xl border px-3 text-sm font-medium transition-colors disabled:opacity-60",
               isSaved
-                ? "border-brand bg-brand text-white hover:bg-brand-dark"
+                ? "border-brand bg-brand-solid text-on-brand hover:bg-brand-dark"
                 : "border-line bg-surface text-ink hover:border-brand-light hover:text-brand-dark",
             )}
           >

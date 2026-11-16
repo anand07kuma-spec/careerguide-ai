@@ -27,12 +27,12 @@ export function ThemeToggle({ label }: { label: string }) {
       onClick={toggleTheme}
       aria-label={label}
       title={label}
-      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-line bg-surface text-muted transition-colors hover:border-brand-light hover:text-ink"
+      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-line bg-surface text-muted transition-colors hover:border-brand-light hover:text-ink"
     >
       {theme === "dark" ? (
-        <Sun className="h-4 w-4" aria-hidden />
+        <Sun className="h-5 w-5" aria-hidden />
       ) : (
-        <Moon className="h-4 w-4" aria-hidden />
+        <Moon className="h-5 w-5" aria-hidden />
       )}
     </button>
   );

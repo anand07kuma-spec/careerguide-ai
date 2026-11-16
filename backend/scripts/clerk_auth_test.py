@@ -316,13 +316,15 @@ check("…and no picture, phone number or avatar column exists to be filled",
       not [name for name in columns
            if any(word in name for word in ("avatar", "image", "phone"))],
       sorted(columns))
-# The address columns that do exist hold only what an account typed into this app's own
-# settings screen: `user.created` matches a Clerk address against them and never writes
-# one, so the set is pinned here rather than left to grow quietly.
-check("…and the only email columns are the four this app's own consent flow writes",
+# The address columns that do exist are written only by this app: the four the consent
+# flow uses, plus `login_email`, which belongs to the email-and-password credential and
+# which neither Clerk nor Google may fill in. `user.created` matches a Clerk address
+# against these and never writes one, so the set is pinned rather than left to grow
+# quietly — an address arriving from outside this app has no column to land in.
+check("…and the email columns are still only the four consent writes plus the password login",
       {name for name in columns if "email" in name}
       == {"contact_email", "email_confirmed_at", "email_confirm_hash",
-          "email_confirm_expires_at"}, sorted(columns))
+          "email_confirm_expires_at", "login_email"}, sorted(columns))
 
 print("\n=== 4. Entering from a new device")
 use_clerk_api("user_01ABC")

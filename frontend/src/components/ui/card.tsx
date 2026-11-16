@@ -28,12 +28,12 @@ export function CardHeader({
     <div className={cn("flex flex-col items-start gap-3 sm:flex-row sm:justify-between", className)}>
       <div className="flex min-w-0 items-start gap-3">
         {icon ? (
-          <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
+          <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-control bg-subtle text-subtle-ink">
             {icon}
           </span>
         ) : null}
         <div className="min-w-0">
-          <h2 className="text-base font-semibold leading-tight text-ink">
+          <h2 className="text-base font-semibold leading-tight text-heading">
             {typeof title === "string" ? t(title) : title}
           </h2>
           {description ? (
@@ -53,6 +53,7 @@ export function SectionHeading({
   description,
   action,
   id,
+  eyebrow,
   className,
 }: {
   title: ReactNode;
@@ -60,17 +61,24 @@ export function SectionHeading({
   action?: ReactNode;
   /** Sections reference this with `aria-labelledby`, so the id must exist. */
   id?: string;
+  /** A short kicker above the title, for dashboard sections that need a cue. */
+  eyebrow?: string;
   className?: string;
 }) {
   const t = useT();
   return (
     <div className={cn("flex flex-wrap items-end justify-between gap-3", className)}>
       <div className="min-w-0">
-        <h2 id={id} className="text-lg font-semibold tracking-tight text-ink sm:text-xl">
+        {eyebrow ? (
+          <p className="mb-1 text-2xs font-semibold uppercase tracking-[0.14em] text-brand">
+            {t(eyebrow)}
+          </p>
+        ) : null}
+        <h2 id={id} className="text-xl font-semibold tracking-tight text-heading sm:text-2xl">
           {typeof title === "string" ? t(title) : title}
         </h2>
         {description ? (
-          <p className="mt-1 text-sm leading-relaxed text-muted">
+          <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-muted">
             {typeof description === "string" ? t(description) : description}
           </p>
         ) : null}

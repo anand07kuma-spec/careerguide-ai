@@ -136,7 +136,7 @@ PRO_MONTHLY = Plan(
         "voice": "Unlimited",
         "pdf_report": True,
         "parent_dashboard": True,
-        "devices": "Any number, with a come-back code",
+        "devices": "Any number, with email sign-in",
         "languages": True,
         "data_control": True,
     },
@@ -220,7 +220,8 @@ FEATURE_ROWS: tuple[tuple[FeatureKey, str, str], ...] = (
     (
         "devices",
         "Coming back on another device",
-        "A come-back code, plus optional email sign-in where it is configured.",
+        "Email sign-in where it is configured, so the account opens in any browser it "
+        "is signed into.",
     ),
     (
         "languages",

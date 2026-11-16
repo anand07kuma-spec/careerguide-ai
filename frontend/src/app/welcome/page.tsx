@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { ArrowRight, ClipboardList, MessagesSquare, ShieldCheck } from "lucide-react";
 import { GuideAvatar, Wordmark } from "@/components/brand";
+import { SiteHeader } from "@/components/layout/site-header";
 import { Badge } from "@/components/ui/badge";
 import { useSession } from "@/lib/session";
 import { useT } from "@/lib/i18n";
@@ -30,14 +31,14 @@ import { useT } from "@/lib/i18n";
  */
 const WAYS_IN = [
   {
-    href: "/onboarding?intent=chat",
+    href: "/onboarding?role=student&intent=chat",
     icon: MessagesSquare,
     title: "Start a Conversation (AI Chat)",
     body: "Tell the guide what you like and it explores careers from that. Hindi, English or Hinglish — typing always works, and voice only if you turn it on.",
     after: "You land in the chat",
   },
   {
-    href: "/onboarding?intent=assessment",
+    href: "/onboarding?role=student&intent=assessment",
     icon: ClipboardList,
     title: "Take the Self-Discovery Questions",
     body: "Three short sets about what you are drawn to, how you like to work, and puzzles you enjoy. Six to ten minutes each, nothing timed, no wrong answer.",
@@ -57,14 +58,20 @@ export default function WelcomePage() {
 
   return (
     <div className="min-h-dvh bg-canvas">
-      <header className="border-b border-line bg-surface/80 px-4 py-4 sm:px-6">
-        <div className="mx-auto flex max-w-3xl items-center justify-between gap-3">
-          <Wordmark />
+      <SiteHeader width="focus" skipTo="#main-content" skipLabel={t("Skip to content")}>
+        <Wordmark />
+        <div className="ml-auto flex items-center gap-3">
+          <Link
+            href="/login"
+            className="text-xs font-semibold text-brand-dark underline underline-offset-2"
+          >
+            {t("Log in")}
+          </Link>
           <Badge tone="neutral">{t("No email, no password")}</Badge>
         </div>
-      </header>
+      </SiteHeader>
 
-      <main className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 sm:py-12">
+      <main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-focus px-4 py-8 sm:px-6 sm:py-12">
         <div className="flex flex-col items-center text-center">
           <GuideAvatar state="idle" className="h-20 w-20 shrink-0" />
           <h1 className="mt-5 text-2xl font-semibold tracking-tight text-heading sm:text-3xl">
@@ -110,7 +117,7 @@ export default function WelcomePage() {
 
         <p className="mt-6 text-center text-xs text-muted">
           {t("Here for a child?")}{" "}
-          <Link href="/onboarding" className="font-semibold text-brand-dark underline">
+          <Link href="/get-started" className="font-semibold text-brand-dark underline">
             {t("Choose parent instead")}
           </Link>
         </p>

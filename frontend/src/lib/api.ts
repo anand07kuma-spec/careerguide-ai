@@ -64,6 +64,7 @@ import type {
   ExamUpdateInput,
   GuardianLink,
   GuestResult,
+  GoogleStatus,
   Health,
   Institution,
   InterestPrompt,
@@ -96,12 +97,14 @@ import type {
   Resume,
   ResumeInput,
   ResumeSuggestion,
+  Role,
   SavedCareer,
   Session,
   SessionNote,
   SessionRenewal,
   Settings,
   ShareCode,
+  SignInMethods,
   Scholarship,
   StudyCountry,
   StudyCountryCard,
@@ -109,6 +112,7 @@ import type {
   StudyLeadHandle,
   StudyLeadIn,
   StudyLeadOut,
+  StudentProfile,
   StudyPlan,
   StudyService,
   StudyStory,
@@ -215,7 +219,11 @@ function dropInMemoryToken() {
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers);
-  if (init.body && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
+  // A FormData body carries its own multipart boundary in the header the browser writes,
+  // so setting JSON here would both lie about the body and hide that boundary.
+  if (init.body && !(init.body instanceof FormData) && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
   let response: Response;
@@ -355,6 +363,25 @@ export const api = {
     request<Settings>("/api/auth/settings", { method: "PATCH", body: JSON.stringify(patch) }),
   updateProfile: (patch: Record<string, unknown>) =>
     request<Session["profile"]>("/api/auth/profile", { method: "PATCH", body: JSON.stringify(patch) }),
+  /**
+   * The saved photo, as bytes. It arrives through `binary` for the same reason a PDF
+   * report does: the route behind it checks the session, so a picture is never a public
+   * link. The caller turns the blob into an object URL and revokes it when the picture
+   * changes or the screen closes.
+   *
+   * `replace` and `remove` answer with the profile rather than with the new photo, so a
+   * screen updates its stored address and its face in one step.
+   */
+  profilePhoto: () => binary("/api/profile/photo"),
+  uploadProfilePhoto: (file: File) => {
+    const form = new FormData();
+    // The server names the stored row after the caller, never after this filename; the
+    // name travels only so a proxy can say what was sent.
+    form.append("photo", file, file.name || "photo");
+    return request<StudentProfile>("/api/profile/photo", { method: "POST", body: form });
+  },
+  removeProfilePhoto: () =>
+    request<StudentProfile>("/api/profile/photo", { method: "DELETE" }),
   consent: (scope: "profile" | "voice" | "history_sharing", granted: boolean) =>
     request<ConsentRecord>("/api/auth/consent", {
       method: "POST",
@@ -412,6 +439,59 @@ export const api = {
       body: JSON.stringify({ session }),
     }),
 
+  /**
+   * Google sign-in. The browser is sent to the *backend* to begin, because the client
+   * secret, the PKCE verifier and the identity-token check all live there; nothing about
+   * this flow puts a Google credential in this bundle. `role` is the preference chosen
+   * on the previous screen and only decides what a brand-new account is — the callback
+   * never reads it from a URL, and the server's stored role always wins.
+   */
+  googleStatus: () => request<GoogleStatus>("/api/auth/google/status"),
+  googleStartUrl: (role: Role | null, deviceId: string) => {
+    const params = new URLSearchParams({ consent: "1", device_id: deviceId });
+    if (role) params.set("role", role);
+    return `${apiBase()}/api/auth/google/start?${params.toString()}`;
+  },
+
+  /**
+   * Email-and-password accounts. The password crosses this request once and is never
+   * kept: the answer is the same session shape every other way in returns, so the rest
+   * of the app cannot tell how an account was opened. `device_id` is what makes the next
+   * visit a return rather than a password prompt, and the server only binds it when no
+   * other account already owns that browser.
+   */
+  emailRegister: (payload: {
+    role: Role;
+    display_name: string;
+    email: string;
+    password: string;
+    device_id?: string;
+  }) =>
+    request<Session>("/api/auth/email/register", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  emailLogin: (email: string, password: string, device_id?: string) =>
+    request<Session>("/api/auth/email/login", {
+      method: "POST",
+      body: JSON.stringify({ email, password, device_id }),
+    }),
+  /** The answer is identical whether or not the address has an account, so this route
+   * cannot be used to ask this database which families are here. */
+  requestPasswordReset: (email: string) =>
+    request<{ message: string }>("/api/auth/password/forgot", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    }),
+  /** Redeems the single-use link. The server answers 204 and ends every existing
+   * session, so this browser is signed out as part of succeeding. */
+  resetPassword: (token: string, password: string) =>
+    request<void>("/api/auth/password/reset", {
+      method: "POST",
+      body: JSON.stringify({ token, password }),
+    }),
+  signInMethods: () => request<SignInMethods>("/api/auth/methods"),
+
   shareCode: () => request<ShareCode>("/api/auth/share-code"),
   newShareCode: () => request<ShareCode>("/api/auth/share-code/new", { method: "POST" }),
   revokeShareCode: () => request<ShareCode>("/api/auth/share-code", { method: "DELETE" }),
@@ -421,6 +501,8 @@ export const api = {
       body: JSON.stringify({ code, relationship: relationship ?? null }),
     }),
   guardians: () => request<GuardianLink[]>("/api/auth/guardians"),
+  approveGuardian: (guardianshipId: number) =>
+    request<GuardianLink>(`/api/auth/guardians/${guardianshipId}/approve`, { method: "POST" }),
   setTranscriptSharing: (guardianshipId: number, share_transcripts: boolean) =>
     request<GuardianLink>(`/api/auth/guardians/${guardianshipId}/transcripts`, {
       method: "PATCH",
@@ -769,7 +851,7 @@ export const api = {
    *   checks `is_active` before the flag is ever read.
    * * These calls read counts and rows, never the inside of a conversation. There is
    *   no endpoint in this group that returns a transcript, an answer value, a device
-   *   id or a come-back code, so a screen cannot be tempted to display one.
+   *   id or a credential, so a screen cannot be tempted to display one.
    */
   adminMe: () => request<{ is_admin: boolean }>("/api/admin/me"),
   adminSummary: () => request<AdminSummary>("/api/admin/summary"),

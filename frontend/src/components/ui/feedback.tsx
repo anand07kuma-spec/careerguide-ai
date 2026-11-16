@@ -1,13 +1,14 @@
 "use client";
 
 import type { ReactNode } from "react";
+import Link from "next/link";
 import { AlertTriangle, Inbox, Loader2, RefreshCw, type LucideIcon } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import { Button } from "./button";
 import { cn } from "@/lib/utils";
 
 export function Skeleton({ className }: { className?: string }) {
-  return <div className={cn("animate-pulse rounded-xl bg-slate-200/80", className)} />;
+  return <div className={cn("animate-pulse rounded-xl bg-skeleton", className)} />;
 }
 
 export function SkeletonCard() {
@@ -37,39 +38,39 @@ export function DashboardSkeleton() {
   return (
     <div
       aria-hidden
-      className="min-h-dvh bg-canvas lg:grid lg:grid-cols-[264px_minmax(0,1fr)]"
+      className="min-h-dvh bg-canvas lg:grid lg:grid-cols-[280px_minmax(0,1fr)]"
     >
       {/* The sidebar, whose nav rows are the same height as the real ones. */}
       <div className="hidden space-y-2.5 bg-navy/5 px-4 py-5 lg:block">
-        <Skeleton className="mb-4 h-7 w-40 rounded-lg bg-slate-200/60" />
-        <Skeleton className="h-4 w-24 rounded-md bg-slate-200/60" />
+        <Skeleton className="mb-4 h-7 w-40 rounded-lg bg-skeleton" />
+        <Skeleton className="h-4 w-24 rounded-md bg-skeleton" />
         {Array.from({ length: 3 }, (_, i) => (
-          <Skeleton key={i} className="h-10 w-full rounded-xl bg-slate-200/60" />
+          <Skeleton key={i} className="h-10 w-full rounded-xl bg-skeleton" />
         ))}
-        <Skeleton className="mt-6 h-4 w-20 rounded-md bg-slate-200/60" />
+        <Skeleton className="mt-6 h-4 w-20 rounded-md bg-skeleton" />
         {Array.from({ length: 4 }, (_, i) => (
-          <Skeleton key={i} className="h-10 w-full rounded-xl bg-slate-200/60" />
+          <Skeleton key={i} className="h-10 w-full rounded-xl bg-skeleton" />
         ))}
       </div>
 
-      <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-5 sm:px-6 sm:py-8">
+      <div className="mx-auto w-full max-w-page space-y-6 px-4 py-6 sm:px-6 sm:py-9">
         {/* Mobile header, which is what a phone shows above the content. */}
         <div className="flex items-center gap-3 lg:hidden">
-          <Skeleton className="h-10 w-20 rounded-xl bg-slate-200/60" />
-          <Skeleton className="ml-auto h-9 w-9 rounded-full bg-slate-200/60" />
+          <Skeleton className="h-10 w-20 rounded-xl bg-skeleton" />
+          <Skeleton className="ml-auto h-9 w-9 rounded-full bg-skeleton" />
         </div>
 
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-2">
-            <Skeleton className="h-4 w-16 rounded-full bg-slate-200/60" />
+            <Skeleton className="h-4 w-16 rounded-full bg-skeleton" />
             <Skeleton className="h-7 w-44 rounded-lg" />
           </div>
-          <Skeleton className="h-8 w-28 rounded-xl bg-slate-200/60" />
+          <Skeleton className="h-8 w-28 rounded-xl bg-skeleton" />
         </div>
 
-        {/* Guide card: the avatar and the two ways in. */}
-        <div className="cg-card flex items-center gap-4 p-4 sm:gap-5 sm:p-5">
-          <Skeleton className="h-16 w-16 shrink-0 rounded-full sm:h-20 sm:w-20" />
+        {/* Guide panel: the avatar and the two ways in. */}
+        <div className="cg-card flex items-center gap-4 p-5 sm:gap-6 sm:p-7">
+          <Skeleton className="h-20 w-20 shrink-0 rounded-full sm:h-24 sm:w-24" />
           <div className="min-w-0 flex-1 space-y-3">
             <Skeleton className="h-4 w-2/3" />
             <div className="flex gap-2">
@@ -80,28 +81,28 @@ export function DashboardSkeleton() {
         </div>
 
         <div className="space-y-3">
-          <Skeleton className="h-5 w-40 rounded-lg bg-slate-200/60" />
+          <Skeleton className="h-5 w-40 rounded-lg bg-skeleton" />
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             {Array.from({ length: 4 }, (_, i) => (
-              <Skeleton key={i} className="h-[88px]" />
+              <Skeleton key={i} className="h-[132px]" />
             ))}
           </div>
         </div>
 
         <div className="space-y-3">
-          <Skeleton className="h-5 w-24 rounded-lg bg-slate-200/60" />
-          <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4 lg:grid-cols-8">
+          <Skeleton className="h-5 w-24 rounded-lg bg-skeleton" />
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
             {Array.from({ length: 8 }, (_, i) => (
-              <Skeleton key={i} className="h-[86px] rounded-card" />
+              <Skeleton key={i} className="h-[120px] rounded-card" />
             ))}
           </div>
         </div>
 
         <div className="space-y-3">
-          <Skeleton className="h-5 w-56 rounded-lg bg-slate-200/60" />
+          <Skeleton className="h-5 w-56 rounded-lg bg-skeleton" />
           <div className="grid gap-3 sm:grid-cols-3">
             {Array.from({ length: 3 }, (_, i) => (
-              <Skeleton key={i} className="h-[104px]" />
+              <Skeleton key={i} className="h-[148px]" />
             ))}
           </div>
         </div>
@@ -145,10 +146,10 @@ export function EmptyState({
         className,
       )}
     >
-      <span className="mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 text-slate-600">
+      <span className="mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-subtle text-subtle-ink">
         <Icon className="h-5 w-5" aria-hidden />
       </span>
-      <p className="text-sm font-semibold text-ink">{t(title)}</p>
+      <p className="text-sm font-semibold text-heading">{t(title)}</p>
       {description ? (
         <p className="mt-1 max-w-md text-sm leading-relaxed text-muted">
           {typeof description === "string" ? t(description) : description}
@@ -187,7 +188,7 @@ export function ErrorState({
       <span className="mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-danger/10 text-danger">
         <AlertTriangle className="h-5 w-5" aria-hidden />
       </span>
-      <p className="text-sm font-semibold text-ink">{t(title)}</p>
+      <p className="text-sm font-semibold text-heading">{t(title)}</p>
       {description ? (
         <p className="mt-1 max-w-md text-sm leading-relaxed text-muted">
           {typeof description === "string" ? t(description) : description}
@@ -236,7 +237,7 @@ export function ProgressBar({
         aria-valuemin={0}
         aria-valuemax={100}
         aria-label={t(label ?? "Progress")}
-        className="h-2 w-full overflow-hidden rounded-full bg-slate-200"
+        className="h-2 w-full overflow-hidden rounded-full bg-subtle"
       >
         <div className={cn("h-full rounded-full transition-[width] duration-500", fill)} style={{ width: `${percent}%` }} />
       </div>
@@ -249,35 +250,51 @@ export function Stat({
   value,
   hint,
   tone = "brand",
+  icon: Icon,
   footer,
-  onClick,
+  href,
 }: {
   label: string;
   value: ReactNode;
   hint?: ReactNode;
-  tone?: "brand" | "teal" | "success" | "warning";
+  tone?: "brand" | "teal" | "success" | "warning" | "indigo";
+  icon?: LucideIcon;
   /** Anything drawn under the number, such as a progress bar. */
   footer?: ReactNode;
-  /** Makes the tile a question the student can ask about its own number. */
-  onClick?: () => void;
+  /** Makes the whole tile a link to the part of the account it counts. */
+  href?: string;
 }) {
-  // Numbers read as ink; only a warning keeps a colour, because it is the one
-  // state a family should notice without reading the label.
-  const accent = tone === "warning" ? "text-amber-600" : "text-heading";
+  const accent = tone === "warning" ? "text-warning" : "text-heading";
+  const tint = {
+    brand: "bg-brand-mist text-brand-dark",
+    teal: "bg-teal-mist text-teal",
+    success: "bg-success-mist text-success",
+    warning: "bg-warning-mist text-warning",
+    indigo: "bg-indigo-100 text-indigo-700",
+  }[tone];
   const t = useT();
   const body = (
     <>
-      <p className="text-xs font-medium leading-relaxed text-muted break-words">{t(label)}</p>
-      <p className={cn("mt-1.5 text-2xl font-semibold leading-none tracking-tight", accent)}>{value}</p>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-xs font-medium leading-relaxed text-muted break-words">{t(label)}</p>
+          <p className={cn("mt-2 text-3xl font-semibold leading-none tracking-tight", accent)}>{value}</p>
+        </div>
+        {Icon ? (
+          <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl", tint)}>
+            <Icon className="h-5 w-5" aria-hidden />
+          </span>
+        ) : null}
+      </div>
       {hint ? <p className="mt-2 text-xs leading-relaxed text-muted">{hint}</p> : null}
       {footer}
     </>
   );
-  const shell = "cg-card p-4 text-left";
-  return onClick ? (
-    <button type="button" onClick={onClick} className={cn(shell, "transition-colors hover:border-brand/50")}>
+  const shell = "cg-card p-4 text-left sm:p-5";
+  return href ? (
+    <Link href={href} className={cn(shell, "cg-lift block hover:border-brand/40")}>
       {body}
-    </button>
+    </Link>
   ) : (
     <div className={shell}>{body}</div>
   );

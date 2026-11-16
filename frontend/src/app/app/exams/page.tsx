@@ -22,7 +22,7 @@ import { api } from "@/lib/api";
 import { useSession } from "@/lib/session";
 import { useResource } from "@/lib/use-resource";
 import { useT, useTf } from "@/lib/i18n";
-import type { ExamCard } from "@/lib/types";
+import type { ExamCard, ExamGroupCard } from "@/lib/types";
 
 /**
  * The exam map, read from `/api/exams`.
@@ -169,6 +169,22 @@ function ExamCardView({ exam }: { exam: ExamCard }) {
   );
 }
 
+/**
+ * One column of a paired row: the door's own heading above its single exam. The row's
+ * subgrid keeps the heading and the card level with the door beside it.
+ */
+function PairedDoor({ group }: { group: ExamGroupCard }) {
+  const t = useT();
+  return (
+    <section className="grid gap-3 sm:row-span-2 sm:grid-rows-subgrid">
+      <SectionHeading title={t(group.title)} description={t(group.description)} />
+      {group.exams.map((exam) => (
+        <ExamCardView key={exam.id} exam={exam} />
+      ))}
+    </section>
+  );
+}
+
 export default function ExamsScreen() {
   const t = useT();
   const { status: sessionStatus } = useSession();
@@ -176,6 +192,16 @@ export default function ExamsScreen() {
   const loadExams = useCallback(() => api.exams(), []);
   const list = useResource(loadExams, sessionStatus === "ready");
   const groups = list.data ?? [];
+  // The catalogue's first six doors each lead to one exam: JEE Main, NEET UG,
+  // CUET (UG), CLAT, NDA / NA and the CA / CS route. Pairing them keeps the map
+  // from running long while every door keeps its own heading: the first four sit
+  // together, then the next two. The rest of the catalogue is listed as before.
+  const oneExamPerDoor = (group: ExamGroupCard) => group.exams.length === 1;
+  const firstPair = groups.length >= 4 && groups.slice(0, 4).every(oneExamPerDoor);
+  const secondPair = firstPair && groups.length >= 6 && groups.slice(4, 6).every(oneExamPerDoor);
+  const pairedGroups = firstPair ? groups.slice(0, 4) : [];
+  const nextPairedGroups = secondPair ? groups.slice(4, 6) : [];
+  const listedGroups = firstPair ? groups.slice(secondPair ? 6 : 4) : groups;
 
   return (
     <Screen
@@ -229,7 +255,7 @@ export default function ExamsScreen() {
         {list.state === "loading" ? (
           <>
             <p className="text-sm text-muted">{t("Loading the exam map…")}</p>
-            <div className="grid gap-4 lg:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-2">
               {Array.from({ length: 4 }).map((_, i) => (
                 <SkeletonCard key={i} />
               ))}
@@ -256,16 +282,32 @@ export default function ExamsScreen() {
             }
           />
         ) : (
-          groups.map((group) => (
-            <section key={group.id} className="space-y-3">
-              <SectionHeading title={t(group.title)} description={t(group.description)} />
-              <div className="grid gap-4 lg:grid-cols-2">
-                {group.exams.map((exam) => (
-                  <ExamCardView key={exam.id} exam={exam} />
+          <>
+            {pairedGroups.length > 0 ? (
+              <div className="grid gap-x-4 gap-y-5 sm:grid-cols-2">
+                {pairedGroups.map((group) => (
+                  <PairedDoor key={group.id} group={group} />
                 ))}
               </div>
-            </section>
-          ))
+            ) : null}
+            {nextPairedGroups.length > 0 ? (
+              <div className="grid gap-x-4 gap-y-5 sm:grid-cols-2">
+                {nextPairedGroups.map((group) => (
+                  <PairedDoor key={group.id} group={group} />
+                ))}
+              </div>
+            ) : null}
+            {listedGroups.map((group) => (
+              <section key={group.id} className="space-y-3">
+                <SectionHeading title={t(group.title)} description={t(group.description)} />
+                <div className="grid gap-4 lg:grid-cols-2">
+                  {group.exams.map((exam) => (
+                    <ExamCardView key={exam.id} exam={exam} />
+                  ))}
+                </div>
+              </section>
+            ))}
+          </>
         )}
 
         {/* General information, not counselling */}

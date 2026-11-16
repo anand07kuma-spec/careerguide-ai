@@ -18,10 +18,10 @@
 #     is rewritten to the driver this project ships (`postgresql+psycopg://`), and
 #     `sslmode=require` is added when the host is not this machine and the URL did not
 #     already ask for a TLS mode. Nothing else about your string is touched.
-#   * `DB_AUTO_SETUP` — `true` here so a brand-new database is created and seeded on
-#     the first boot. Set it to `false` once the service is healthy, and take schema
-#     changes through `alembic upgrade head` instead (see the commented
-#     `preDeployCommand` below).
+#   * `DB_AUTO_SETUP` — `false`: schema changes arrive through `alembic upgrade head`
+#     against the database, never through a boot that creates its own tables. A boot
+#     that builds the schema is how a production database quietly diverges from its
+#     migration chain (see the commented `preDeployCommand` below).
 #   * `RATE_LIMIT_REDIS_URL` — left blank, the counters live in each worker's own
 #     memory, and `-w 4` below means four of them: "20 per minute" quietly behaves
 #     like 80 on a busy deployment. The stated rules are a floor, not a ceiling, until
@@ -77,7 +77,7 @@ services:
       - key: REQUIRE_POSTGRES
         value: "true"
       - key: DB_AUTO_SETUP
-        value: "true" # flip to "false" after the first healthy boot
+        value: "false" # schema comes from `alembic upgrade head`, not a boot
 
       # --- The model that answers ------------------------------------------------------
       - key: AI_PROVIDER

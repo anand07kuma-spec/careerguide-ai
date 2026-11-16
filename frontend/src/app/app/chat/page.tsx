@@ -14,7 +14,6 @@ import {
   Send,
   Square,
   StopCircle,
-  Trash2,
   Volume2,
   X,
 } from "lucide-react";
@@ -94,6 +93,9 @@ function ChatThread() {
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
+  // Why the last reply came from the built-in guide instead of the configured model.
+  // Kept apart from the toast-style `sendError`, which means the request itself failed.
+  const [aiError, setAiError] = useState<string | null>(null);
   const [speakOn, setSpeakOn] = useState(settings.speak_responses);
   const [lastAudio, setLastAudio] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -193,6 +195,7 @@ function ChatThread() {
           : history
       );
       setNotice(null);
+      setAiError(null);
       setSpoken(info.language || "hinglish");
       scrollToEnd();
     },
@@ -307,6 +310,9 @@ function ChatThread() {
           { ...answer.reply, themes: answer.detected_themes, saved },
         ]);
         setSession({ ...session, stage: answer.stage });
+        // The server only fills this in when its fallback guide wrote the reply. It
+        // arrives beside the reply so the answer is never shown as model output.
+        setAiError(answer.error);
         if (saved.length) void reload();
 
         if (answer.audio_url) {
@@ -375,18 +381,6 @@ function ChatThread() {
     }
   }, [player, session, t, toast]);
 
-  const clearMessages = useCallback(async () => {
-    if (!session) return;
-    try {
-      await api.clearConversation(session.id);
-      setMessages([]);
-      setNotice(t("Earlier messages were deleted from the server."));
-      toast(t("Messages deleted."), "success");
-    } catch (error) {
-      toast(error instanceof Error ? error.message : t("Could not delete the messages."), "error");
-    }
-  }, [session, t, toast]);
-
   const stageLine = useMemo(() => {
     if (!session || session.stage <= 1) return null;
     return tf("Guide is at step {step} of {total} — it simply asks a few friendly questions.", {
@@ -437,12 +431,37 @@ function ChatThread() {
   }
 
   return (
-    <Screen
-      title="Chat with your guide"
-      description="Type, speak, or do both. There is no wrong answer, and you can stop any time."
-      badge={<Badge tone="brand">{t("Talk with your guide")}</Badge>}
-      action={
-        <>
+    // The chat is a fixed-height column inside the app shell: header on top,
+    // transcript in the middle, composer at the bottom edge. Only the transcript
+    // scrolls, so the page itself never moves.
+    <div className="cg-chat-screen mx-auto flex w-full flex-col px-4 pt-3 sm:px-6 sm:pt-4 lg:px-8 lg:pt-6">
+      <header className="flex shrink-0 flex-wrap items-start justify-between gap-x-4 gap-y-2 border-b border-line pb-3 sm:pb-4">
+        <div className="min-w-0">
+          <h1 className="text-lg font-semibold tracking-tight text-heading sm:text-xl">
+            {t("Chat with your guide")}
+          </h1>
+          <p className="mt-0.5 text-xs leading-relaxed text-muted">
+            {t("Type, speak, or do both. There is no wrong answer, and you can stop any time.")}
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <Toggle
+            checked={speakOn}
+            onChange={(next) => {
+              setSpeakOn(next);
+              if (!next) {
+                player.stop();
+                cancelBrowserTts();
+              }
+            }}
+            label="Read replies aloud"
+          />
+          {player.status === "playing" || player.status === "paused" ? (
+            <Button variant="ghost" size="sm" onClick={() => player.stop()}>
+              <Square className="h-3.5 w-3.5" aria-hidden />
+              {t("Stop voice")}
+            </Button>
+          ) : null}
           <Button variant="secondary" size="sm" onClick={() => void startNewConversation()}>
             <Plus className="h-4 w-4" aria-hidden />
             {t("New chat")}
@@ -453,12 +472,12 @@ function ChatThread() {
               {t("End")}
             </Button>
           ) : null}
-        </>
-      }
-    >
-      <div className="space-y-4">
+        </div>
+      </header>
+
+      <div ref={setListRef} className="cg-scrollbar min-h-0 flex-1 space-y-3 overflow-y-auto py-4 sm:space-y-4 sm:py-5">
         {safety ? (
-          <Card className="border-warning/40 bg-warning-mist">
+          <Card className="max-w-3xl border-warning/40 bg-warning-mist">
             <div className="flex items-start gap-3">
               <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-700" aria-hidden />
               <div className="text-sm">
@@ -490,7 +509,7 @@ function ChatThread() {
         ) : null}
 
         {pinned && plan ? (
-          <Card className="border-brand/30 bg-brand-mist/40">
+          <Card className="max-w-3xl border-brand/30 bg-brand-mist/40">
             <div className="flex items-start justify-between gap-3">
               <div className="flex min-w-0 items-start gap-3">
                 <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-surface text-brand-dark">
@@ -540,7 +559,7 @@ function ChatThread() {
         ) : null}
 
         {planId && planChecked && !plan ? (
-          <Card className="border-warning/40 bg-warning-mist">
+          <Card className="max-w-3xl border-warning/40 bg-warning-mist">
             <p className="text-sm leading-relaxed text-ink">
               {t(
                 "That plan is not on this account any more, so your guide has not been shown one. This chat works exactly as it did before — and a questionnaire you answer now comes with a plan of its own.",
@@ -558,52 +577,15 @@ function ChatThread() {
           </p>
         ) : null}
 
+        {aiError ? (
+          <p className="rounded-card border border-warning/40 bg-warning-mist px-4 py-2.5 text-xs leading-relaxed text-ink">
+            {t(aiError)}
+          </p>
+        ) : null}
+
         {stageLine ? <p className="text-xs text-muted">{stageLine}</p> : null}
 
-        {/* Voice and deletion sit above the thread, not inside the composer. In the
-            composer they wrapped to five lines on a phone and, with the composer
-            pinned, that left the messages a 32px strip to read through. Here they
-            are still one tap away and the thread keeps the height.
-
-            Stacked below `sm`: side by side, the switch and the Delete button eat
-            the row and the explanation is left a column one word wide. */}
-        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
-          <div className="min-w-0 sm:max-w-xs sm:flex-1">
-            <Toggle
-              checked={speakOn}
-              onChange={(next) => {
-                setSpeakOn(next);
-                if (!next) {
-                  player.stop();
-                  cancelBrowserTts();
-                }
-              }}
-              label="Read replies aloud"
-              description="Replies are read aloud; your browser's own voice is the fallback."
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            {player.status === "playing" || player.status === "paused" ? (
-              <Button variant="ghost" size="sm" onClick={() => player.stop()}>
-                <Square className="h-3.5 w-3.5" aria-hidden />
-                {t("Stop voice")}
-              </Button>
-            ) : null}
-            {messages.length > 0 ? (
-              <Button variant="ghost" size="sm" onClick={() => void clearMessages()}>
-                <Trash2 className="h-3.5 w-3.5" aria-hidden />
-                {t("Delete these messages")}
-              </Button>
-            ) : null}
-          </div>
-        </div>
-
-        <Card className="cg-thread flex flex-col p-0">
-          <div
-            ref={setListRef}
-            className="cg-scrollbar min-h-0 flex-1 space-y-4 overflow-y-auto p-4 sm:p-5"
-          >
-            {messages.length === 0 ? (
+        {messages.length === 0 ? (
               <EmptyState
                 icon={MessagesSquare}
                 title="No messages yet"
@@ -615,19 +597,19 @@ function ChatThread() {
                   key={`${message.id}-${index}`}
                   className={cn("flex", message.role === "user" ? "justify-end" : "justify-start")}
                 >
-                  <div className="min-w-0 max-w-[88%] sm:max-w-[76%]">
+                  <div className="min-w-0 max-w-[85%] sm:max-w-[72ch]">
                     <div
                       className={cn(
-                        "rounded-card px-4 py-3 text-sm leading-relaxed break-words shadow-card",
+                        "rounded-2xl px-4 py-3 text-sm leading-relaxed break-words shadow-card sm:px-5 sm:py-3.5 sm:text-[15px]",
                         message.role === "user"
-                          ? "bg-brand text-white"
-                          : "border border-line bg-surface text-ink",
+                          ? "rounded-br-md bg-brand-solid text-on-brand"
+                          : "rounded-bl-md border border-line bg-surface text-ink",
                       )}
                     >
                       {message.content}
                     </div>
                     {message.role === "assistant" ? (
-                      <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                      <div className="mt-2 flex flex-wrap items-center gap-1.5">
                         {message.demo_generated ? (
                           <Badge tone="warning">{t("Demo guide answer")}</Badge>
                         ) : null}
@@ -672,16 +654,17 @@ function ChatThread() {
             )}
             {sending ? (
               <div className="flex justify-start">
-                <div className="rounded-card border border-line bg-surface px-4 py-3 text-sm text-muted">
+                <div className="rounded-2xl rounded-bl-md border border-line bg-surface px-4 py-3 text-sm text-muted sm:px-5">
                   <span role="status">{t("Your guide is thinking…")}</span>
                 </div>
               </div>
             ) : null}
-          </div>
+      </div>
 
-          {/* Never shrinks: the composer is the one part of this card that must stay
-              whole, so the message list above it gives up height instead. */}
-          <div className="shrink-0 border-t border-line p-3 sm:p-4">
+      {/* Never shrinks: the composer is the one part of the screen that must
+          stay whole, so the transcript above it gives up height instead. */}
+      <div className="shrink-0 border-t border-line bg-surface py-3 sm:py-4">
+        <div className="mx-auto w-full max-w-4xl">
             {sendError ? (
               <p className="mb-2 rounded-card bg-danger-mist px-3 py-2 text-xs text-danger">
                 {sendError}
@@ -726,7 +709,7 @@ function ChatThread() {
                   if (dictation.listening) dictation.stop();
                   else dictation.start();
                 }}
-                className={cn(dictation.listening && "bg-teal text-white")}
+                className={cn(dictation.listening && "bg-teal text-on-teal")}
               >
                 {dictation.listening ? (
                   <MicOff className="h-4 w-4" aria-hidden />
@@ -753,15 +736,13 @@ function ChatThread() {
                   : t("Listening… your finished words appear in the box above.")}
               </p>
             ) : null}
-          </div>
-        </Card>
-
         {!dictation.supported ? (
-          <p className="text-xs leading-relaxed text-muted">
+          <p className="mt-2 text-xs leading-relaxed text-muted">
             {t(MIC_ERROR_TEXT.unsupported)}
           </p>
         ) : null}
+        </div>
       </div>
-    </Screen>
+    </div>
   );
 }

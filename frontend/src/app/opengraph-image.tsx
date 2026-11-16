@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import { ImageResponse } from "next/og";
 
 import { DEFAULT_DESCRIPTION, SITE_NAME } from "@/lib/site";
@@ -26,6 +29,13 @@ export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 export const alt = `${SITE_NAME}: a voice and chat career guide for Indian students from class 6 to 12, in Hindi, English or Hinglish.`;
 
+/** The approved white-lettering artwork, inlined because a share card is one
+ * request and must not depend on a second one reaching this server. The card is
+ * navy in the file, so it uses the on-dark logo and no plate behind it. */
+const LOGO = `data:image/png;base64,${readFileSync(
+  join(process.cwd(), "public/careerguide-horizontal-logo-dark.png"),
+).toString("base64")}`;
+
 export default function OpengraphImage() {
   return new ImageResponse(
     (
@@ -42,24 +52,9 @@ export default function OpengraphImage() {
           fontFamily: "sans-serif",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <div
-            style={{
-              width: 46,
-              height: 46,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              borderRadius: 14,
-              background: "#5b8cff",
-              color: "#0b1730",
-              fontSize: 26,
-              fontWeight: 700,
-            }}
-          >
-            C
-          </div>
-          <div style={{ fontSize: 30, fontWeight: 600, letterSpacing: 0.5 }}>{SITE_NAME}</div>
+        <div style={{ display: "flex", alignItems: "center" }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={LOGO} alt="" width={171} height={46} style={{ width: 171, height: 46 }} />
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>

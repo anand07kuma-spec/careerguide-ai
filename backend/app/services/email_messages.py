@@ -60,6 +60,7 @@ PATHS = {
     "assessments": "/app/assessments",
     "contact": "/contact",
     "confirm": "/email/confirm",
+    "reset": "/reset-password",
     "parent": "/parent",
     "join": "/join",
     "study_abroad": "/study-abroad",
@@ -211,6 +212,24 @@ def _confirmation(db: Session, user: User, token: str) -> Draft:
             "name": user.display_name,
             "confirm_url": _url("confirm", token=token),
             "valid_hours": consent.valid_hours(),
+        },
+    )
+
+
+def _password_reset(db: Session, user: User, token: str, minutes: int) -> Draft:
+    language = _language(user)
+    return Draft(
+        template="password_reset.html",
+        subject=transport.copy(
+            language,
+            "Choose a new password",
+            "नया पासवर्ड चुनें",
+        ),
+        context={
+            "lang": language,
+            "name": user.display_name,
+            "reset_url": _url("reset", token=token),
+            "valid_minutes": minutes,
         },
     )
 
@@ -414,6 +433,24 @@ def send_confirmation(db: Session, user: User, token: str) -> Answer:
     return Answer("sent" if dispatch.ok else dispatch.status, dispatch.detail)
 
 
+def send_password_reset(db: Session, user: User, token: str, minutes: int) -> Answer:
+    """The one message sent to the address that *is* the sign-in name.
+
+    It bypasses `consent.may_send` because this mail is not a notification choice: the
+    address named by `login_email` is the credential, and somebody who cannot sign in
+    has no other way to prove they own it. The limit is the content — a link, an expiry
+    and nothing about the account — so a mistyped or forwarded address learns nothing.
+    """
+    if not transport.enabled():
+        return Answer("disabled")
+    address = user.login_email
+    if not transport.valid_address(address):
+        return Answer("invalid-address")
+    message = _password_reset(db, user, token, minutes)
+    dispatch = transport.send(address or "", message.template, message.subject, message.context)
+    return Answer("sent" if dispatch.ok else dispatch.status, dispatch.detail)
+
+
 def send_welcome(db: Session, user: User) -> Answer:
     return send(db, user, "welcome")
 
@@ -440,7 +477,11 @@ def send_parent_invite(db: Session, student: User, address: str) -> Answer:
     language = _language(student)
     existing = db.scalars(
         select(Guardianship)
-        .where(Guardianship.student_id == student.id)
+        .where(
+            Guardianship.student_id == student.id,
+            Guardianship.consent_granted_at.is_not(None),
+            Guardianship.consent_withdrawn_at.is_(None),
+        )
         .order_by(Guardianship.id.desc())
         .limit(1)
     ).first()

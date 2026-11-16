@@ -24,9 +24,10 @@ Four rules the rest of the file is arranged around:
   `scripts/admin_test.py` calls every route in this file as an anonymous caller, as a
   student and as a parent, and requires 401 or 403 on each.
 * **What an operator may see is a list, not a schema.** `AdminUserRowOut`,
-  `AdminSummaryOut` and `AuditEventOut` in `app/schemas.py` hold no device id, no come-back
-  code or hash, no token, no transcript and no answer value — those columns are absent from
-  those models, so there is no field to hide later and forget. The *count* of a child's
+  `AdminSummaryOut` and `AuditEventOut` in `app/schemas.py` hold no device id, no
+  credential or its hash, no token, no transcript and no answer value — those columns are
+  absent from those models, so there is no field to hide later and forget. The *count* of a
+  child's
   conversations is here; the conversations are not, and no query in this file reads
   `Message.content`. Reading one takes that account's own session, or the guardian route a
   parent was given.

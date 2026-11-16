@@ -729,7 +729,13 @@ with SessionLocal() as session:
     stranger = User(role="parent", display_name="Unrelated", preferred_language="en")
     session.add_all([parent, stranger])
     session.flush()
-    session.add(Guardianship(parent_id=parent.id, student_id=user_f))
+    session.add(
+        Guardianship(
+            parent_id=parent.id,
+            student_id=user_f,
+            consent_granted_at=datetime.now(timezone.utc),
+        )
+    )
     session.commit()
     parent_id, stranger_id = parent.id, stranger.id
 

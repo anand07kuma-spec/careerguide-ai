@@ -107,7 +107,6 @@ with client:
     user_id = created["user"]["id"]
     check("a bearer token comes back", len(token_a) > 20, token_a[:6] + "…")
     check("the token is not the device id", token_a != DEVICE_A and DEVICE_A not in token_a)
-    check("no come-back code is pushed on a guest account", created.get("comeback_code") is None)
     check("the profile is there", (created.get("profile") or {}).get("class_level") == "class-9")
 
     r = client.post("/api/auth/onboarding", json={**STUDENT, "device_id": DEVICE_A})

@@ -180,6 +180,16 @@ ORG_INVITE = {
     "lang": "en",
 }
 
+# The reset mail is the one that goes to the credential's own address rather than to a
+# confirmed notification address; it is still an account holder's message, so it is not
+# in NO_ACCOUNT below.
+PASSWORD_RESET = {
+    "name": "Ananya",
+    "reset_url": "https://careerguide.example.invalid/reset-password?token=abc123",
+    "valid_minutes": 30,
+    "lang": "en",
+}
+
 ALL = {
     "welcome.html": WELCOME,
     "email_confirm.html": CONFIRM,
@@ -190,6 +200,7 @@ ALL = {
     "study_lead_operator.html": OPERATOR,
     "study_lead_ack.html": ACK,
     "org_invite.html": ORG_INVITE,
+    "password_reset.html": PASSWORD_RESET,
 }
 
 # Three of these ten go to somebody with no account: the family who typed an enquiry

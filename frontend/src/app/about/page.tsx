@@ -13,7 +13,8 @@ import {
   UserRound,
 } from "lucide-react";
 import { Wordmark } from "@/components/brand";
-import { Badge } from "@/components/ui/badge";
+import { PageHero } from "@/components/layout/page-hero";
+import { SiteHeader } from "@/components/layout/site-header";
 import { LinkButton } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { REPO_URL } from "@/components/legal/legal-layout";
@@ -79,38 +80,38 @@ export default function AboutPage() {
 
   return (
     <div className="min-h-dvh bg-canvas">
-      <header className="border-b border-line bg-surface/80 px-4 py-4 sm:px-6">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-3">
-          <Wordmark />
+      <SiteHeader width="reading" skipTo="#main-content" skipLabel={t("Skip to content")}>
+        <Wordmark />
+        <div className="ml-auto">
           <LinkButton size="sm" variant="outline" href="/onboarding">
             {t("Start exploring")}
           </LinkButton>
         </div>
-      </header>
+      </SiteHeader>
 
-      <main className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-14">
-        {/* Hero */}
-        <section>
-          <Badge tone="teal" className="mb-5">
-            {t("About CareerGuide AI")}
-          </Badge>
-          <h1 className="text-balance text-3xl font-bold leading-tight tracking-tight text-heading sm:text-4xl">
-            {t("AI career guidance for every Indian student")}
-          </h1>
-          <p className="mt-5 max-w-2xl text-base leading-relaxed text-ink sm:text-lg">
-            {t(
-              "Career advice in India usually costs money, needs a connection, or starts with a test. This project tries a fourth thing: a conversation a thirteen-year-old can have in the language they think in, on a phone, for nothing, without signing up.",
-            )}
-          </p>
-          <p className="mt-4 max-w-2xl leading-relaxed text-muted">
-            {t(
-              "It is a prototype built by one person, not a company. It has no funding, no users to report on, and no career counsellor on staff. What it has is public code, a working app, and pages that describe the limits instead of hiding them.",
-            )}
-          </p>
-        </section>
+      <main id="main-content" tabIndex={-1}>
+        <PageHero
+          eyebrow={t("About CareerGuide AI")}
+          title={t("AI career guidance for every Indian student")}
+          lead={
+            <>
+              <p className="text-ink">
+                {t(
+                  "Career advice in India usually costs money, needs a connection, or starts with a test. This project tries a fourth thing: a conversation a thirteen-year-old can have in the language they think in, on a phone, for nothing, without signing up.",
+                )}
+              </p>
+              <p className="mt-3 text-sm">
+                {t(
+                  "It is a prototype built by one person, not a company. It has no funding, no users to report on, and no career counsellor on staff. What it has is public code, a working app, and pages that describe the limits instead of hiding them.",
+                )}
+              </p>
+            </>
+          }
+        />
 
+        <div className="mx-auto w-full max-w-reading px-4 pb-10 pt-8 sm:px-6 sm:pb-14 sm:pt-10">
         {/* Mission */}
-        <section className="mt-12">
+        <section className="mt-4 sm:mt-2">
           <h2 className="text-xl font-bold tracking-tight text-heading sm:text-2xl">
             {t("Mission")}
           </h2>
@@ -139,7 +140,7 @@ export default function AboutPage() {
           <div className="mt-5 grid gap-4 sm:grid-cols-3">
             {STEPS.map((step, index) => (
               <Card key={step.title} className="p-5">
-                <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-brand-mist text-brand">
+                <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-brand-mist text-brand-dark">
                   <step.icon className="h-5 w-5" aria-hidden />
                 </span>
                 <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-muted">
@@ -279,6 +280,7 @@ export default function AboutPage() {
             </div>
           </Card>
         </section>
+        </div>
       </main>
     </div>
   );

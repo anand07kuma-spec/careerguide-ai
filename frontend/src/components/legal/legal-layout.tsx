@@ -4,6 +4,7 @@ import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { ChevronDown, Printer } from "lucide-react";
 import { Wordmark } from "@/components/brand";
+import { SiteHeader } from "@/components/layout/site-header";
 import { Badge } from "@/components/ui/badge";
 import { useT } from "@/lib/i18n";
 
@@ -81,24 +82,25 @@ export function LegalLayout({
 
   return (
     <div className="min-h-dvh bg-canvas print:bg-white">
-      <header className="border-b border-line bg-surface/80 px-4 py-4 sm:px-6 print:hidden">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-3">
-          <Wordmark />
-          <div className="flex items-center gap-4">
-            <button
-              type="button"
-              onClick={() => window.print()}
-              className="hidden items-center gap-1.5 text-xs font-medium text-muted hover:text-ink sm:flex print:hidden"
-            >
-              <Printer className="h-3.5 w-3.5" aria-hidden />
-              {t("Print")}
-            </button>
-            <span className="text-xs font-medium text-muted">{t("Prototype")}</span>
-          </div>
+      <SiteHeader width="reading" skipTo="#main-content" className="print:hidden" skipLabel={t("Skip to content")}>
+        <Wordmark />
+        <div className="ml-auto flex items-center gap-4">
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="hidden items-center gap-1.5 text-xs font-medium text-muted hover:text-ink sm:flex print:hidden"
+          >
+            <Printer className="h-3.5 w-3.5" aria-hidden />
+            {t("Print")}
+          </button>
+          <span className="text-xs font-medium text-muted">{t("Prototype")}</span>
         </div>
-      </header>
+      </SiteHeader>
 
-      <main className="mx-auto grid w-full max-w-5xl gap-x-10 px-4 py-6 sm:px-6 sm:py-10 lg:grid-cols-[15rem_minmax(0,1fr)]">
+      <main
+        id="main-content" tabIndex={-1}
+        className="mx-auto grid w-full max-w-reading gap-x-10 px-4 py-6 sm:px-6 sm:py-10 lg:grid-cols-[15rem_minmax(0,1fr)]"
+      >
         {hasToc ? (
           <aside className="lg:col-start-1 lg:row-start-1 print:hidden">
             {/* Phone: a button that opens the list in place. */}
@@ -134,7 +136,7 @@ export function LegalLayout({
           </aside>
         ) : null}
 
-        <div className="min-w-0 max-w-3xl lg:col-start-2 lg:row-start-1">
+        <div className="min-w-0 max-w-focus lg:col-start-2 lg:row-start-1">
           <Badge tone="teal" className="mb-4">
             {badge}
           </Badge>

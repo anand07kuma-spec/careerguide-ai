@@ -79,7 +79,7 @@ export default async function StudyAbroadServicePage({ params }: { params: Param
     return (
       <div className="min-h-dvh bg-canvas">
         <PublicSiteHeader current="/study-abroad" />
-        <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
+        <main id="main-content" tabIndex={-1} className="mx-auto max-w-focus px-4 py-10 sm:px-6">
           <DirectoryUnavailable what={`the service “${slug}”`} />
         </main>
       </div>
@@ -90,7 +90,7 @@ export default async function StudyAbroadServicePage({ params }: { params: Param
     return (
       <div className="min-h-dvh bg-canvas">
         <PublicSiteHeader current="/study-abroad" />
-        <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
+        <main id="main-content" tabIndex={-1} className="mx-auto max-w-focus px-4 py-10 sm:px-6">
           <NotInDirectory kind="service" value={slug} />
         </main>
       </div>
@@ -101,7 +101,7 @@ export default async function StudyAbroadServicePage({ params }: { params: Param
     <div className="min-h-dvh bg-canvas">
       <PublicSiteHeader current="/study-abroad" />
 
-      <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6 sm:py-14">
+      <main id="main-content" tabIndex={-1} className="mx-auto max-w-focus px-4 py-10 sm:px-6 sm:py-14">
         <Link href="/study-abroad" className="text-sm text-brand underline-offset-2 hover:underline">
           Study abroad
         </Link>
@@ -140,7 +140,7 @@ export default async function StudyAbroadServicePage({ params }: { params: Param
             <ol className="mt-4 space-y-2.5">
               {service.steps.map((step, index) => (
                 <li key={step} className="flex gap-3 text-sm leading-relaxed text-ink">
-                  <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-mist text-[11px] font-bold text-brand">
+                  <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-mist text-brand-dark text-[11px] font-bold">
                     {index + 1}
                   </span>
                   {step}

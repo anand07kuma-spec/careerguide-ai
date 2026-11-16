@@ -16,7 +16,7 @@ const PLACES = [
 
 export default function NotFound() {
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-4 py-10 sm:py-16">
+    <main className="mx-auto flex w-full max-w-focus flex-1 flex-col px-4 py-10 sm:py-16">
       <Wordmark />
       <Card className="mt-6 p-6 sm:p-8">
         <p className="text-sm font-semibold uppercase tracking-wide text-brand-dark">Page not found</p>

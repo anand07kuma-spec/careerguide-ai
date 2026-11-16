@@ -116,9 +116,9 @@ export default async function StudyAbroadCountryPage({ params, searchParams }: {
 
   if (failed) {
     return (
-      <div className="min-h-dvh bg-canvas">
+      <div lang={lang === "hi" ? "hi-IN" : "en-IN"} className="min-h-dvh bg-canvas">
         <PublicSiteHeader current="/study-abroad" lang={lang} path={`/study-abroad/${slug}`} keepQuery={query} />
-        <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
+        <main id="main-content" tabIndex={-1} className="mx-auto max-w-focus px-4 py-10 sm:px-6">
           <DirectoryUnavailable
             what={tf("the destination “{slug}” and its university list", { slug })}
             lang={lang}
@@ -130,9 +130,9 @@ export default async function StudyAbroadCountryPage({ params, searchParams }: {
 
   if (!country) {
     return (
-      <div className="min-h-dvh bg-canvas">
+      <div lang={lang === "hi" ? "hi-IN" : "en-IN"} className="min-h-dvh bg-canvas">
         <PublicSiteHeader current="/study-abroad" lang={lang} path={`/study-abroad/${slug}`} keepQuery={query} />
-        <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
+        <main id="main-content" tabIndex={-1} className="mx-auto max-w-focus px-4 py-10 sm:px-6">
           {slug === "services" ? (
             // `/study-abroad/services` is the section on the index, not a destination; the
             // dynamic segment below would otherwise tell a reader there is no country
@@ -216,10 +216,10 @@ export default async function StudyAbroadCountryPage({ params, searchParams }: {
   );
 
   return (
-    <div className="min-h-dvh bg-canvas">
+    <div lang={lang === "hi" ? "hi-IN" : "en-IN"} className="min-h-dvh bg-canvas">
       <PublicSiteHeader current="/study-abroad" lang={lang} path={`/study-abroad/${country.slug}`} keepQuery={query} />
 
-      <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6 sm:py-14">
+      <main id="main-content" tabIndex={-1} className="mx-auto max-w-focus px-4 py-10 sm:px-6 sm:py-14">
         <Link href={`/study-abroad${langSuffix}`} className="text-sm text-brand underline-offset-2 hover:underline">
           {t("All destinations")}
         </Link>
@@ -265,7 +265,7 @@ export default async function StudyAbroadCountryPage({ params, searchParams }: {
             {lang === "hi" ? <input type="hidden" name="lang" value="hi" /> : null}
             <button
               type="submit"
-              className="rounded-card bg-brand px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-dark"
+              className="rounded-card bg-brand-solid px-4 py-2 text-sm font-semibold text-on-brand transition-colors hover:bg-brand-dark"
             >
               {t("Search")}
             </button>
@@ -330,7 +330,7 @@ export default async function StudyAbroadCountryPage({ params, searchParams }: {
           <ol className="mt-4 space-y-2.5">
             {country.to_check.map((question, index) => (
               <li key={question} className="flex gap-3 text-sm leading-relaxed text-ink">
-                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-mist text-[11px] font-bold text-brand">
+                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-mist text-brand-dark text-[11px] font-bold">
                   {index + 1}
                 </span>
                 {question}

@@ -63,7 +63,7 @@ function CareerResults({
           return (
             <Card key={career.id} className="flex flex-col p-4 sm:p-5">
               <div className="flex items-start justify-between gap-2">
-                <Badge className="min-w-0 bg-slate-100 text-slate-600">{career.category}</Badge>
+                <Badge className="min-w-0 bg-subtle text-subtle-ink">{career.category}</Badge>
                 <button
                   type="button"
                   onClick={() => void onToggle(career)}
@@ -73,7 +73,7 @@ function CareerResults({
                   className={cn(
                     "shrink-0 rounded-full border p-2 transition-colors disabled:opacity-60",
                     isSaved
-                      ? "border-brand bg-brand text-white"
+                      ? "border-brand bg-brand-solid text-on-brand"
                       : "border-line bg-surface text-muted hover:border-brand-light hover:text-brand-dark",
                   )}
                 >
@@ -325,7 +325,7 @@ export default function CareerExplorer() {
                 <button
                   type="button"
                   onClick={clearFilters}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-dark"
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-brand-solid px-4 py-2 text-sm font-medium text-on-brand hover:bg-brand-dark"
                 >
                   <X className="h-4 w-4" aria-hidden />
                   {t("Clear filters")}

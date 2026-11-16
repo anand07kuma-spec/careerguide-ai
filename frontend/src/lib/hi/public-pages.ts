@@ -47,6 +47,8 @@ export const HI: Record<string, string> = {
   "No career is listed under that name": "इस नाम से कोई करियर लिस्ट में नहीं है",
   "The career “{slug}” is not in the catalogue this deployment has seeded. It may have been renamed, or the link may have come from a different build.":
     "“{slug}” नाम से कोई करियर इस इंस्टॉलेशन के कैटलॉग में नहीं है। हो सकता है इसका नाम बदल गया हो, या लिंक किसी दूसरे बिल्ड से आया हो।",
+  "That career is not in the catalogue this deployment has seeded. It may have been renamed, or the link may have come from a different build.":
+    "वह करियर इस इंस्टॉलेशन के कैटलॉग में नहीं है। हो सकता है इसका नाम बदल गया हो, या लिंक किसी दूसरे बिल्ड से आया हो।",
   "Browse the careers that are listed": "जो करियर लिस्ट में हैं उन्हें देखें",
 
   // /careers — index

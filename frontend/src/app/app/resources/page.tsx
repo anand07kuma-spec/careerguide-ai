@@ -220,7 +220,7 @@ export default function ResourcesScreen() {
                 <button
                   type="button"
                   onClick={clearFilters}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-dark"
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-brand-solid px-4 py-2 text-sm font-medium text-on-brand hover:bg-brand-dark"
                 >
                   <X className="h-4 w-4" aria-hidden />
                   {t("Clear filters")}

@@ -950,8 +950,12 @@ for index in range(5):
 
 with SessionLocal() as db:
     for _token, user_id in FIVE[:2]:
+        # `submitted` is the word the submit route stores. The fixture used to say
+        # `completed`, a status no route writes, and so agreed with a route that looked for
+        # the same impossible word — which is how two finished sittings could be reported
+        # as zero without this suite noticing.
         db.add(Assessment(user_id=user_id, assessment_type="interest", language="hi",
-                          status="completed", completed_at=datetime.now(timezone.utc)))
+                          status="submitted", completed_at=datetime.now(timezone.utc)))
     db.add(Assessment(user_id=FIVE[2][1], assessment_type="interest", language="en",
                       status="in_progress"))
     db.commit()
@@ -977,6 +981,45 @@ check("the sittings counted are counted honestly",
       big["sittings_started"] == 3 and big["sittings_completed"] == 2, big)
 check("and the number who share is its own count, not a restatement of who finished",
       big["shared_results"] == 1 and big["sittings_completed"] == 2, big)
+
+# The status counted is the status the flow stores, not a word chosen for the chart. The
+# rows below are the ways a count can be wrong without an exception: a finished sitting
+# left out, an open one counted from its clock, a second sitting read as a second child,
+# and another school's child read as this one's.
+empty = client.get(f"/api/organizations/{OTHER_SCHOOL}/analytics", headers=auth(OPS_TOKEN)).json()
+check("a portal with nobody joined reports zeros rather than an error",
+      (empty["cohort_size"], empty["sittings_started"], empty["sittings_completed"],
+       empty["shared_results"]) == (0, 0, 0, 0), empty)
+check("and says that there is nothing to count",
+      any("nothing to count" in line for line in empty["hidden"]), empty["hidden"])
+
+_, NILGIRI_ID = signup(name="Nilgiri Student", class_level="class-9",
+                       device="dev-nilgiri-0001")
+join_by_hand(OTHER_SCHOOL, NILGIRI_ID, "student", "Roll 1")
+with SessionLocal() as db:
+    db.add(Assessment(user_id=NILGIRI_ID, assessment_type="interest", language="en",
+                      status="submitted", completed_at=datetime.now(timezone.utc)))
+    # A second finished sitting for the same child: two sittings, one student.
+    db.add(Assessment(user_id=FIVE[1][1], assessment_type="personality", language="hi",
+                      status="submitted", completed_at=datetime.now(timezone.utc)))
+    # Open on purpose, with a clock written beside it: only the status may decide.
+    db.add(Assessment(user_id=FIVE[3][1], assessment_type="aptitude", language="en",
+                      status="in_progress", completed_at=datetime.now(timezone.utc)))
+    # Submitted with no clock: the timestamp is half the answer, not decoration.
+    db.add(Assessment(user_id=FIVE[0][1], assessment_type="personality", language="hi",
+                      status="submitted", completed_at=None))
+    db.commit()
+
+counted = client.get(f"/api/organizations/{SCHOOL}/analytics", headers=auth(OPS_TOKEN)).json()
+check("each finished sitting is counted once, and only finished sittings are counted",
+      counted["sittings_started"] == 6 and counted["sittings_completed"] == 3, counted)
+check("two sittings by one child do not become two children",
+      counted["cohort_size"] == 6 and counted["shared_results"] == 1, counted)
+nilgiri = client.get(f"/api/organizations/{OTHER_SCHOOL}/analytics", headers=auth(OPS_TOKEN)).json()
+check("another school's submission is counted where it belongs",
+      nilgiri["sittings_started"] == 1 and nilgiri["sittings_completed"] == 1, nilgiri)
+check("and the school that did not sit it is not given the number",
+      counted["sittings_completed"] == 3, counted)
 
 caseload = client.get(f"/api/organizations/{SCHOOL}/analytics", headers=auth(MEERA_TOKEN)).json()
 check("the counsellor with one assigned child is not given the school's chart",

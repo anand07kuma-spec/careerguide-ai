@@ -31,8 +31,8 @@ import { useResource } from "@/lib/use-resource";
  *   has ever heard of it. The two are not added together anywhere on this screen.
  *
  * Nothing here reaches inside a conversation. There is no endpoint in `/api/admin` that
- * returns a transcript, an answer value, a device id or a come-back code, so the busiest
- * card on this page is still only a count.
+ * returns a transcript, an answer value, a device id or a credential, so the busiest card
+ * on this page is still only a count.
  */
 
 export default function AdminDashboardScreen() {

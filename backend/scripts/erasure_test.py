@@ -117,20 +117,22 @@ DEVICE = "erasure-suite-student"
 
 
 def sign_up(device: str, name: str = "Erase Me", role: str = "student") -> tuple[str, int]:
-    response = client.post(
-        "/api/auth/onboarding",
-        json={
-            "role": role,
-            "display_name": name,
-            "preferred_language": "en",
-            "class_level": "class-12",
-            "interest_areas": ["drawing"],
-            "consent_profile": True,
-            "consent_voice": False,
-            "consent_age": "11-12",
-            "device_id": device,
-        },
-    )
+    payload = {
+        "role": role,
+        "display_name": name,
+        "preferred_language": "en",
+        "class_level": "class-12",
+        "interest_areas": ["drawing"],
+        "consent_profile": True,
+        "consent_voice": False,
+        "consent_age": "11-12",
+        "device_id": device,
+    }
+    if role == "parent":
+        # A parent form names no child, so no link is made; this suite needs one
+        # to prove that erasure removes a link. Ask for it explicitly.
+        payload.update({"student_name": "Somebody", "student_class_level": "class-12"})
+    response = client.post("/api/auth/onboarding", json=payload)
     assert response.status_code == 200, response.text[:300]
     return response.json()["token"], response.json()["user"]["id"]
 
@@ -260,6 +262,19 @@ check(
     before["profile"] == 1,
 )
 
+# Put every new credential field on the row before the erasure, so the checks below are
+# proving the route cleared something rather than proving the fixture never set it.
+with SessionLocal() as db:
+    typed = db.get(User, student_id)
+    typed.login_email = "erase-me@example.com"
+    typed.password_hash = "$argon2id$v=19$m=19456,t=2,p=1$fixture$fixture"
+    typed.password_updated_at = datetime.now(timezone.utc)
+    typed.password_reset_hash = "a" * 64
+    typed.password_reset_expires_at = datetime.now(timezone.utc)
+    typed.failed_login_count = 3
+    typed.locked_until = datetime.now(timezone.utc)
+    db.commit()
+
 erased = client.delete("/api/users/me", headers=auth(token))
 check("the account asks for its own erasure", erased.status_code == 200, erased.text[:300])
 payload = erased.json()
@@ -334,9 +349,22 @@ with SessionLocal() as db:
     check("no longer any kind of account", row is not None and row.role == "erased", str(row.role))
     check("no longer an operator", row is not None and row.is_admin is False)
     check("with the device digest gone, so this browser is a stranger again", row is not None and row.device_hash is None)
-    check("with no come-back code", row is not None and row.comeback_hash is None and row.comeback_index is None)
     check("with no email address", row is not None and row.contact_email is None)
     check("and no linked sign-in", row is not None and row.clerk_user_id is None)
+    check(
+        "with no password, sign-in address or reset link",
+        row is not None
+        and row.login_email is None
+        and row.password_hash is None
+        and row.password_updated_at is None
+        and row.password_reset_hash is None
+        and row.password_reset_expires_at is None
+        and row.password_reset_used_at is None,
+    )
+    check(
+        "and no lockout counters pointing at anybody",
+        row is not None and row.failed_login_count is None and row.locked_until is None,
+    )
     check("holding exactly one thing: the day it was erased", row is not None and isinstance(row.erased_at, datetime), str(row.erased_at))
     ledger = Payment(
         user_id=student_id,

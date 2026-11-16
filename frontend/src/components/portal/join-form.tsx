@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useState, type ReactNode } from "react";
 import { ArrowRight, MailQuestion, ShieldCheck } from "lucide-react";
 import { Wordmark } from "@/components/brand";
+import { SiteHeader } from "@/components/layout/site-header";
 import { Badge } from "@/components/ui/badge";
 import { Button, LinkButton } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -201,17 +202,17 @@ function Frame({ children }: { children: ReactNode }) {
   const t = useT();
   return (
     <div className="min-h-dvh bg-canvas">
-      <header className="border-b border-line bg-surface/80 px-4 py-4 sm:px-6">
-        <div className="mx-auto flex max-w-3xl items-center justify-between gap-3">
-          <Link href="/" className="block">
-            <Wordmark />
-          </Link>
-          <Link href="/app" className="text-xs font-medium text-muted hover:text-ink">
-            {t("My own work")}
-          </Link>
-        </div>
-      </header>
-      <main className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6 sm:py-10">{children}</main>
+      <SiteHeader width="focus" skipTo="#main-content" skipLabel={t("Skip to content")}>
+        <Link href="/" className="block">
+          <Wordmark />
+        </Link>
+        <Link href="/app" className="ml-auto text-xs font-medium text-muted hover:text-ink">
+          {t("My own work")}
+        </Link>
+      </SiteHeader>
+      <main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-focus px-4 py-6 sm:px-6 sm:py-10">
+        {children}
+      </main>
     </div>
   );
 }

@@ -9,7 +9,7 @@ column.
 
 Two states a real database is actually in, and both are tested:
 
-* **Empty.** `upgrade head` has to build all forty tables from nothing. That is
+* **Empty.** `upgrade head` has to build all forty-one tables from nothing. That is
   the job `0000_baseline_schema` exists for: before it, revision 0001 pointed its foreign
   keys at a `users` table it expected somebody else to have made, which is a precondition
   SQLite lets you violate and PostgreSQL refuses outright with `relation "users" does not
@@ -108,6 +108,8 @@ TABLES = [
     "exams",
     # Its primary key is the account, so `users` has to exist before it can.
     "resumes",
+    # Also keyed by the account, and cascading with it: one photo per person.
+    "profile_photos",
     # Points at `users` and must survive its deletion, so it is last.
     "audit_events",
 ]
@@ -136,8 +138,8 @@ BASELINE_TABLES = [
     "institutions",
 ]
 ALL_TABLES = [*BASELINE_TABLES, *TABLES]
-# The eight columns that arrive on `users` later, and the three indexes that arrive with
-# them. A baseline that already contains them is a baseline that cannot be upgraded.
+# The columns that arrive on `users` later, and the indexes that arrive with them. A
+# baseline that already contains them is a baseline that cannot be upgraded.
 ADDED_LATER = (
     "clerk_user_id",
     "clerk_linked_at",
@@ -147,6 +149,14 @@ ADDED_LATER = (
     "email_confirmed_at",
     "is_admin",
     "erased_at",
+    "login_email",
+    "password_hash",
+    "password_updated_at",
+    "password_reset_hash",
+    "password_reset_expires_at",
+    "password_reset_used_at",
+    "failed_login_count",
+    "locked_until",
 )
 BASELINE = "0000_baseline_schema"
 FIRST = "0001_assessment_tables"
@@ -164,7 +174,12 @@ TWELFTH = "0012_user_erasure"
 THIRTEENTH = "0013_student_age"
 FOURTEENTH = "0014_resume"
 FIFTEENTH = "0015_result_roadmap"
-HEAD = "0016_career_source"
+SIXTEENTH = "0016_career_source"
+SEVENTEENTH = "0017_google_sign_in"
+EIGHTEENTH = "0018_email_password_auth"
+NINETEENTH = "0019_profile_photos"
+TWENTIETH = "0020_drop_comeback_code"
+HEAD = "0021_guardian_consent"
 URL = os.environ["DATABASE_URL"]
 EMPTY_URL = f"sqlite:///{EMPTY.as_posix()}"
 
@@ -231,18 +246,26 @@ cfg = alembic_config()
 print("\n=== 1. the revision graph")
 script = ScriptDirectory.from_config(cfg)
 walked = list(script.walk_revisions())
-check("seventeen revisions are on file", len(walked) == 17, [revision.revision for revision in walked])
+check("twenty-two revisions are on file", len(walked) == 22, [revision.revision for revision in walked])
 check("the newest is the one the file declares",
       walked[0].revision == HEAD, walked[0].revision)
 check("it is the head", script.get_current_head() == HEAD, script.get_current_head())
-# The newest revision widens two tables the baseline made, so it has to sit on the plan column
-# rather than beside it, and every pair below is the chain that was already there. It is walked
-# as a list rather than written out as sixteen indexed checks, because adding a revision used to
-# mean renumbering every line under it — which is a change no reviewer would notice getting wrong.
+# The newest revision changes no table, only two nullable columns on `guardianships`, so
+# it has to sit on the come-back removal rather than beside it, and every pair below is
+# the chain that was already there. It is walked as a list rather than written out as
+# twenty-two indexed checks, because adding a revision used to mean renumbering every
+# line under it — which is a change no reviewer would notice getting wrong.
 # Section 9 is the one that proves a device account and a live session both survive 0010,
 # wherever in the chain it now sits.
 CHAIN: list[tuple[str, str, str]] = [
-    (HEAD, FIFTEENTH, "the source columns build on the plan column rather than replacing it"),
+    (HEAD, TWENTIETH, "the guardian consent columns build on the come-back removal"),
+    (TWENTIETH, NINETEENTH, "…and the removed come-back columns build on the photo table rather than replacing it"),
+    (NINETEENTH, EIGHTEENTH, "…and the photo table builds on the password columns rather than replacing them"),
+    (EIGHTEENTH, SEVENTEENTH, "…and the password columns build on the Google identity columns"),
+    (SEVENTEENTH, SIXTEENTH, "…and the Google identity columns build on the catalogue "
+     "source columns"),
+    (SIXTEENTH, FIFTEENTH,
+     "…and the source columns build on the plan column rather than replacing it"),
     (FIFTEENTH, FOURTEENTH,
      "…and the plan column builds on the resume table rather than replacing it"),
     (FOURTEENTH, THIRTEENTH,
@@ -266,7 +289,7 @@ CHAIN: list[tuple[str, str, str]] = [
     (FOURTH, THIRD, "…and payments builds on the email-sign-in revision"),
     (THIRD, SECOND, "…and that one builds on the report revision"),
     (SECOND, FIRST, "…and that one on the assessment revision"),
-    # The bottom of the chain, and the reason the sixteen above it can point at `users` at all.
+    # The bottom of the chain, and the reason the nineteen above it can point at `users` at all.
     (FIRST, BASELINE,
      "…and the assessment revision builds on the baseline rather than replacing it"),
 ]
@@ -282,9 +305,9 @@ check("the baseline has nothing before it, so a fresh database can be built from
 check("…and it is exactly one revision, not a second root the chain would fork over",
       sum(1 for revision in walked if revision.down_revision is None) == 1,
       [revision.revision for revision in walked if revision.down_revision is None])
-check("…and it claims nineteen tables, which with the twenty-one the later revisions add "
+check("…and it claims nineteen tables, which with the twenty-two the later revisions add "
       "is the whole application",
-      len(ALL_TABLES) == len(set(ALL_TABLES)) == len(BASELINE_TABLES) + len(TABLES) == 40,
+      len(ALL_TABLES) == len(set(ALL_TABLES)) == len(BASELINE_TABLES) + len(TABLES) == 41,
       [len(BASELINE_TABLES), len(TABLES)])
 
 print("\n=== 2. offline mode prints the SQL, which is the diff to read")
@@ -297,9 +320,9 @@ except Exception as caught:  # noqa: BLE001 - reported as a failed check
     error = caught
 printed = stream.getvalue()
 check("alembic upgrade head --sql runs", error is None, repr(error))
-check("…and emits forty-one CREATE TABLEs: the forty app tables plus its own "
+check("…and emits forty-two CREATE TABLEs: the forty-one app tables plus its own "
       "version table",
-      printed.count("CREATE TABLE") == 41, printed.count("CREATE TABLE"))
+      printed.count("CREATE TABLE") == 42, printed.count("CREATE TABLE"))
 check("…naming all of them", all(f"CREATE TABLE {table}" in printed for table in ALL_TABLES),
       [table for table in ALL_TABLES if f"CREATE TABLE {table}" not in printed])
 check("…starting with `users`, which is the table whose absence used to make this chain "
@@ -339,6 +362,44 @@ check("…which the careers create statement does not carry, because they are 00
       "source_url" not in created_careers and "verified_at" not in created_careers
       and created_careers != "",
       created_careers[:200])
+# 0017 has the same shape, on `users`: two nullable columns and a unique index, so a reviewer
+# of the offline diff sees the ALTERs and can tell that neither the create statement nor
+# anything before it depends on them.
+check("…and the Google identity columns as two one-column ALTERs plus their unique index",
+      printed.count("ADD COLUMN google_sub") == 1
+      and printed.count("ADD COLUMN google_linked_at") == 1
+      and "CREATE UNIQUE INDEX ix_users_google_sub" in printed,
+      [line.strip() for line in printed.splitlines()
+       if "google" in line])
+created_users = printed.split("CREATE TABLE users", 1)[1].split(";", 1)[0] \
+    if "CREATE TABLE users" in printed else ""
+check("…which the users create statement does not carry, because they are 0017's",
+      "google_sub" not in created_users and "google_linked_at" not in created_users
+      and created_users != "",
+      created_users[:200])
+# 0018 is the newest widening, also on `users`: eight nullable columns and two indexes.
+# Every one of them has to arrive as an ALTER in the offline diff, and the create statement
+# that predates them must not carry any — otherwise a database stopped at 0017 could not be
+# brought forward.
+EMAIL_COLUMNS = [
+    "login_email",
+    "password_hash",
+    "password_updated_at",
+    "password_reset_hash",
+    "password_reset_expires_at",
+    "password_reset_used_at",
+    "failed_login_count",
+    "locked_until",
+]
+check("…and the password columns as eight one-column ALTERs plus their two indexes",
+      all(printed.count(f"ADD COLUMN {column}") == 1 for column in EMAIL_COLUMNS)
+      and "CREATE UNIQUE INDEX ix_users_login_email" in printed
+      and "CREATE INDEX ix_users_password_reset_hash" in printed,
+      [line.strip() for line in printed.splitlines()
+       if any(column in line for column in EMAIL_COLUMNS)])
+check("…which the users create statement does not carry either, because they are 0018's",
+      not any(column in created_users for column in EMAIL_COLUMNS) and created_users != "",
+      created_users[:200])
 # The baseline is the one revision that must never grow a query: offline mode cannot run
 # Python that connects, so a `SELECT` in it would break `--sql` for the whole chain.
 check("…which is possible because the baseline is pure DDL, with no data step in it",
@@ -363,7 +424,7 @@ engine = create_engine(EMPTY_URL)
 at_baseline = inspect(engine).get_table_names()
 check("the baseline on its own creates nineteen tables",
       all(table in at_baseline for table in BASELINE_TABLES), at_baseline)
-check("…and none of the twenty the later revisions own",
+check("…and none of the twenty-one the later revisions own",
       not any(table in at_baseline for table in TABLES),
       [table for table in at_baseline if table in TABLES])
 baseline_users = {column["name"] for column in inspect(engine).get_columns("users")}
@@ -394,7 +455,7 @@ check("and the rest of the chain runs over that baseline without a collision",
       engine.connect().execute(text("select version_num from alembic_version")).scalar()
       == HEAD,
       engine.connect().execute(text("select version_num from alembic_version")).scalar())
-check("…reaching all forty tables", all(table in inspect(engine).get_table_names()
+check("…reaching all forty-one tables", all(table in inspect(engine).get_table_names()
                                                for table in ALL_TABLES),
       inspect(engine).get_table_names())
 check("…and nothing beyond them and its own version table",
@@ -411,6 +472,39 @@ check("…and the eight columns that belong to later revisions present on the fr
       "too, so both paths land on the same schema",
       set(ADDED_LATER) <= {column["name"] for column in inspect(engine).get_columns("users")},
       sorted(column["name"] for column in inspect(engine).get_columns("users")))
+# 0017 is the newest widening: a Google identity is a pointer, not a requirement, so both
+# columns must be nullable on a database built from nothing as well as one widened in place.
+google_at_head = {column["name"]: column
+                  for column in inspect(engine).get_columns("users")}
+check("…and 0017's Google identity columns, both nullable so no existing account is asked "
+      "for one",
+      {"google_sub", "google_linked_at"} <= set(google_at_head)
+      and all(google_at_head[name]["nullable"]
+              for name in ("google_sub", "google_linked_at")),
+      {name: google_at_head.get(name, {}).get("nullable")
+       for name in ("google_sub", "google_linked_at")})
+check("…with one Google identity per account enforced by the unique index",
+      any(index["name"] == "ix_users_google_sub" and index["unique"]
+          for index in inspect(engine).get_indexes("users")),
+      inspect(engine).get_indexes("users"))
+head_users = {column["name"]: column for column in inspect(engine).get_columns("users")}
+head_indexes = {index["name"]: index for index in inspect(engine).get_indexes("users")}
+check("…and the come-back columns 0020 removes are gone from the fresh build too",
+      not ({"comeback_index", "comeback_hash", "ix_users_comeback_index"}
+           & (set(head_users) | set(head_indexes))),
+      [sorted(head_users), sorted(head_indexes)])
+check("…and 0018's password columns, all nullable so a fresh build starts exactly where an "
+      "upgraded one does",
+      set(EMAIL_COLUMNS) <= set(head_users)
+      and all(head_users[name]["nullable"] for name in EMAIL_COLUMNS),
+      {name: head_users.get(name, {}).get("nullable") for name in EMAIL_COLUMNS})
+check("…with one address per account enforced by the unique index, and a lookup for the "
+      "reset token beside it",
+      set(head_indexes) >= {"ix_users_login_email", "ix_users_password_reset_hash"}
+      and bool(head_indexes["ix_users_login_email"]["unique"])
+      and not head_indexes["ix_users_password_reset_hash"]["unique"],
+      {name: head_indexes.get(name) for name in
+       ("ix_users_login_email", "ix_users_password_reset_hash")})
 head_profiles = {column["name"]: column
                  for column in inspect(engine).get_columns("student_profiles")}
 check("…and the typed age 0013 adds, nullable so a student who has never stated one is "
@@ -455,7 +549,7 @@ seed.dispose()
 print("\n=== 3b. upgrade head runs over a running database without disturbing it")
 get_settings.cache_clear()
 command.upgrade(cfg, "head")
-check("all twenty tables the later revisions own are there, beside the nineteen the "
+check("all twenty-one tables the later revisions own are there, beside the nineteen the "
       "baseline brought",
       all(table in tables_in(URL) for table in ALL_TABLES), tables_in(URL))
 engine = create_engine(URL)
@@ -542,7 +636,7 @@ engine.dispose()
 
 print("\n=== 4. every table the chain builds matches the table the models build")
 reference = create_engine(f"sqlite:///{FROM_MODELS.as_posix()}")
-# All forty at once: `create_all` puts them in dependency order for the same
+# All forty-one at once: `create_all` puts them in dependency order for the same
 # reason the baseline lists them in one, and this is the database the app would have made
 # on a laptop with no migrations in sight.
 Base.metadata.create_all(reference)
@@ -1227,12 +1321,12 @@ check("…and the only table it points at is the account, so no child's row is r
 engine.dispose()
 
 print("\n=== 6. downgrade: each revision can be undone, down to the baseline")
-# Back as far as the baseline, not further: the twenty tables the later revisions
+# Back as far as the baseline, not further: the twenty-one tables the later revisions
 # created go, the nineteen that predate them stay, and the child's account in `users` is
 # untouched — which is the only undo anybody would ever run on a database with real data.
 command.downgrade(cfg, BASELINE)
 left = tables_in(URL)
-check("all twenty tables the later revisions created are gone",
+check("all twenty-one tables the later revisions created are gone",
       not any(table in left for table in TABLES), left)
 check("…and the nineteen the baseline created are still there, `users` among them",
       all(table in left for table in BASELINE_TABLES), left)
@@ -1249,6 +1343,11 @@ check("…with their unique index",
 check("…and the contact-address columns, the outbox and the study-abroad tables leave "
       "no column behind",
       not (set(ADDED_LATER) & kept), sorted(kept))
+check("…including 0018's password columns and both indexes",
+      not (set(EMAIL_COLUMNS) & kept)
+      and not any(index["name"] in {"ix_users_login_email", "ix_users_password_reset_hash"}
+                  for index in inspect(engine).get_indexes("users")),
+      [sorted(kept), inspect(engine).get_indexes("users")])
 check("…and the account that was there before this revision is still there, row for row",
       engine.connect().execute(text("select id, display_name from users")).all() == [(1, "Asha")],
       engine.connect().execute(text("select * from users")).all())
@@ -1300,7 +1399,7 @@ Base.metadata.create_all(prepared)
 prepared.dispose()
 os.environ["DATABASE_URL"] = STAMP_URL
 get_settings.cache_clear()
-check("it has all forty tables and no alembic_version, which is the state the "
+check("it has all forty-one tables and no alembic_version, which is the state the "
       "entrypoint looks for",
       sorted(tables_in(STAMP_URL)) == sorted(ALL_TABLES), tables_in(STAMP_URL))
 command.stamp(cfg, "head")
@@ -1484,8 +1583,9 @@ check("…and the account beside that value is unharmed, name and join date and 
       ).all() == [("Asha", "student", 1, "2026-10-11 17:26:21")],
       laptop.connect().execute(text("select * from users")).all())
 check("the index follows the column it covers, which is the name `app/models.py` declares",
-      sorted(index["name"] for index in inspect(laptop).get_indexes("users"))
-      == ["ix_users_device_hash"],
+      "ix_users_device_hash" in {index["name"] for index in inspect(laptop).get_indexes("users")}
+      and "ix_users_device_id" not in {index["name"]
+                                       for index in inspect(laptop).get_indexes("users")},
       inspect(laptop).get_indexes("users"))
 laptop.dispose()
 
@@ -1507,9 +1607,11 @@ check("…while the accounts themselves stay, because the undo touches two colum
       laptop.connect().execute(
           text("select display_name from users order by id")).all()
       == [("Asha",), ("Bilal",)])
-check("…and the index comes back under its old name",
-      sorted(index["name"] for index in inspect(laptop).get_indexes("users"))
-      == ["ix_users_device_id"], inspect(laptop).get_indexes("users"))
+names_after_undo = sorted(index["name"] for index in inspect(laptop).get_indexes("users"))
+check("…and the device index comes back under its old name rather than the hashed one",
+      "ix_users_device_id" in names_after_undo
+      and "ix_users_device_hash" not in names_after_undo,
+      names_after_undo)
 laptop.dispose()
 command.upgrade(cfg, "head")
 laptop = create_engine(HASH_URL)
@@ -1611,8 +1713,10 @@ check("the accounts are untouched — three of them, names and join dates and al
       boot.connect().execute(text("select * from users")).all())
 check("the index ends up on the surviving column under the name `app/models.py` declares, "
       "and the one that covered the dropped column is gone",
-      sorted(index["name"] for index in inspect(boot).get_indexes("users"))
-      == ["ix_users_device_hash"], inspect(boot).get_indexes("users"))
+      "ix_users_device_hash" in {index["name"] for index in inspect(boot).get_indexes("users")}
+      and "ix_users_device_id" not in {index["name"]
+                                       for index in inspect(boot).get_indexes("users")},
+      inspect(boot).get_indexes("users"))
 check("…and `auth_tokens`, which schema sync can never have touched (its column is the "
       "primary key, so it is not nullable), still just renames",
       "token_hash" in {column["name"] for column in inspect(boot).get_columns("auth_tokens")}
@@ -1754,6 +1858,154 @@ check("…with the source the app recorded during that window still on the row, 
           text("select source_url, verified_at, needs_verification from careers where id = 1")
       ).all())
 aged.dispose()
+
+print("\n=== 12. 0021 grandfathers links that already existed, and only those")
+# A guardianship row used to *be* access: redeeming a share code created it and the parent
+# could read the summary. The revision that introduces `consent_granted_at` has to decide
+# what those old rows mean, and the answer it records is the hand-over that created them.
+# A link created after the revision must not inherit that — it starts pending.
+CONSENT_DB = pathlib.Path(tempfile.gettempdir()) / "careerguide_guardian_consent_migration.db"
+if CONSENT_DB.exists():
+    CONSENT_DB.unlink()
+CONSENT_URL = f"sqlite:///{CONSENT_DB.as_posix()}"
+os.environ["DATABASE_URL"] = CONSENT_URL
+get_settings.cache_clear()
+command.upgrade(cfg, TWENTIETH)
+consented = create_engine(CONSENT_URL)
+with consented.begin() as conn:
+    conn.execute(
+        text("insert into users (id, role, display_name, preferred_language, is_active, "
+             "created_at) values (1, 'student', 'Meera', 'en', 1, '2026-11-01 09:00:00')")
+    )
+    conn.execute(
+        text("insert into users (id, role, display_name, preferred_language, is_active, "
+             "created_at) values (2, 'parent', 'Mr. Rao', 'en', 1, '2026-11-01 09:05:00')")
+    )
+    conn.execute(
+        text("insert into guardianships (id, parent_id, student_id, relationship, "
+             "share_conversation_transcripts, created_at) values "
+             "(1, 2, 1, 'parent', 0, '2026-11-02 10:00:00')")
+    )
+check("it starts at 0020, where a guardianship row is itself the access",
+      consented.connect().execute(
+          text("select version_num from alembic_version")).scalar() == TWENTIETH
+      and {"consent_granted_at", "consent_withdrawn_at"}.isdisjoint(
+          {column["name"] for column in inspect(consented).get_columns("guardianships")}),
+      sorted(column["name"] for column in inspect(consented).get_columns("guardianships")))
+consented.dispose()
+error = None
+try:
+    command.upgrade(cfg, "head")
+except Exception as caught:  # noqa: BLE001 - reported as a failed check
+    error = caught
+check("`upgrade head` adds the decision columns to a table that already has rows",
+      error is None, repr(error))
+consented = create_engine(CONSENT_URL)
+check("…and the link that predates consent keeps the access it was given",
+      consented.connect().execute(
+          text("select consent_granted_at, consent_withdrawn_at from guardianships where id = 1")
+      ).all() == [("2026-11-02 10:00:00", None)],
+      consented.connect().execute(text("select * from guardianships")).all())
+with consented.begin() as conn:
+    conn.execute(
+        text("insert into users (id, role, display_name, preferred_language, is_active, "
+             "created_at) values (3, 'parent', 'Ms. Iyer', 'en', 1, '2026-11-13 11:00:00')")
+    )
+    conn.execute(
+        text("insert into guardianships (id, parent_id, student_id, relationship, "
+             "share_conversation_transcripts, created_at) values "
+             "(2, 3, 1, 'guardian', 0, '2026-11-13 11:00:00')")
+    )
+check("…while a link made after it starts with no decision, which reads as pending",
+      consented.connect().execute(
+          text("select consent_granted_at, consent_withdrawn_at from guardianships where id = 2")
+      ).all() == [(None, None)],
+      consented.connect().execute(
+          text("select consent_granted_at, consent_withdrawn_at from guardianships where id = 2")
+      ).all())
+consented.dispose()
+command.downgrade(cfg, TWENTIETH)
+consented = create_engine(CONSENT_URL)
+check("downgrade drops the two columns and leaves every link, so undoing loses no pairing",
+      {"consent_granted_at", "consent_withdrawn_at"}.isdisjoint(
+          {column["name"] for column in inspect(consented).get_columns("guardianships")})
+      and consented.connect().execute(text("select count(*) from guardianships")).scalar() == 2,
+      consented.connect().execute(text("select * from guardianships")).all())
+consented.dispose()
+command.upgrade(cfg, "head")
+consented = create_engine(CONSENT_URL)
+check("…and running it forward again grandfathers what is still there rather than failing",
+      consented.connect().execute(
+          text("select count(*), count(consent_granted_at) from guardianships")).all() == [(2, 2)],
+      consented.connect().execute(
+          text("select * from guardianships")).all())
+consented.dispose()
+
+print("\n=== 13. 0021 on a database the application reached first")
+# The window every guarded revision here has to survive: new code boots, `schema_sync` adds
+# the nullable columns, and only then does Alembic run. During that window the new code can
+# create a *pending* request, which by these two columns alone looks exactly like an old
+# link. So the revision must not backfill columns it did not add — it would grant a parent
+# access the student never approved. Failing closed asks the student to approve once more.
+WINDOW_DB = pathlib.Path(tempfile.gettempdir()) / "careerguide_guardian_window_test.db"
+if WINDOW_DB.exists():
+    WINDOW_DB.unlink()
+WINDOW_URL = f"sqlite:///{WINDOW_DB.as_posix()}"
+os.environ["DATABASE_URL"] = WINDOW_URL
+get_settings.cache_clear()
+command.upgrade(cfg, TWENTIETH)
+window = create_engine(WINDOW_URL)
+with window.begin() as conn:
+    conn.execute(
+        text("insert into users (id, role, display_name, preferred_language, is_active, "
+             "created_at) values (1, 'student', 'Meera', 'en', 1, '2026-11-01 09:00:00')")
+    )
+    conn.execute(
+        text("insert into users (id, role, display_name, preferred_language, is_active, "
+             "created_at) values (2, 'parent', 'Mr. Rao', 'en', 1, '2026-11-01 09:05:00')")
+    )
+    conn.execute(
+        text("insert into users (id, role, display_name, preferred_language, is_active, "
+             "created_at) values (3, 'parent', 'Ms. Iyer', 'en', 1, '2026-11-13 11:00:00')")
+    )
+    conn.execute(
+        text("insert into guardianships (id, parent_id, student_id, relationship, "
+             "share_conversation_transcripts, created_at) values "
+             "(1, 2, 1, 'parent', 0, '2026-11-02 10:00:00')")
+    )
+added = add_missing_columns(window)
+check("the boot sync adds both decision columns before the revision gets there",
+      {"guardianships.consent_granted_at", "guardianships.consent_withdrawn_at"} <= set(added),
+      added)
+with window.begin() as conn:
+    # The request the new code created during the window. Its consent columns are NULL
+    # because nobody has approved it yet — and so is the old link's, because boot sync
+    # added the columns after that row was written.
+    conn.execute(
+        text("insert into guardianships (id, parent_id, student_id, relationship, "
+             "share_conversation_transcripts, created_at) values "
+             "(2, 3, 1, 'guardian', 0, '2026-11-13 11:00:00')")
+    )
+window.dispose()
+error = None
+try:
+    command.upgrade(cfg, "head")
+except Exception as caught:  # noqa: BLE001 - reported as a failed check
+    error = caught
+check("`upgrade head` runs instead of dying on a duplicate column", error is None, repr(error))
+window = create_engine(WINDOW_URL)
+check("…and neither row is silently activated: the unapproved request stays pending",
+      window.connect().execute(
+          text("select consent_granted_at, consent_withdrawn_at from guardianships where id = 2")
+      ).all() == [(None, None)],
+      window.connect().execute(text("select * from guardianships")).all())
+check("…and the older link waits for a fresh approval too, which is the price of not "
+      "guessing",
+      window.connect().execute(
+          text("select consent_granted_at, consent_withdrawn_at from guardianships where id = 1")
+      ).all() == [(None, None)],
+      window.connect().execute(text("select * from guardianships")).all())
+window.dispose()
 
 os.environ["DATABASE_URL"] = URL
 get_settings.cache_clear()

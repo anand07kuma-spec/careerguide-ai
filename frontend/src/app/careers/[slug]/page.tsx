@@ -2,9 +2,25 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { cache } from "react";
 import { connection } from "next/server";
+import { notFound } from "next/navigation";
+import {
+  ArrowRight,
+  BookOpen,
+  ClipboardCheck,
+  Compass,
+  ExternalLink,
+  Footprints,
+  Lightbulb,
+  ListChecks,
+  Route,
+  Sun,
+  ThumbsUp,
+  TriangleAlert,
+  Wallet,
+  type LucideIcon,
+} from "lucide-react";
 
 import {
-  CareerNotFound,
   PublicLangNotice,
   PublicSiteHeader,
 } from "@/components/careers/public-careers-shell";
@@ -91,12 +107,29 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   });
 }
 
-function Section({ title, items }: { title: string; items: string[] }) {
+function Section({
+  icon: Icon,
+  title,
+  items,
+}: {
+  icon: LucideIcon;
+  title: string;
+  items: string[];
+}) {
   if (items.length === 0) return null;
   return (
-    <section className="mt-8">
-      <h2 className="text-lg font-bold tracking-tight text-heading sm:text-xl">{title}</h2>
-      <ul className="mt-3 space-y-2 text-sm leading-relaxed text-ink">
+    <section className="cg-card p-6 sm:p-7">
+      <div className="flex items-center gap-3">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-mist text-brand-dark">
+          <Icon className="h-4 w-4" aria-hidden />
+        </span>
+        <h2 className="text-lg font-bold tracking-tight text-heading sm:text-xl">{title}</h2>
+      </div>
+      <ul
+        className={`mt-4 grid gap-x-8 gap-y-2.5 text-sm leading-relaxed text-ink ${
+          items.length > 4 ? "sm:grid-cols-2" : ""
+        }`}
+      >
         {items.map((item) => (
           <li key={item} className="flex gap-2.5">
             <span aria-hidden className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-brand" />
@@ -132,16 +165,10 @@ export default async function CareerProfilePage({
     career = null;
   }
 
-  if (!career) {
-    return (
-      <div className="min-h-dvh bg-canvas">
-        <PublicSiteHeader current="/careers" lang={lang} path={`/careers/${slug}`} />
-        <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
-          <CareerNotFound slug={slug} lang={lang} />
-        </main>
-      </div>
-    );
-  }
+  // A missing slug is a missing page. The friendly screen lives in this
+  // segment's `not-found.tsx`, and Next answers it with a real 404 status
+  // instead of the 200 a rendered "not found" card used to return.
+  if (!career) notFound();
 
   const profile = career;
   const titles = await loadTitles();
@@ -153,6 +180,9 @@ export default async function CareerProfilePage({
   // Every internal link from a Hindi page carries the language, because there
   // is no client store on this route to remember it.
   const qs = lang === "hi" ? "?lang=hi" : "";
+  const categoryHref = `/careers?category=${encodeURIComponent(profile.category)}${
+    lang === "hi" ? "&lang=hi" : ""
+  }`;
 
   const structuredData = [
     {
@@ -190,163 +220,260 @@ export default async function CareerProfilePage({
   ];
 
   return (
-    <div className="min-h-dvh bg-canvas">
+    <div lang={lang === "hi" ? "hi-IN" : "en-IN"} className="min-h-dvh bg-canvas">
       <PublicSiteHeader current="/careers" lang={lang} path={`/careers/${profile.slug}`} />
 
-      <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6 sm:py-14">
-        <nav aria-label={t("Breadcrumb")} className="text-sm text-muted">
-          <Link href={`/careers${qs}`} className="hover:text-brand hover:underline">
-            {t("Careers")}
-          </Link>
-          <span aria-hidden className="mx-2">
-            /
-          </span>
-          <a href={`/careers?category=${encodeURIComponent(profile.category)}${lang === "hi" ? "&lang=hi" : ""}`} className="hover:text-brand hover:underline">
-            {profile.category}
-          </a>
-          <span aria-hidden className="mx-2">
-            /
-          </span>
-          <span className="text-ink">{t(profile.title)}</span>
-        </nav>
+      <main id="main-content" tabIndex={-1}>
+        {/* Profile header — the answer first, then the sections that support it. */}
+        <section className="relative overflow-hidden border-b border-line bg-surface">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -right-24 -top-32 h-80 w-80 rounded-full bg-brand-mist/80 blur-3xl"
+          />
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -left-28 top-32 h-72 w-72 rounded-full bg-teal-mist/50 blur-3xl"
+          />
 
-        <div className="mt-5 flex flex-wrap items-center gap-2">
-          <Badge tone="teal">{profile.category}</Badge>
-          <Badge tone="neutral">{tf("From class {n}", { n: profile.min_class })}</Badge>
-          {profile.needs_verification ? (
-            <Badge tone="warning">{t("Figures to verify")}</Badge>
-          ) : null}
-        </div>
+          <div className="relative mx-auto max-w-page px-4 pb-10 pt-8 sm:px-6 sm:pb-14 sm:pt-10">
+            <nav aria-label={t("Breadcrumb")} className="text-sm text-muted">
+              <Link href={`/careers${qs}`} className="hover:text-brand hover:underline">
+                {t("Careers")}
+              </Link>
+              <span aria-hidden className="mx-2">
+                /
+              </span>
+              <a href={categoryHref} className="hover:text-brand hover:underline">
+                {profile.category}
+              </a>
+              <span aria-hidden className="mx-2">
+                /
+              </span>
+              <span className="text-ink">{t(profile.title)}</span>
+            </nav>
 
-        <h1 className="mt-4 text-balance text-3xl font-bold leading-tight tracking-tight text-heading sm:text-4xl">
-          {t(profile.title)}
-        </h1>
-        <PublicLangNotice lang={lang} what="career description on this page" />
-        <p className="mt-4 text-base leading-relaxed text-ink sm:text-lg">{profile.summary}</p>
+            <div className="mt-6 max-w-3xl">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge tone="teal">{profile.category}</Badge>
+                <Badge tone="neutral">{tf("From class {n}", { n: profile.min_class })}</Badge>
+                {profile.needs_verification ? (
+                  <Badge tone="warning">{t("Figures to verify")}</Badge>
+                ) : null}
+              </div>
 
-        {profile.needs_verification ? (
-          <p className="mt-5 rounded-card border border-warning/40 bg-warning-mist p-4 text-sm leading-relaxed text-ink">
-            {t(
-              "This record was written from general knowledge rather than read off a live official source. Treat the fees, exam names and route steps below as things to confirm with a recognising body or college before a family plans around them.",
-            )}
-          </p>
-        ) : null}
+              <h1 className="mt-4 text-balance text-4xl font-bold leading-[1.08] tracking-tight text-heading sm:text-5xl">
+                {t(profile.title)}
+              </h1>
+              <PublicLangNotice lang={lang} what="career description on this page" />
+              <p className="mt-5 text-base leading-relaxed text-ink sm:text-lg">{profile.summary}</p>
 
-        <Section title={t("What the work involves")} items={profile.typical_activities} />
-        <Section title={t("Skills that help")} items={profile.useful_skills} />
-        <Section title={t("School subjects behind it")} items={profile.school_subjects} />
-        <Section title={t("How people reach it")} items={profile.education_pathways} />
-        <Section title={t("What you need to get in")} items={profile.entry_requirements} />
-        <Section title={t("Stages along the way")} items={profile.preparation_stages} />
+              {profile.needs_verification ? (
+                <div className="mt-5 flex gap-3 rounded-card border border-warning/40 bg-warning-mist p-4">
+                  <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-warning" aria-hidden />
+                  <p className="text-sm leading-relaxed text-ink">
+                    {t(
+                      "This record was written from general knowledge rather than read off a live official source. Treat the fees, exam names and route steps below as things to confirm with a recognising body or college before a family plans around them.",
+                    )}
+                  </p>
+                </div>
+              ) : null}
 
-        {profile.typical_day ? (
-          <section className="mt-8">
-            <h2 className="text-lg font-bold tracking-tight text-heading sm:text-xl">
-              {t("An ordinary day")}
-            </h2>
-            <p className="mt-3 text-sm leading-relaxed text-ink">{profile.typical_day}</p>
-          </section>
-        ) : null}
-
-        {profile.costs_and_alternatives ? (
-          <section className="mt-8">
-            <h2 className="text-lg font-bold tracking-tight text-heading sm:text-xl">
-              {t("Cost, and cheaper routes")}
-            </h2>
-            <p className="mt-3 text-sm leading-relaxed text-ink">{profile.costs_and_alternatives}</p>
-          </section>
-        ) : null}
-
-        <div className="mt-8 grid gap-6 sm:grid-cols-2">
-          <div>
-            <h2 className="text-lg font-bold tracking-tight text-heading sm:text-xl">{t("What people like")}</h2>
-            <ul className="mt-3 space-y-2 text-sm leading-relaxed text-ink">
-              {profile.benefits.map((item) => (
-                <li key={item} className="flex gap-2.5">
-                  <span aria-hidden className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-teal" />
-                  {item}
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div>
-            <h2 className="text-lg font-bold tracking-tight text-heading sm:text-xl">{t("What is hard")}</h2>
-            <ul className="mt-3 space-y-2 text-sm leading-relaxed text-ink">
-              {profile.challenges.map((item) => (
-                <li key={item} className="flex gap-2.5">
-                  <span aria-hidden className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-warning" />
-                  {item}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-
-        <Section title={t("Try it before choosing it")} items={profile.explore_activities} />
-
-        {profile.official_links.length > 0 ? (
-          <section className="mt-8">
-            <h2 className="text-lg font-bold tracking-tight text-heading sm:text-xl">
-              {t("Check the official source")}
-            </h2>
-            <div className="mt-3 space-y-3">
-              {profile.official_links.map((link) => (
-                <Card key={link.url} className="p-4">
-                  <a
-                    href={link.url}
-                    target="_blank"
-                    rel="noopener noreferrer nofollow"
-                    className="text-sm font-semibold text-brand hover:underline"
-                  >
-                    {link.label}
-                  </a>
-                  {link.note ? (
-                    <p className="mt-1 text-xs leading-relaxed text-muted">{link.note}</p>
-                  ) : null}
-                </Card>
-              ))}
-            </div>
-          </section>
-        ) : null}
-
-        {related.length > 0 ? (
-          <section className="mt-10">
-            <h2 className="text-lg font-bold tracking-tight text-heading sm:text-xl">{t("Related careers")}</h2>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {related.map((item) => (
+              <div className="mt-6 flex flex-wrap gap-2">
+                <LinkButton href="/onboarding">
+                  {t("Start exploring")}
+                  <ArrowRight className="h-4 w-4" aria-hidden />
+                </LinkButton>
                 <a
-                  key={item.slug}
-                  href={`/careers/${item.slug}${qs}`}
-                  className="rounded-full border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink transition-colors hover:border-brand hover:text-brand"
+                  href={categoryHref}
+                  className="inline-flex min-h-11 items-center rounded-full border border-line bg-surface px-5 text-sm font-medium text-ink transition-colors hover:border-brand/50 hover:text-brand"
                 >
-                  {t(item.title)}
+                  {tf("Browse {category}", { category: profile.category })}
                 </a>
-              ))}
+              </div>
             </div>
-          </section>
-        ) : null}
-
-        <Card className="mt-10 flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 className="text-base font-semibold text-heading">
-              {tf("Ask {site} about this career", { site: SITE_NAME })}
-            </h2>
-            <p className="mt-1.5 text-sm leading-relaxed text-muted">
-              {t(
-                "A conversation can go further than a profile: what to do in this class, in this language, with the subjects actually on your timetable.",
-              )}
-            </p>
           </div>
-          <LinkButton href="/onboarding" className="shrink-0">
-            {t("Start exploring")}
-          </LinkButton>
-        </Card>
+        </section>
 
-        <p className="mt-6 text-xs leading-relaxed text-muted">
-          {t(
-            "Nothing on this page is a promise about admission, marks, income or jobs. It describes a route people have taken, and it is sample data curated for this project rather than a verified survey.",
-          )}
-        </p>
+        <div className="mx-auto max-w-page px-4 py-12 sm:px-6 lg:py-16">
+          <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start lg:gap-12">
+            <div className="min-w-0 space-y-4">
+              <Section
+                icon={ListChecks}
+                title={t("What the work involves")}
+                items={profile.typical_activities}
+              />
+              <Section icon={Lightbulb} title={t("Skills that help")} items={profile.useful_skills} />
+              <Section
+                icon={BookOpen}
+                title={t("School subjects behind it")}
+                items={profile.school_subjects}
+              />
+              <Section
+                icon={Route}
+                title={t("How people reach it")}
+                items={profile.education_pathways}
+              />
+              <Section
+                icon={ClipboardCheck}
+                title={t("What you need to get in")}
+                items={profile.entry_requirements}
+              />
+              <Section
+                icon={Footprints}
+                title={t("Stages along the way")}
+                items={profile.preparation_stages}
+              />
+
+              {profile.typical_day ? (
+                <section className="cg-card p-6 sm:p-7">
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-warning-mist text-warning">
+                      <Sun className="h-4 w-4" aria-hidden />
+                    </span>
+                    <h2 className="text-lg font-bold tracking-tight text-heading sm:text-xl">
+                      {t("An ordinary day")}
+                    </h2>
+                  </div>
+                  <p className="mt-4 text-sm leading-relaxed text-ink">{profile.typical_day}</p>
+                </section>
+              ) : null}
+
+              {profile.costs_and_alternatives ? (
+                <section className="cg-card p-6 sm:p-7">
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-teal-mist text-teal">
+                      <Wallet className="h-4 w-4" aria-hidden />
+                    </span>
+                    <h2 className="text-lg font-bold tracking-tight text-heading sm:text-xl">
+                      {t("Cost, and cheaper routes")}
+                    </h2>
+                  </div>
+                  <p className="mt-4 text-sm leading-relaxed text-ink">{profile.costs_and_alternatives}</p>
+                </section>
+              ) : null}
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <section className="cg-card p-6">
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-success-mist text-success">
+                      <ThumbsUp className="h-4 w-4" aria-hidden />
+                    </span>
+                    <h2 className="text-lg font-bold tracking-tight text-heading">
+                      {t("What people like")}
+                    </h2>
+                  </div>
+                  <ul className="mt-4 space-y-2.5 text-sm leading-relaxed text-ink">
+                    {profile.benefits.map((item) => (
+                      <li key={item} className="flex gap-2.5">
+                        <span aria-hidden className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-teal" />
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+
+                <section className="cg-card p-6">
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-warning-mist text-warning">
+                      <TriangleAlert className="h-4 w-4" aria-hidden />
+                    </span>
+                    <h2 className="text-lg font-bold tracking-tight text-heading">{t("What is hard")}</h2>
+                  </div>
+                  <ul className="mt-4 space-y-2.5 text-sm leading-relaxed text-ink">
+                    {profile.challenges.map((item) => (
+                      <li key={item} className="flex gap-2.5">
+                        <span aria-hidden className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-warning" />
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              </div>
+
+              <Section
+                icon={Compass}
+                title={t("Try it before choosing it")}
+                items={profile.explore_activities}
+              />
+
+              <p className="text-xs leading-relaxed text-muted">
+                {t(
+                  "Nothing on this page is a promise about admission, marks, income or jobs. It describes a route people have taken, and it is sample data curated for this project rather than a verified survey.",
+                )}
+              </p>
+            </div>
+
+            <aside className="space-y-4 lg:sticky lg:top-24">
+              {profile.official_links.length > 0 ? (
+                <Card className="p-5">
+                  <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-muted">
+                    {t("Check the official source")}
+                  </h2>
+                  <ul className="mt-4 space-y-2.5">
+                    {profile.official_links.map((link) => (
+                      <li key={link.url} className="rounded-control border border-line bg-canvas p-3">
+                        <a
+                          href={link.url}
+                          target="_blank"
+                          rel="noopener noreferrer nofollow"
+                          className="flex items-start gap-2 text-sm font-semibold text-brand hover:underline"
+                        >
+                          <ExternalLink className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                          <span>{link.label}</span>
+                        </a>
+                        {link.note ? (
+                          <p className="mt-1.5 pl-6 text-xs leading-relaxed text-muted">{link.note}</p>
+                        ) : null}
+                      </li>
+                    ))}
+                  </ul>
+                </Card>
+              ) : null}
+
+              {related.length > 0 ? (
+                <Card className="p-5">
+                  <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-muted">
+                    {t("Related careers")}
+                  </h2>
+                  <ul className="mt-3 space-y-0.5">
+                    {related.map((item) => (
+                      <li key={item.slug}>
+                        <a
+                          href={`/careers/${item.slug}${qs}`}
+                          className="group flex items-center justify-between gap-2 rounded-control px-2.5 py-2 text-sm font-medium text-ink transition-colors hover:bg-canvas hover:text-brand"
+                        >
+                          <span>{t(item.title)}</span>
+                          <ArrowRight
+                            className="h-3.5 w-3.5 shrink-0 text-muted transition-transform group-hover:translate-x-0.5 group-hover:text-brand"
+                            aria-hidden
+                          />
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </Card>
+              ) : null}
+
+              <div className="relative overflow-hidden rounded-card bg-navy p-6 text-white shadow-lift">
+                <div aria-hidden className="pointer-events-none absolute inset-0 cg-aurora opacity-70" />
+                <div className="relative">
+                  <h2 className="text-base font-semibold">
+                    {tf("Ask {site} about this career", { site: SITE_NAME })}
+                  </h2>
+                  <p className="mt-2 text-sm leading-relaxed text-white/70">
+                    {t(
+                      "A conversation can go further than a profile: what to do in this class, in this language, with the subjects actually on your timetable.",
+                    )}
+                  </p>
+                  <LinkButton href="/onboarding" className="mt-4 w-full">
+                    {t("Start exploring")}
+                    <ArrowRight className="h-4 w-4" aria-hidden />
+                  </LinkButton>
+                </div>
+              </div>
+            </aside>
+          </div>
+        </div>
       </main>
 
       <JsonLd data={structuredData} />

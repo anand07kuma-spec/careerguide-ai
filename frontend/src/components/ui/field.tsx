@@ -19,8 +19,11 @@ function shown(t: (en: string) => string, value: ReactNode): ReactNode {
   return typeof value === "string" ? t(value) : value;
 }
 
+/* Placeholders used to be `muted/70`, which lands near 3:1 on white and is the
+   only label some fields have. The keyboard indicator is the global outline plus
+   the border change, so no `focus:outline-none` here. */
 const FIELD_BASE =
-  "w-full rounded-xl border border-line bg-surface px-3.5 text-sm text-ink placeholder:text-muted/70 transition-colors focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/25 disabled:cursor-not-allowed disabled:bg-canvas disabled:text-muted";
+  "w-full rounded-control border border-field-line bg-surface px-3.5 text-sm text-ink placeholder:text-muted transition-colors focus:border-brand disabled:cursor-not-allowed disabled:bg-canvas disabled:text-muted";
 
 export function Field({
   label,
@@ -81,7 +84,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         required={required}
         placeholder={typeof placeholder === "string" ? t(placeholder) : placeholder}
         aria-invalid={error ? true : undefined}
-        className={cn(FIELD_BASE, "h-11", error && "border-danger focus:border-danger focus:ring-danger/25", className)}
+        className={cn(FIELD_BASE, "h-11", error && "border-danger focus:border-danger", className)}
         {...rest}
       />
     </Field>
@@ -172,7 +175,7 @@ export function Checkbox({
       <input
         id={inputId}
         type="checkbox"
-        className="mt-0.5 h-5 w-5 shrink-0 cursor-pointer rounded-md border-line text-brand accent-brand"
+        className="mt-0.5 h-5 w-5 shrink-0 cursor-pointer rounded-md border-field-line text-brand accent-brand"
         {...rest}
       />
       <label htmlFor={inputId} className="cursor-pointer select-none">
@@ -182,6 +185,53 @@ export function Checkbox({
         ) : null}
       </label>
     </div>
+  );
+}
+
+/** The switch on its own, for callers that already draw the label — a card header
+ * whose right-hand action is the toggle, say. `aria-labelledby` points at the text
+ * the caller rendered; `aria-label` is the fallback when that text is an icon. */
+export function Switch({
+  checked,
+  onChange,
+  labelledBy,
+  ariaLabel,
+  disabled,
+  className,
+}: {
+  checked: boolean;
+  onChange: (next: boolean) => void;
+  labelledBy?: string;
+  ariaLabel?: string;
+  disabled?: boolean;
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-labelledby={labelledBy}
+      aria-label={labelledBy ? undefined : ariaLabel}
+      disabled={disabled}
+      onClick={() => onChange(!checked)}
+      className={cn(
+        "relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-50",
+        checked ? "bg-brand" : "bg-field-line",
+        className,
+      )}
+    >
+      <span
+        className={cn(
+          // `left-0` is what the two translations below are measured from. Without
+          // it the knob takes its static position instead, lands outside the 44px
+          // track, and — wherever the switch sits at the right edge of a phone —
+          // pushes the whole document a few pixels wider than the screen.
+          "absolute left-0 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform",
+          checked ? "translate-x-[22px]" : "translate-x-[2px]",
+        )}
+      />
+    </button>
   );
 }
 
@@ -211,29 +261,7 @@ export function Toggle({
           <p className="mt-0.5 text-xs leading-relaxed text-muted">{shown(t, description)}</p>
         ) : null}
       </div>
-      <button
-        type="button"
-        role="switch"
-        aria-checked={checked}
-        aria-labelledby={labelId}
-        disabled={disabled}
-        onClick={() => onChange(!checked)}
-        className={cn(
-          "relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-50",
-          checked ? "bg-brand" : "bg-slate-300",
-        )}
-      >
-        <span
-          className={cn(
-            // `left-0` is what the two translations below are measured from. Without
-            // it the knob takes its static position instead, lands outside the 44px
-            // track, and — wherever the switch sits at the right edge of a phone —
-            // pushes the whole document a few pixels wider than the screen.
-            "absolute left-0 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform",
-            checked ? "translate-x-[22px]" : "translate-x-[2px]",
-          )}
-        />
-      </button>
+      <Switch checked={checked} onChange={onChange} labelledBy={labelId} disabled={disabled} />
     </div>
   );
 }

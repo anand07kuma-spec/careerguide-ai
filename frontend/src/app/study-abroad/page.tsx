@@ -4,6 +4,7 @@ import { connection } from "next/server";
 import { ArrowRight, Check, Globe2, Minus } from "lucide-react";
 
 import { PublicLangNotice, PublicSiteHeader } from "@/components/careers/public-careers-shell";
+import { PageHero } from "@/components/layout/page-hero";
 import { LeadForm } from "@/components/study-abroad/lead-form";
 import { DirectoryUnavailable } from "@/components/study-abroad/study-shell";
 import { Badge } from "@/components/ui/badge";
@@ -59,9 +60,9 @@ type PageQuery = Promise<{ lang?: string }>;
 function Unavailable({ what, lang }: { what: string; lang: PublicLang }) {
   const t = makeT(lang);
   return (
-    <div className="min-h-dvh bg-canvas">
+    <div lang={lang === "hi" ? "hi-IN" : "en-IN"} className="min-h-dvh bg-canvas">
       <PublicSiteHeader current="/study-abroad" lang={lang} path="/study-abroad" />
-      <main className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
+      <main id="main-content" tabIndex={-1} className="mx-auto max-w-reading px-4 py-10 sm:px-6">
         <h1 className="text-3xl font-bold tracking-tight text-heading sm:text-4xl">{t("Study abroad")}</h1>
         <div className="mt-6">
           <DirectoryUnavailable what={what} lang={lang} />
@@ -100,46 +101,50 @@ export default async function StudyAbroadPage({ searchParams }: { searchParams: 
   const totalUniversities = countries.reduce((sum, country) => sum + country.universities, 0);
 
   return (
-    <div className="min-h-dvh bg-canvas">
+    <div lang={lang === "hi" ? "hi-IN" : "en-IN"} className="min-h-dvh bg-canvas">
       <PublicSiteHeader current="/study-abroad" lang={lang} path="/study-abroad" keepQuery={query} />
 
-      <main className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-14">
-        <Badge tone="teal" className="mb-5">
-          {t("Study abroad")}
-        </Badge>
-        <h1 className="text-balance text-3xl font-bold leading-tight tracking-tight text-heading sm:text-5xl">
-          {t("Study abroad made simple")}
-        </h1>
-        <PublicLangNotice lang={lang} what="country and service descriptions" />
-        <p className="mt-5 max-w-2xl text-base leading-relaxed text-ink sm:text-lg">
-          {tf(
-            "{n} destinations explained in the language a family actually argues in, {u} universities with each one's own official site attached, and a plain description of what a paid adviser does at every stage — from a class 9 profile to a visa document list.",
-            { n: countries.length, u: totalUniversities },
-          )}
-        </p>
-        <p className="mt-4 max-w-2xl text-sm leading-relaxed text-muted">
-          {t(
-            "What this directory does not do is quote a number it has not read from a source. Tuition, living costs, application deadlines and visa rules are the four things that change every year, so a page here that has not been re-read says so and links to the government or university page that owns the answer. An estimate would look more finished and be worth less.",
-          )}
-        </p>
+      <main id="main-content" tabIndex={-1}>
+        <PageHero
+          eyebrow={t("Study abroad")}
+          title={t("Study abroad made simple")}
+          notice={<PublicLangNotice lang={lang} what="country and service descriptions" />}
+          lead={
+            <>
+              <p className="text-ink">
+                {tf(
+                  "{n} destinations explained in the language a family actually argues in, {u} universities with each one's own official site attached, and a plain description of what a paid adviser does at every stage — from a class 9 profile to a visa document list.",
+                  { n: countries.length, u: totalUniversities },
+                )}
+              </p>
+              <p className="mt-3 text-sm">
+                {t(
+                  "What this directory does not do is quote a number it has not read from a source. Tuition, living costs, application deadlines and visa rules are the four things that change every year, so a page here that has not been re-read says so and links to the government or university page that owns the answer. An estimate would look more finished and be worth less.",
+                )}
+              </p>
+              <p className="mt-3 text-xs">
+                {t(
+                  "“Book” here means an enquiry, not a calendar slot: nothing is scheduled until somebody replies. See the form at the bottom of this page.",
+                )}
+              </p>
+            </>
+          }
+          actions={
+            <>
+              <LinkButton href="#enquiry">
+                {t("Book a free consultation")}
+                <ArrowRight className="h-4 w-4" aria-hidden />
+              </LinkButton>
+              <LinkButton variant="outline" href={`/careers${langSuffix}`}>
+                {t("Browse career profiles instead")}
+              </LinkButton>
+            </>
+          }
+        />
 
-        <div className="mt-8 flex flex-wrap gap-2">
-          <LinkButton href="#enquiry">
-            {t("Book a free consultation")}
-            <ArrowRight className="h-4 w-4" aria-hidden />
-          </LinkButton>
-          <LinkButton variant="outline" href={`/careers${langSuffix}`}>
-            {t("Browse career profiles instead")}
-          </LinkButton>
-        </div>
-        <p className="mt-3 text-xs leading-relaxed text-muted">
-          {t(
-            "“Book” here means an enquiry, not a calendar slot: nothing is scheduled until somebody replies. See the form at the bottom of this page.",
-          )}
-        </p>
-
+        <div className="mx-auto w-full max-w-reading px-4 pb-10 pt-8 sm:px-6 sm:pb-14 sm:pt-10">
         {/* ---------------------------------------------------------------- destinations */}
-        <section className="mt-14" aria-labelledby="destinations">
+        <section className="mt-2" aria-labelledby="destinations">
           <h2 id="destinations" className="text-2xl font-bold tracking-tight text-heading">
             {t("Destinations")}
           </h2>
@@ -304,6 +309,7 @@ export default async function StudyAbroadPage({ searchParams }: { searchParams: 
             />
           </div>
         </section>
+        </div>
       </main>
     </div>
   );

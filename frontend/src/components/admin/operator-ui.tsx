@@ -95,7 +95,7 @@ export function BucketList({
                 <span className="ml-1.5 text-xs">({share}%)</span>
               </span>
             </div>
-            <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-slate-100">
+            <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-subtle">
               <div className="h-full rounded-full bg-brand/70" style={{ width: `${share}%` }} />
             </div>
           </li>

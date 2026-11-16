@@ -9,21 +9,28 @@ from sqlalchemy.orm import Session
 from ..database import get_db
 from ..models import (
     Career,
+    CareerReport,
     ConversationSession,
     Guardianship,
     InterestObservation,
     Recommendation,
     SavedCareer,
     StudentProfile,
+    StudyPlan,
+    StudyPlanItem,
     User,
 )
 from ..schemas import (
     CareerSummaryOut,
     JourneyOut,
-    ObservationOut,
+    ParentLatestReportOut,
+    ParentProfileOut,
+    ParentRecommendationOut,
+    ParentReportDirectionOut,
+    ParentReportSummaryOut,
+    ParentStudyPlanSummaryOut,
     ParentSummaryOut,
-    ProfileOut,
-    RecommendationOut,
+    ParentThemeOut,
     ReportOut,
     SavedCareerOut,
     SessionOutInfo,
@@ -33,8 +40,150 @@ from ..security import linked_student_ids, require_parent, require_student, reso
 from ..services import entitlements
 from ..services import report as report_service
 from ..services.recommender import build_recommendations
+from ..services.themes import THEMES
 
 router = APIRouter(tags=["reports and parenting"])
+
+
+def _safe_report_fields(content: dict) -> tuple[str | None, list[str]]:
+    """The note and career names from a stored report, and nothing else.
+
+    Both are catalogue/interface text: the note is generated from themes, and the
+    titles are career names. Reading only these two keys is what keeps
+    `activities_enjoyed`, `themes_observed[].evidence` and
+    `recommendations[].supporting_statements` — the child's own words — from
+    crossing the parent boundary at all.
+    """
+    raw_note = content.get("note")
+    note = raw_note.strip() if isinstance(raw_note, str) and raw_note.strip() else None
+
+    titles: list[str] = []
+    recommendations = content.get("recommendations")
+    if isinstance(recommendations, list):
+        for item in recommendations:
+            if not isinstance(item, dict):
+                continue
+            title = item.get("career")
+            if isinstance(title, str):
+                title = title.strip()
+                if title and title not in titles:
+                    titles.append(title)
+            if len(titles) >= 5:
+                break
+    return note, titles
+
+
+def _parent_report_summary(record: CareerReport) -> ParentReportSummaryOut:
+    """Only the safe half of a stored report: its note and career names.
+
+    The full content stays behind the student's own report route; this DTO is
+    what a parent may list.
+    """
+    content = record.content if isinstance(record.content, dict) else {}
+    note, titles = _safe_report_fields(content)
+    return ParentReportSummaryOut(
+        id=record.id,
+        generated_at=record.created_at,
+        note=note,
+        career_titles=titles,
+    )
+
+
+def _parent_latest_report(
+    record: CareerReport, parent_whys: dict[int, str]
+) -> ParentLatestReportOut:
+    """The newest report as a parent may open it, never the stored dictionary.
+
+    Directions keep the career title (catalogue text) and a quote-free explanation.
+    The stored `why` is not reused: the recommender writes it around the child's
+    first matched statement, so it can contain the sentence itself. `parent_whys`
+    is the live recommendation payload's safe wording keyed by career id; a stored
+    direction whose career is no longer recommended falls back to a neutral line.
+    """
+    content = record.content if isinstance(record.content, dict) else {}
+    note, titles = _safe_report_fields(content)
+
+    directions: list[ParentReportDirectionOut] = []
+    raw_recommendations = content.get("recommendations")
+    if isinstance(raw_recommendations, list):
+        for item in raw_recommendations:
+            if not isinstance(item, dict):
+                continue
+            title = item.get("career")
+            if not isinstance(title, str) or not title.strip():
+                continue
+            title = title.strip()
+            career_id = item.get("career_id")
+            career_id = career_id if isinstance(career_id, int) else None
+            why = parent_whys.get(career_id) if career_id is not None else None
+            directions.append(
+                ParentReportDirectionOut(
+                    career_id=career_id,
+                    career=title,
+                    why=why
+                    or f"{title} is one of the directions this report mentions.",
+                )
+            )
+
+    raw_steps = content.get("next_steps")
+    next_steps = (
+        [step.strip() for step in raw_steps if isinstance(step, str) and step.strip()]
+        if isinstance(raw_steps, list)
+        else []
+    )
+
+    return ParentLatestReportOut(
+        id=record.id,
+        generated_at=record.created_at,
+        note=note,
+        career_titles=titles,
+        career_directions=directions,
+        next_steps=next_steps,
+    )
+
+
+def _parent_themes(observations: list[InterestObservation]) -> list[ParentThemeOut]:
+    """One row per theme the child touched, newest theme first.
+
+    Only the taxonomy key selects the label; `evidence` is never read. A key
+    that is not in the shared table is skipped rather than echoed, so a stored
+    value that somehow is not a theme name cannot cross as text.
+    """
+    seen: set[str] = set()
+    themes: list[ParentThemeOut] = []
+    for observation in observations:
+        name = observation.theme
+        if name in seen or name not in THEMES:
+            continue
+        seen.add(name)
+        themes.append(ParentThemeOut(theme=name, label=THEMES[name]["label"]))
+    return themes
+
+
+def _parent_plan_summary(
+    plan: StudyPlan, items: list[StudyPlanItem]
+) -> ParentStudyPlanSummaryOut:
+    """A plan as a parent may see it: name, progress and the next open step.
+
+    The plan's own `goal`, every item's detail and its resource link are the
+    child's writing or their private study trail, so none of them leave this
+    function. Skipped steps stay in the denominator — they were part of the plan
+    — but they are neither completion nor the next thing to do.
+    """
+    completed = sum(1 for item in items if item.status == "completed")
+    next_item = next(
+        (item for item in items if item.status in ("pending", "in_progress")),
+        None,
+    )
+    return ParentStudyPlanSummaryOut(
+        id=plan.id,
+        title=plan.title,
+        status=plan.status,
+        created_at=plan.created_at,
+        total_items=len(items),
+        completed_items=completed,
+        next_item_title=next_item.title if next_item else None,
+    )
 
 
 def _build_report_out(db: Session, student_id: int) -> ReportOut:
@@ -143,15 +292,15 @@ def parent_summary(
     )
 
     payload, _ = build_recommendations(db, child_id, limit=4)
+    # `parent_why` is the quote-free explanation the recommender writes alongside the
+    # student-facing `why`; the latter is never placed in a parent response.
+    parent_whys = {item["career_id"]: item["parent_why"] for item in payload}
     recommendations = [
-        RecommendationOut(
+        ParentRecommendationOut(
             career=CareerSummaryOut.model_validate(item["career"]),
-            why=item["why"],
-            supporting_statements=item["supporting_statements"],
+            why=item["parent_why"],
             open_questions=item["open_questions"],
             skills_to_try=item["skills_to_try"],
-            qualifications_to_check=item["qualifications_to_check"],
-            alternatives=item["alternatives"],
             evidence_level=item["evidence_level"],
             next_activity=item["next_activity"],
         )
@@ -174,30 +323,54 @@ def parent_summary(
         )
     )
 
-    from ..models import CareerReport, StudyPlan, StudyPlanItem
-    from sqlalchemy import func
-
-    plan_ids = list(db.scalars(select(StudyPlan.id).where(StudyPlan.student_id == child_id)))
-    total_items = db.execute(
-        select(func.count(StudyPlanItem.id)).where(StudyPlanItem.plan_id.in_(plan_ids or [-1]))
-    ).scalar() or 0
-    done_items = db.execute(
-        select(func.count(StudyPlanItem.id)).where(
-            StudyPlanItem.plan_id.in_(plan_ids or [-1]), StudyPlanItem.status == "completed"
+    plan_rows = list(
+        db.scalars(
+            select(StudyPlan)
+            .where(StudyPlan.student_id == child_id)
+            .order_by(StudyPlan.id.desc())
         )
-    ).scalar() or 0
+    )
+    plan_ids = [plan.id for plan in plan_rows]
+    item_rows = list(
+        db.scalars(
+            select(StudyPlanItem)
+            .where(StudyPlanItem.plan_id.in_(plan_ids or [-1]))
+            .order_by(StudyPlanItem.plan_id, StudyPlanItem.order, StudyPlanItem.id)
+        )
+    )
+    items_by_plan: dict[int, list[StudyPlanItem]] = {}
+    for item in item_rows:
+        items_by_plan.setdefault(item.plan_id, []).append(item)
 
-    latest = db.scalars(
-        select(CareerReport)
-        .where(CareerReport.student_id == child_id, CareerReport.is_deleted.is_(False))
-        .order_by(CareerReport.id.desc())
-        .limit(1)
-    ).first()
+    study_plans = [
+        _parent_plan_summary(plan, items_by_plan.get(plan.id, [])) for plan in plan_rows
+    ]
+    total_items = len(item_rows)
+    done_items = sum(1 for item in item_rows if item.status == "completed")
+
+    report_rows = list(
+        db.scalars(
+            select(CareerReport)
+            .where(CareerReport.student_id == child_id, CareerReport.is_deleted.is_(False))
+            .order_by(CareerReport.id.desc())
+            .limit(5)
+        )
+    )
+    latest = report_rows[0] if report_rows else None
 
     return ParentSummaryOut(
         student=UserOut.model_validate(student),
-        profile=ProfileOut.model_validate(profile) if profile else None,
-        themes=[ObservationOut.model_validate(o) for o in observations],
+        profile=(
+            ParentProfileOut(
+                class_level=profile.class_level,
+                age=profile.age,
+                age_range=profile.age_range,
+                interest_areas=profile.interest_areas or [],
+            )
+            if profile
+            else None
+        ),
+        themes=_parent_themes(observations),
         recommendations=recommendations,
         saved_careers=[
             SavedCareerOut(
@@ -214,11 +387,9 @@ def parent_summary(
             activities_completed=int(done_items),
             activities_total=int(total_items),
         ),
-        latest_report=ReportOut(
-            id=latest.id, generated_at=latest.created_at, content=latest.content
-        )
-        if latest
-        else None,
+        latest_report=_parent_latest_report(latest, parent_whys) if latest else None,
+        recent_reports=[_parent_report_summary(row) for row in report_rows],
+        study_plans=study_plans,
         share_transcripts=bool(link and link.share_conversation_transcripts),
         recent_sessions=[SessionOutInfo.model_validate(s) for s in sessions],
         guidance_note=(

@@ -18,12 +18,18 @@ const CHROME =
   process.env.CHROME_PATH ?? "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
 const BASE = process.env.CG_URL ?? "http://careerguide.localhost:3000";
 const TOKEN = process.env.CG_TOKEN ?? "";
+// A session is keyed to the browser's random device id, not to a stored token,
+// so an authenticated shot has to arrive as a device that already has an account.
+const DEVICE = process.env.CG_DEVICE ?? "";
 // Devanagari labels are usually longer than their English sources, so the
 // responsive sweep is run in both languages rather than only one.
 const UI_LANG = process.env.CG_UI_LANG ?? "";
 // The appearance is device-local, so a screenshot of the dark theme has to say so
 // in the browser profile rather than through a header or a query string.
 const THEME = process.env.CG_THEME ?? "";
+// The storage notice covers the middle of every first visit, which makes a shot of
+// the page underneath useless. Passing an answer settles it the way a click would.
+const CONSENT = process.env.CG_CONSENT ?? "";
 
 const args = process.argv.slice(2);
 const positional = args.filter((a) => !a.startsWith("--"));
@@ -110,7 +116,8 @@ try {
     if (msg.id && pending.has(msg.id)) {
       const { resolve, reject } = pending.get(msg.id);
       pending.delete(msg.id);
-      msg.error ? reject(new Error(JSON.stringify(msg.error))) : resolve(msg.result);
+      if (msg.error) reject(new Error(JSON.stringify(msg.error)));
+      else resolve(msg.result);
       return;
     }
     events.push(msg);
@@ -171,6 +178,11 @@ try {
       expression: `localStorage.setItem('careerguide.token', ${JSON.stringify(TOKEN)})`,
     });
   }
+  if (DEVICE) {
+    await call("Runtime.evaluate", {
+      expression: `localStorage.setItem('careerguide.device-id', ${JSON.stringify(DEVICE)})`,
+    });
+  }
   if (UI_LANG) {
     await call("Runtime.evaluate", {
       expression: `localStorage.setItem('careerguide.ui-lang', ${JSON.stringify(UI_LANG)})`,
@@ -179,6 +191,11 @@ try {
   if (THEME) {
     await call("Runtime.evaluate", {
       expression: `localStorage.setItem('careerguide.theme', ${JSON.stringify(THEME)})`,
+    });
+  }
+  if (CONSENT) {
+    await call("Runtime.evaluate", {
+      expression: `localStorage.setItem('careerguide.consent', JSON.stringify({state:'${CONSENT}',categories:{necessary:true,analytics:false,marketing:false,functional:false},savedAt:new Date().toISOString()}))`,
     });
   }
   await goto(`${BASE}${route.startsWith("/") ? route : `/${route}`}`);
@@ -206,6 +223,27 @@ try {
   });
   const { wide, w, culprits } = JSON.parse(overflow.result.value);
   const overflowing = wide > w + 1;
+
+  // A page that scrolls is normal; one that scrolls a little because a card is
+  // 40px too tall is worth knowing about, so a measured selector can be asked for.
+  const measure = flag("measure", "");
+  if (measure) {
+    const box = await call("Runtime.evaluate", {
+      expression: `(() => {
+        const el = document.querySelector(${JSON.stringify(measure)});
+        if (!el) return 'missing';
+        const r = el.getBoundingClientRect();
+        return JSON.stringify({ top: Math.round(r.top + window.scrollY), height: Math.round(r.height) });
+      })()`,
+      returnByValue: true,
+    });
+    const page = await call("Runtime.evaluate", {
+      expression: `JSON.stringify({ scrollHeight: document.documentElement.scrollHeight, innerHeight: window.innerHeight })`,
+      returnByValue: true,
+    });
+    console.log(`${measure}: ${box.result.value}`);
+    console.log(`page: ${page.result.value}`);
+  }
 
   const failed = events.filter(
     (e) => e.method === "Network.loadingFailed" && e.params?.errorText && !/aborted/i.test(e.params.errorText),
