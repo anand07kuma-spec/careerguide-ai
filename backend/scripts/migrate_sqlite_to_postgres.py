@@ -51,7 +51,7 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from sqlalchemy import create_engine, inspect, select, text  # noqa: E402
+from sqlalchemy import create_engine, func, inspect, select, text  # noqa: E402
 
 from app import models  # noqa: E402, F401  (registers every table on Base.metadata)
 from app.config import BARE_PG_SCHEMES, postgres_url  # noqa: E402
@@ -70,6 +70,12 @@ SEED_TABLES = frozenset(
         "study_services",
         "study_universities",
         "assessment_questions",
+        # `app/seed/__init__.py::_seed_exams` writes these two, in the same one
+        # transaction as the rest of the catalogue. Without them here the script reads
+        # a seeded target as a target holding people's rows and refuses, which is what
+        # happened on the first cutover run against Neon.
+        "exam_groups",
+        "exams",
     }
 )
 
@@ -91,6 +97,26 @@ def counts(conn, tables: list[str]) -> dict[str, int]:
     for name in tables:
         out[name] = conn.execute(text(f'select count(*) from "{name}"')).scalar()
     return out
+
+
+def null_dangling(rows: list[dict], edges, parent_ids: dict[str, set]) -> int:
+    """Set a nullable foreign key to NULL when its parent row is not in the source.
+
+    Neon's `audit_events.actor_user_id` is `ON DELETE SET NULL`: an operator account
+    that was deleted leaves the event behind with the actor's name snapshotted on the
+    row. SQLite never enforced the reference, so the laptop file can still name the
+    missing id, and Postgres refuses the insert. This applies the database's own rule
+    to that one class of column — every event survives, every other field untouched.
+    """
+    nulled = 0
+    for column, parent in edges:
+        valid = parent_ids[parent]
+        for row in rows:
+            value = row.get(column)
+            if value is not None and value not in valid:
+                row[column] = None
+                nulled += 1
+    return nulled
 
 
 def revision(conn) -> str | None:
@@ -196,8 +222,25 @@ def main() -> int:
             "of the app knows and the file does not"
         )
 
+    # Nullable foreign keys are copied under the database's own ON DELETE SET NULL rule.
+    # SQLite never enforced these references, so a laptop file can hold an audit event
+    # whose actor account has since been deleted; Postgres would refuse that row, and
+    # dropping the event would lose the operator log. The dangling value becomes NULL,
+    # and every other field — including the `actor_name` snapshot — stays as written.
+    copied_names = {t.name for t in tables}
+    nullable_fks = {
+        t.name: [
+            (fk.parent.name, fk.column.table.name)
+            for fk in t.foreign_keys
+            if fk.parent.nullable and fk.column.table.name in copied_names
+        ]
+        for t in tables
+    }
+    nullable_fks = {name: edges for name, edges in nullable_fks.items() if edges}
+
     print(f"source : {source_path}  ({len(tables)} of {len(Base.metadata.tables)} tables present)")
-    print(f"target : {mask(target)}")
+    # The target's host and credentials are deliberately not printed, even masked.
+    print("target : <Postgres target, redacted>")
 
     with src_engine.connect() as sc, tgt_engine.begin() as tc:
         absent = [t.name for t in tables if t.name not in tgt_inspect.get_table_names()]
@@ -278,6 +321,29 @@ def main() -> int:
         for name in skipped:
             print(f"{name:26} {0:>8} {tgt_n[name]:>11}  nothing in the source")
 
+        # Named before any write, so a dry run reports it too: a nullable foreign key
+        # whose parent row is absent from the source becomes NULL at copy time.
+        parent_ids = {
+            parent: {row[0] for row in sc.execute(text(f'select id from "{parent}"'))}
+            for edges in nullable_fks.values()
+            for _, parent in edges
+        }
+        dangling = []
+        for t in tables:
+            for column, parent in nullable_fks.get(t.name, ()):
+                valid = parent_ids[parent]
+                found = sc.execute(
+                    select(func.count())
+                    .select_from(t)
+                    .where(t.c[column].isnot(None), t.c[column].notin_(valid))
+                ).scalar()
+                if found:
+                    dangling.append((t.name, column, found))
+        if dangling:
+            print("\nnullable foreign keys whose parent row is absent — set to NULL:")
+            for name, column, found in dangling:
+                print(f"  {name}.{column}: {found}")
+
         if args.dry_run:
             print("\ndry run: nothing was written.")
             return 0
@@ -307,14 +373,29 @@ def main() -> int:
             shared = [c for c in t.columns if c.name in tgt_cols]
             rows = sc.execute(select(*shared)).mappings()
             written = 0
+            nulled = 0
             while True:
                 chunk = rows.fetchmany(BATCH)
                 if not chunk:
                     break
-                tc.execute(t.insert(), [dict(r) for r in chunk])
-                written += len(chunk)
+                batch = [dict(r) for r in chunk]
+                if t.name in nullable_fks:
+                    batch_columns = {c.name for c in shared}
+                    nulled += null_dangling(
+                        batch,
+                        [
+                            edge
+                            for edge in nullable_fks[t.name]
+                            if edge[0] in batch_columns
+                        ],
+                        parent_ids,
+                    )
+                tc.execute(t.insert(), batch)
+                written += len(batch)
             moved += written
             print(f"  copied {written:>7} rows into {t.name}")
+            if nulled:
+                print(f"  nulled {nulled:>7} dangling foreign key value(s) in {t.name}")
 
         # The part a hand-written dump always forgets: sequences.
         restarted = 0
