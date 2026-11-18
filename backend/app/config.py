@@ -4,7 +4,7 @@ import logging
 from functools import lru_cache
 from urllib.parse import urlsplit
 
-from pydantic import field_validator
+from pydantic import AliasChoices, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 log = logging.getLogger(__name__)
@@ -110,11 +110,49 @@ def frontend_origins(value: str) -> list[str]:
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=(".env", "../.env"), env_file_encoding="utf-8", extra="ignore"
+        env_file=(".env", "../.env"),
+        env_file_encoding="utf-8",
+        extra="ignore",
+        # An empty environment variable counts as unset. This is what lets a blank
+        # `CAREERGUIDE_DATABASE_URL` fall through to `DATABASE_URL` — a dashboard
+        # lets the variable exist before it holds a value.
+        env_ignore_empty=True,
+        # `database_url` is validated through an alias now, and an alias hides the
+        # field name from validation — without this, `Settings(database_url=…)`
+        # would be silently ignored and fall back to the environment.
+        validate_by_name=True,
     )
 
     app_name: str = "CareerGuide AI"
-    database_url: str = "sqlite:///./careerguide.db"
+    # Vercel's Prisma Postgres integration owns `DATABASE_URL` and refuses edits or
+    # deletions, so the deployment names its own Neon string
+    # `CAREERGUIDE_DATABASE_URL`. The named one wins when both exist; a laptop that
+    # sets neither keeps its SQLite file.
+    database_url: str = Field(
+        default="sqlite:///./careerguide.db",
+        validation_alias=AliasChoices("CAREERGUIDE_DATABASE_URL", "DATABASE_URL"),
+    )
+
+    @model_validator(mode="before")
+    @classmethod
+    def ignore_a_blank_preferred_database(cls, data):
+        """A preferred value of spaces must not become an empty database URL.
+
+        The environment source already drops an exactly-empty variable (and moves
+        on to `DATABASE_URL`); this covers the constructor and a whitespace-only
+        value, which would otherwise reach `create_engine` as "".
+        """
+        if isinstance(data, dict):
+            blank = [
+                key
+                for key, value in data.items()
+                if str(key).upper() == "CAREERGUIDE_DATABASE_URL"
+                and isinstance(value, str)
+                and not value.strip()
+            ]
+            for key in blank:
+                data = {k: v for k, v in data.items() if k != key}
+        return data
 
     @field_validator("database_url")
     @classmethod
