@@ -241,15 +241,16 @@ export default function VoiceCallPage() {
       sendingRef.current = true;
       clearSilenceTimer();
       sttRef.current.stop();
+      const optimisticId = Date.now();
       setTyped("");
       go("thinking");
       setCaptions((current) => [
         ...current,
-        { id: Date.now(), from: "you", text },
+        { id: optimisticId, from: "you", text },
       ]);
 
       try {
-        const answer = await api.sendMessage(active.id, text, !mutedRef.current);
+        const answer = await api.sendMessage(active.id, text);
         // The guide's verdict on whether this sounds like a child asking for help
         // travels with the reply, so no extra request decides whether help shows.
         if (answer.needs_support) setSafety(true);
@@ -277,28 +278,52 @@ export default function VoiceCallPage() {
           setNotice(null);
         }
 
-        if (answer.audio_url && !mutedRef.current) {
+        if (!mutedRef.current) {
+          // The caption is already on screen. The voice is a second request, so a
+          // slow speech service delays the sound, not the answer the student reads.
           go("speaking");
-          await player.play(answer.audio_url);
-        } else {
-          if (answer.audio_error && !mutedRef.current) {
-            setNotice(`${answer.audio_error} ${t("Using your browser's voice instead.")}`);
-            const handled = speakWithBrowser(answer.reply.content, answer.language || spoken, () =>
-              onEndedRef.current(),
+          try {
+            const audio = await api.speak(
+              answer.reply.content,
+              answer.language || spoken,
+              settings.voice,
+            );
+            if (mutedRef.current) {
+              if (settings.continuous_conversation) beginListening();
+              else go("ready");
+              return;
+            }
+            // An interrupt during synthesis means the student took the turn back:
+            // never start speaking over them.
+            if (stateRef.current !== "speaking") return;
+            await player.play(audio.audio_url);
+          } catch (error) {
+            if (stateRef.current !== "speaking" || mutedRef.current) return;
+            setNotice(
+              `${
+                error instanceof Error ? error.message : t("The voice service is unavailable.")
+              } ${t("Using your browser's voice instead.")}`,
+            );
+            const handled = speakWithBrowser(
+              answer.reply.content,
+              answer.language || spoken,
+              () => onEndedRef.current(),
             );
             if (!handled) {
               if (settings.continuous_conversation) beginListening();
               else go("ready");
-            } else {
-              go("speaking");
             }
-          } else if (settings.continuous_conversation) {
-            beginListening();
-          } else {
-            go("ready");
           }
+        } else if (settings.continuous_conversation) {
+          beginListening();
+        } else {
+          go("ready");
         }
       } catch (error) {
+        // The server saved nothing, so take the optimistic caption back and give
+        // the student their words to send again.
+        setCaptions((current) => current.filter((caption) => caption.id !== optimisticId));
+        setTyped(text);
         setOffline(isOffline(error));
         setNotice(
           error instanceof Error
@@ -310,7 +335,16 @@ export default function VoiceCallPage() {
         sendingRef.current = false;
       }
     },
-    [beginListening, clearSilenceTimer, go, player, settings.continuous_conversation, spoken, t],
+    [
+      beginListening,
+      clearSilenceTimer,
+      go,
+      player,
+      settings.continuous_conversation,
+      settings.voice,
+      spoken,
+      t,
+    ],
   );
 
   // The recognition and audio callbacks are wired after commit, so each one sees

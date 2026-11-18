@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   AlertTriangle,
@@ -259,6 +259,32 @@ function ChatThread() {
     [stopVoice],
   );
 
+  // The reply is painted before any speech is requested, so a slow voice service
+  // delays the voice and never the answer. The sequence number makes an older
+  // reply's audio stand aside if a newer turn has already started.
+  const speechSeq = useRef(0);
+  const speakAnswer = useCallback(
+    async (text: string, lang: string) => {
+      const turn = ++speechSeq.current;
+      try {
+        const audio = await api.speak(text, lang, settings.voice);
+        if (speechSeq.current !== turn) return;
+        setLastAudio(audio.audio_url);
+        void player.play(audio.audio_url);
+      } catch (error) {
+        if (speechSeq.current !== turn) return;
+        setNotice(
+          tf("{failed} Your browser's own voice is reading this reply.", {
+            failed:
+              error instanceof Error ? error.message : t("Spoken replies are unavailable."),
+          }),
+        );
+        speakWithBrowser(text, lang);
+      }
+    },
+    [player, settings.voice, t, tf],
+  );
+
   const replyTo = useCallback(
     async (text: string) => {
       if (!session) return;
@@ -275,7 +301,7 @@ function ChatThread() {
         // The server re-reads the plan from its own row rather than trusting this number,
         // and it refuses an id that is not this student's, so nothing here can hand over
         // another family's answers.
-        const answer = await api.sendMessage(session.id, trimmed, speakOn, pinned ? planId : null);
+        const answer = await api.sendMessage(session.id, trimmed, pinned ? planId : null);
         // The reply carries the guide's own judgement about whether this sounds
         // like a child asking for help, so a second request that fails cannot
         // decide whether the helpline card appears.
@@ -315,22 +341,13 @@ function ChatThread() {
         setAiError(answer.error);
         if (saved.length) void reload();
 
-        if (answer.audio_url) {
-          setLastAudio(answer.audio_url);
-          if (speakOn) void player.play(answer.audio_url);
-        } else if (speakOn) {
-          // The server's text-to-speech failed; the browser's own voice is a
-          // different sound, so the reply still says it is labelled as such.
-          if (answer.audio_error) {
-            setNotice(
-              tf("{failed} Your browser's own voice is reading this reply.", {
-                failed: answer.audio_error,
-              }),
-            );
-            speakWithBrowser(answer.reply.content, answer.language || language);
-          }
+        if (speakOn) {
+          void speakAnswer(answer.reply.content, answer.language || language);
         }
       } catch (error) {
+        // Nothing was saved on the server, so the words go back into the composer
+        // instead of disappearing with an error toast.
+        setDraft((current) => current || trimmed);
         setSendError(
           error instanceof Error ? error.message : t("The guide could not answer just now."),
         );
@@ -338,7 +355,7 @@ function ChatThread() {
         setSending(false);
       }
     },
-    [dictation, language, pinned, planId, player, reload, sending, session, speakOn, t, tf],
+    [dictation, language, pinned, planId, reload, sending, session, speakAnswer, speakOn, t, tf],
   );
 
   const canSend = Boolean(session) && draft.trim().length > 0 && !sending;

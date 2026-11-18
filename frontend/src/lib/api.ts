@@ -551,16 +551,14 @@ export const api = {
    * sent only while that card is pinned. The server checks the id belongs to this student
    * before it tells the model anything about the plan, and the field is left null for
    * every other message so a plan never travels into an unrelated conversation.
+   *
+   * The answer comes back without audio: speech is requested separately with `speak()`
+   * once the reply is on screen, so the text is never held behind the voice.
    */
-  sendMessage: async (
-    sessionId: number,
-    message: string,
-    speak: boolean,
-    planOf?: number | null,
-  ) => {
+  sendMessage: async (sessionId: number, message: string, planOf?: number | null) => {
     const reply = await request<ChatReply>(`/api/conversations/${sessionId}/messages`, {
       method: "POST",
-      body: JSON.stringify({ message, speak, plan_of: planOf ?? null }),
+      body: JSON.stringify({ message, plan_of: planOf ?? null }),
     });
     return { ...reply, audio_url: mediaUrl(reply.audio_url) };
   },

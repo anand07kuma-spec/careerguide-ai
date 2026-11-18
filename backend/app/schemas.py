@@ -455,6 +455,9 @@ class MessageOut(ORMModel):
 
 class ChatIn(StrictIn):
     message: str = Field(min_length=1, max_length=2000)
+    # Accepted and ignored. Speech is no longer made inside this request: the reply
+    # is returned at model speed and the screen asks `/api/voice/speak` afterwards.
+    # The field stays so a cached frontend that still sends it is not refused.
     speak: bool = False
     # Set only when the student opened this chat from the "discuss this plan" button on a
     # result: the id of that result, which the route checks belongs to this student before
@@ -466,6 +469,8 @@ class ChatIn(StrictIn):
 class ChatOut(BaseModel):
     reply: MessageOut
     stage: int
+    # Always null now; the audio is fetched from `/api/voice/speak` once the reply is
+    # on screen. Kept in the shape for the same reason `speak` stays in `ChatIn`.
     audio_url: str | None = None
     audio_error: str | None = None
     detected_themes: list[str] = Field(default_factory=list)

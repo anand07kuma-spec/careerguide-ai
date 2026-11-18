@@ -9,6 +9,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from ..database import get_db
+from ..config import get_settings
 from ..middleware.rate_limit import chat_limit
 from ..models import (
     ConsentRecord,
@@ -29,7 +30,7 @@ from ..schemas import (
     SessionStartIn,
 )
 from ..security import ensure_settings, get_current_user, require_student
-from ..services import ai_provider, entitlements, profile_facts, roadmap, tts
+from ..services import ai_provider, entitlements, profile_facts, roadmap
 from ..services.language import detect as detect_language
 from ..services.recommender import build_recommendations
 from .auth import CLASS_TO_AGE
@@ -111,7 +112,6 @@ async def send_message(
 ) -> ChatOut:
     student_id = require_student(user)
     session = _load_session(db, session_id, student_id)
-    settings = ensure_settings(db, user.id)
 
     if session.status != "active":
         raise HTTPException(
@@ -192,7 +192,14 @@ async def send_message(
         age_range=profile.age_range if profile else None,
         stage=session.stage,
         known_themes=_known_themes(db, student_id),
-        career_suggestions=_suggestion_titles(db, student_id),
+        # The scripted guide is the only reader of these, and only from the stage
+        # where it starts suggesting possibilities. Scoring the whole catalogue on
+        # a real-provider turn spent a query per message on a value nothing used.
+        career_suggestions=(
+            _suggestion_titles(db, student_id)
+            if not get_settings().ai_configured and session.stage >= 4
+            else []
+        ),
         next_activity=None,
         plan_note=plan_note,
         missing_facts=profile_facts.missing_facts(
@@ -204,7 +211,17 @@ async def send_message(
         asked_facts=profile_facts.asked_keys(history),
     )
 
-    reply = await ai_provider.respond(text, ctx, history, db)
+    try:
+        reply = await ai_provider.respond(text, ctx, history, db)
+    except ai_provider.ProviderUnavailable as exc:
+        # Nothing above this line was committed, so a retry is a clean turn: the
+        # same words, no duplicate row, no scripted reply pretending to be the
+        # model's. The screen shows the sentence and offers the composer again.
+        raise HTTPException(
+            status_code=503,
+            detail=str(exc),
+            headers={"Retry-After": "5"},
+        ) from exc
 
     db.add(
         Message(session_id=session.id, role="user", content=text[:2000])
@@ -219,7 +236,9 @@ async def send_message(
     )
     session.stage = reply.stage
 
-    new_themes = _persist_observations(db, student_id, session.id, text, reply.themes)
+    new_themes = _persist_observations(
+        db, student_id, session.id, text, reply.themes, known=ctx.known_themes
+    )
 
     if reply.safety_flag:
         db.add(
@@ -233,14 +252,11 @@ async def send_message(
 
     db.commit()
 
-    audio_url = None
-    audio_error = None
-    if payload.speak and settings.speak_responses:
-        try:
-            audio_url = await tts.synthesize(reply.text, session.language, settings.voice)
-        except tts.TTSError as exc:
-            audio_error = str(exc)
-
+    # The reply leaves here before the voice is made. Speech synthesis took as
+    # long as the model itself (often longer), and holding the text until the WAV
+    # was ready made every spoken turn feel twice as slow as it was. The screen
+    # renders the answer, then asks `POST /api/voice/speak` for the audio, so the
+    # two waits overlap with reading instead of stacking behind each other.
     assistant_message = (
         db.scalars(
             select(Message)
@@ -254,8 +270,6 @@ async def send_message(
     return ChatOut(
         reply=MessageOut.model_validate(assistant_message),
         stage=session.stage,
-        audio_url=audio_url,
-        audio_error=audio_error,
         detected_themes=new_themes,
         needs_support=reply.safety_flag,
         provider=reply.provider,
@@ -282,10 +296,15 @@ def _suggestion_titles(db: Session, student_id: int) -> list[str]:
 
 
 def _persist_observations(
-    db: Session, student_id: int, session_id: int, text: str, themes: list[str]
+    db: Session,
+    student_id: int,
+    session_id: int,
+    text: str,
+    themes: list[str],
+    known: list[str],
 ) -> list[str]:
     """Store only the newest themes so evidence is not duplicated."""
-    already = set(_known_themes(db, student_id))
+    already = set(known)
     added: list[str] = []
     quote = text.strip()[:280]
     for theme in themes:

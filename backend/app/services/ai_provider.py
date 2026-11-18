@@ -7,10 +7,18 @@ Two implementations live behind `respond()`:
 
 Demo replies are always flagged with `demo_generated=True` so no part of the
 product can present them as real model output.
+
+A *failure* is not demo mode. When a provider is configured but times out, is
+rate-limited, or returns nothing usable, `respond()` raises `ProviderUnavailable`
+and the route answers 503 with a retry sentence. Substituting a scripted reply at
+that moment is what made the live assistant look like it had quietly given up
+after a couple of turns: a transient provider problem arrived looking like a
+normal, if generic, answer.
 """
 
 from __future__ import annotations
 
+import asyncio
 import random
 from dataclasses import dataclass, field
 
@@ -21,6 +29,59 @@ from ..config import get_settings
 from ..models import Message
 from . import profile_facts, prompts
 from .themes import THEMES, detect_themes, expresses_uncertainty, possible_distress
+
+# What the screen says when the configured model could not answer. The wording is
+# the same one the frontend shows for a failed request, and it always says the
+# student's message was not lost so a retry is an obvious next step.
+PROVIDER_SLOW = (
+    "The guide took too long to answer just now. Nothing you wrote was lost — "
+    "please send it again in a moment."
+)
+PROVIDER_UNAVAILABLE = (
+    "The guide could not answer just now. Nothing you wrote was lost — please "
+    "send it again in a moment."
+)
+
+
+class ProviderUnavailable(RuntimeError):
+    """The configured provider failed this turn.
+
+    Raised instead of returning a scripted reply: a temporary outage must look
+    like one, not like the guide changing its mind about how it answers.
+    """
+
+
+# One pooled client for the process. A fresh `AsyncClient` per turn paid a TLS
+# handshake to the provider before the first token was even requested; a warm
+# function instance reuses the connection instead. The per-request timeout is
+# passed at call time, so a test that shortens `ai_timeout_seconds` still works.
+_client: httpx.AsyncClient | None = None
+
+
+def _http_client() -> httpx.AsyncClient:
+    global _client
+    if _client is None or _client.is_closed:
+        _client = httpx.AsyncClient(
+            timeout=httpx.Timeout(30.0),
+            limits=httpx.Limits(max_connections=8, max_keepalive_connections=4),
+        )
+    return _client
+
+
+# A provider's own "not right now" answers. Retrying one of these once, a beat
+# later, is what keeps a single 429 from becoming a failed turn for the student.
+RETRYABLE_STATUS = frozenset({429, 500, 502, 503, 504})
+RETRY_DELAY_SECONDS = 0.5
+RETRY_DELAY_CAP_SECONDS = 2.0
+
+
+def _retry_delay(response: httpx.Response) -> float:
+    header = (response.headers.get("retry-after") or "").strip()
+    try:
+        delay = float(header)
+    except ValueError:
+        return RETRY_DELAY_SECONDS
+    return min(max(delay, 0.0), RETRY_DELAY_CAP_SECONDS)
 
 
 @dataclass
@@ -467,6 +528,32 @@ def pick_stage2(language: str) -> str:
     return _pick(STAGE2_QUESTION, language)
 
 
+async def _post_completion(
+    url: str, headers: dict[str, str], body: dict, timeout: float
+) -> httpx.Response:
+    """One completion request, retried once when the provider says "not now".
+
+    Only 429/5xx answers are retried: they arrive immediately, so a single beat of
+    backoff fits inside the turn's time budget. A timeout is not retried — it has
+    already spent the seconds the student can spare.
+    """
+    global _client
+    try:
+        response = await _http_client().post(url, headers=headers, json=body, timeout=timeout)
+    except RuntimeError as exc:
+        # A test suite that creates a second event loop reuses a client bound to
+        # the first one. Rebuild it rather than failing the turn.
+        if "loop" not in str(exc).lower():
+            raise
+        _client = None
+        response = await _http_client().post(url, headers=headers, json=body, timeout=timeout)
+
+    if response.status_code in RETRYABLE_STATUS:
+        await asyncio.sleep(_retry_delay(response))
+        response = await _http_client().post(url, headers=headers, json=body, timeout=timeout)
+    return response
+
+
 async def _openai_compatible_respond(user_text: str, ctx: GuideContext, history: list[Message]) -> GuideReply:
     settings = get_settings()
     system = prompts.build_system_prompt(
@@ -480,7 +567,11 @@ async def _openai_compatible_respond(user_text: str, ctx: GuideContext, history:
         plan_note=ctx.plan_note,
     )
     turns = [{"role": "system", "content": system}]
-    for message in history[-12:]:
+    # Ten turns of context. Six was the old window, which meant turn seven had
+    # already forgotten how the conversation began while the screen still showed it.
+    for message in history[-20:]:
+        if not (message.content or "").strip():
+            continue
         role = "assistant" if message.role == "assistant" else "user"
         turns.append({"role": role, "content": message.content})
     turns.append({"role": "user", "content": user_text})
@@ -488,25 +579,24 @@ async def _openai_compatible_respond(user_text: str, ctx: GuideContext, history:
     if not settings.ai_base_url.strip():
         raise ValueError("no AI base URL is configured")
     url = settings.ai_base_url.strip().rstrip("/") + "/chat/completions"
-    async with httpx.AsyncClient(timeout=settings.ai_timeout_seconds) as client:
-        response = await client.post(
-            url,
-            headers={"Authorization": f"Bearer {settings.ai_api_key}"},
-            json={
-                "model": settings.ai_model,
-                "messages": turns,
-                "temperature": 0.6,
-                "max_tokens": 220,
-            },
-        )
-        response.raise_for_status()
-        payload = response.json()
-        text = (payload["choices"][0]["message"].get("content") or "").strip()
+    response = await _post_completion(
+        url,
+        headers={"Authorization": f"Bearer {settings.ai_api_key}"},
+        body={
+            "model": settings.ai_model,
+            "messages": turns,
+            "temperature": 0.6,
+            "max_tokens": settings.ai_max_tokens,
+        },
+        timeout=settings.ai_timeout_seconds,
+    )
+    response.raise_for_status()
+    payload = response.json()
+    text = (payload["choices"][0]["message"].get("content") or "").strip()
 
     # A reasoning model can spend the whole completion budget thinking and come
     # back with an empty answer. Serving that would look like the guide went
-    # silent, so it counts as a provider failure and the built-in reply takes
-    # over with the reason shown. (`openai/gpt-oss-20b` does exactly this.)
+    # silent, so it counts as a provider failure and the screen offers a retry.
     if not text:
         raise ValueError("the configured provider returned an empty reply")
 
@@ -526,7 +616,12 @@ async def respond(
     history: list[Message],
     db: Session | None = None,
 ) -> GuideReply:
-    """Generate one age-appropriate guide reply, falling back to demo mode."""
+    """Generate one age-appropriate guide reply.
+
+    Demo mode is chosen only by configuration. A configured provider that fails
+    raises `ProviderUnavailable`, which the route turns into a 503 — never into a
+    scripted sentence wearing the guide's voice.
+    """
     settings = get_settings()
     reply: GuideReply
     # A disclosure of harm gets the one answer this project has reviewed word for
@@ -538,21 +633,13 @@ async def respond(
     else:
         try:
             reply = await _openai_compatible_respond(user_text, ctx, history)
-        except httpx.TimeoutException:
+        except httpx.TimeoutException as exc:
             # Told apart from every other failure because it is the one a student can
             # cause by simply typing while a model is thinking, and it reads better
             # than "could not be reached".
-            reply = demo_respond(user_text, ctx)
-            reply.error = (
-                "The configured AI provider took too long to answer, so this reply "
-                "came from the built-in guide instead."
-            )
-        except (httpx.HTTPError, KeyError, IndexError, ValueError):
-            reply = demo_respond(user_text, ctx)
-            reply.error = (
-                "The configured AI provider could not be reached, so this reply came "
-                "from the built-in guide instead."
-            )
+            raise ProviderUnavailable(PROVIDER_SLOW) from exc
+        except (httpx.HTTPError, KeyError, IndexError, ValueError, TypeError) as exc:
+            raise ProviderUnavailable(PROVIDER_UNAVAILABLE) from exc
     # Whatever produced the reply, the caller needs to know which language it came
     # back in so text-to-speech picks a voice that can actually pronounce it.
     reply.language = _lang(ctx.language)
