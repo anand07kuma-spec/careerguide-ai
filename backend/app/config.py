@@ -191,8 +191,15 @@ class Settings(BaseSettings):
     ai_model: str = ""
     ai_base_url: str = "https://api.openai.com/v1"
     # A slow model is a failed turn: the student is waiting on a one-sentence reply,
-    # and the built-in guide answers in the meantime with the reason shown.
+    # and the request says so rather than showing a scripted sentence in its place.
     ai_timeout_seconds: int = 45
+    # The completion budget. This counts a reasoning model's private thinking tokens
+    # as well as the answer, and `openai/gpt-oss-*` on Groq spends the budget thinking
+    # before it writes anything. At 220 the first short turn could fit and every turn
+    # after it came back with empty content — which used to be read as "no answer" and
+    # silently replaced with the scripted guide. A one-sentence reply plus room to
+    # think needs far less than this; the limit is a ceiling, not a target.
+    ai_max_tokens: int = 1024
 
     # Text-to-speech voices. Hindi and English. The same Microsoft neural voice
     # ids work on both transports below.

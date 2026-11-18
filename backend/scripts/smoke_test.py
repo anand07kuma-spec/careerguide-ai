@@ -311,20 +311,20 @@ with client:
             f"{len(provider_calls) - calls_before} extra calls",
         )
 
-        # A provider that is configured but unreachable must degrade to the
-        # labelled demo guide rather than fail the student's turn.
+        # A provider that is configured but unreachable must fail the turn as a
+        # retryable error. A scripted sentence here is what used to make the live
+        # guide look like it had quietly stopped using the model.
         settings.ai_base_url = "http://127.0.0.1:1/v1"
         r = client.post(
             f"/api/conversations/{session_id}/messages",
             json={"message": "I enjoy teaching my younger sister maths", "speak": False},
             headers=auth(student_token),
         )
-        fell_back = r.json() if r.status_code == 200 else {}
+        failed = r.json() if r.status_code == 503 else {}
         check(
-            "an unreachable provider falls back, and says so",
-            r.status_code == 200
-            and fell_back.get("reply", {}).get("demo_generated") is True,
-            str(fell_back)[:200],
+            "an unreachable provider is a retryable 503, not a demo reply",
+            r.status_code == 503 and "reply" not in failed and "again" in str(failed.get("detail", "")).lower(),
+            r.status_code,
         )
     finally:
         stub.shutdown()

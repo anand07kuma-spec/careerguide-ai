@@ -82,9 +82,17 @@ class StubProvider(BaseHTTPRequestHandler):
         )
         if delay:
             time.sleep(delay)
+        retry_after = None
         if mode == "error":
             payload = b'{"error": "upstream is having a bad day"}'
             self.send_response(500)
+        elif mode == "ratelimit_once" and state.get("hits", 0) == 0:
+            # The provider's first "not now", then a normal answer: the retry this
+            # suite checks for is one stretch of patience, not a loop.
+            state["hits"] = 1
+            payload = b'{"error": "slow down"}'
+            self.send_response(429)
+            retry_after = "0"
         elif mode == "empty":
             payload = b'{"choices": [{"message": {"role": "assistant", "content": ""}}]}'
             self.send_response(200)
@@ -97,6 +105,8 @@ class StubProvider(BaseHTTPRequestHandler):
             ).encode()
             self.send_response(200)
         self.send_header("Content-Type", "application/json")
+        if retry_after is not None:
+            self.send_header("Retry-After", retry_after)
         self.send_header("Content-Length", str(len(payload)))
         self.end_headers()
         self.wfile.write(payload)
@@ -139,7 +149,7 @@ def configure(**values) -> None:
     mode = base.pop("mode", "ok")
     for name, value in base.items():
         setattr(settings, name, value)
-    state.update(mode=mode, reply=REPLY, delay=0.0)
+    state.update(mode=mode, reply=REPLY, delay=0.0, hits=0)
 
 
 def reset() -> None:
@@ -173,6 +183,18 @@ try:
             assert response.status_code == 200, response.text[:400]
             return response.json(), response.text
 
+        def attempt(text: str):
+            return client.post(
+                f"/api/conversations/{session_id}/messages",
+                json={"message": text},
+                headers=headers,
+            )
+
+        def stored_messages() -> list[dict]:
+            response = client.get(f"/api/conversations/{session_id}/messages", headers=headers)
+            assert response.status_code == 200, response.text[:200]
+            return response.json()
+
         section("0. a provider needs a name, a key and a model")
         reset()
         check("demo mode is what an unconfigured app reports",
@@ -202,6 +224,8 @@ try:
               sent["path"].endswith("/chat/completions"), sent["path"])
         check("the model the app was told to use is the one asked for",
               sent["body"].get("model") == "stub-model", sent["body"].get("model"))
+        check("the completion budget leaves room for a reasoning model",
+              sent["body"].get("max_tokens", 0) >= 1024, sent["body"].get("max_tokens"))
         check("the key travels only as a bearer header",
               sent["auth"] == f"Bearer {KEY}" and KEY not in sent["raw"], sent["auth"])
         check("the reply itself carries no key", KEY not in raw, raw[:200])
@@ -241,34 +265,91 @@ try:
             check(f"{label}: no provider is contacted", len(calls) == before, len(calls) - before)
             check(f"{label}: no key in the response", KEY not in raw, raw[:160])
 
-        section("4. a provider failure costs the truth, not the conversation")
-        for label, values in (
-            ("HTTP 500", {"mode": "error"}),
-            ("an empty completion", {"mode": "empty"}),
-            ("a body with no choices", {"mode": "malformed"}),
-            ("a blank base URL", {"ai_base_url": ""}),
+        section("4. a provider failure is a retry, never a scripted reply")
+        for label, values, expected_calls in (
+            # The 500 is retried once before the turn is given up on.
+            ("HTTP 500", {"mode": "error"}, 2),
+            ("an empty completion", {"mode": "empty"}, 1),
+            ("a body with no choices", {"mode": "malformed"}, 1),
+            ("a blank base URL", {"ai_base_url": ""}, 0),
         ):
             configure(**values)
             before = len(calls)
-            answer, raw = say("I want to ask about the plan")
-            check(f"{label}: the student still gets an answer",
-                  bool(answer["reply"]["content"].strip()), answer["reply"])
-            check(f"{label}: it is labelled demo",
-                  answer["reply"]["demo_generated"] is True and answer["provider"] == "demo", answer)
-            check(f"{label}: the response says why",
-                  "could not be reached" in (answer["error"] or ""), answer["error"])
-            expected = 0 if label == "a blank base URL" else 1
-            check(f"{label}: the call count matches", len(calls) - before == expected, len(calls) - before)
-            check(f"{label}: the key is still not in the response", KEY not in raw, raw[:160])
+            before_history = stored_messages()
+            response = attempt("I want to ask about the plan")
+            body = response.json()
+            check(f"{label}: the turn fails as a retryable error",
+                  response.status_code == 503, response.status_code)
+            check(f"{label}: …and says it can be sent again",
+                  "again" in str(body.get("detail", "")).lower(), body.get("detail"))
+            check(f"{label}: no scripted answer is returned",
+                  "reply" not in body, str(body)[:160])
+            check(f"{label}: nothing is written to the transcript",
+                  stored_messages() == before_history, len(stored_messages()))
+            check(f"{label}: the call count matches", len(calls) - before == expected_calls,
+                  len(calls) - before)
+            check(f"{label}: the key is still not in the response", KEY not in response.text,
+                  response.text[:160])
 
-        section("5. a slow provider is a fallback, not a blank screen")
+        section("4b. one 429 is survived without the student seeing it")
+        configure(mode="ratelimit_once")
+        before = len(calls)
+        answer, raw = say("I want to ask about the plan")
+        check("a single throttle is retried", len(calls) - before == 2, len(calls) - before)
+        check("…and the model's own reply arrives", answer["reply"]["content"] == REPLY, answer)
+        check("…unlabelled as demo", answer["reply"]["demo_generated"] is False, answer["reply"])
+        check("…and no key leaks", KEY not in raw, raw[:160])
+
+        section("5. a slow provider is a retry, not a blank screen")
         configure(ai_timeout_seconds=1)
         state.update(mode="ok", delay=2.0)
-        answer, raw = say("Which subject should I focus on?")
-        check("the timeout branch answers", answer["reply"]["demo_generated"] is True, answer["reply"])
-        check("…with the timeout reason, not the unreachable one",
-              "took too long" in (answer["error"] or ""), answer["error"])
-        check("…and no key leaks", KEY not in raw, raw[:160])
+        before_history = stored_messages()
+        response = attempt("Which subject should I focus on?")
+        body = response.json()
+        check("the timeout branch answers 503", response.status_code == 503, response.status_code)
+        check("…saying it took too long",
+              "took too long" in str(body.get("detail", "")), body.get("detail"))
+        check("…no scripted reply is passed off as the model",
+              "reply" not in body, str(body)[:160])
+        check("…and the transcript is unchanged", stored_messages() == before_history)
+        check("…and no key leaks", KEY not in response.text, response.text[:160])
+
+        section("5b. ten consecutive turns stay on the real provider")
+        configure()
+        started_again = client.post(
+            "/api/conversations", json={"kind": "chat"}, headers=headers
+        )
+        assert started_again.status_code == 201, started_again.text[:300]
+        long_id = started_again.json()["id"]
+
+        def long_say(text: str) -> dict:
+            response = client.post(
+                f"/api/conversations/{long_id}/messages",
+                json={"message": text},
+                headers=headers,
+            )
+            assert response.status_code == 200, response.text[:400]
+            return response.json()
+
+        first_words = "turn one: I like drawing comics after school"
+        replies = [long_say(first_words)]
+        for index in range(2, 11):
+            replies.append(long_say(f"turn {index}: I also enjoy building things"))
+        check("ten turns all come from the configured provider",
+              all(r["provider"] == "openai" for r in replies),
+              sorted({r["provider"] for r in replies}))
+        check("…and none of them is labelled demo",
+              all(r["reply"]["demo_generated"] is False for r in replies),
+              [r["reply"]["demo_generated"] for r in replies])
+        tenth = calls[-1]["body"]["messages"]
+        check("the tenth turn still carries how the conversation began",
+              any(first_words in m["content"] for m in tenth if m["role"] == "user"),
+              [m["content"][:40] for m in tenth[-4:]])
+        stored = client.get(
+            f"/api/conversations/{long_id}/messages", headers=headers
+        ).json()
+        check("all twenty-one messages (greeting, ten of each role) are stored",
+              len(stored) == 21, len(stored))
 
         section("6. a disclosure of harm is never sent to a model")
         configure()
