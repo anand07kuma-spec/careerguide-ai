@@ -470,6 +470,24 @@ class Settings(BaseSettings):
     google_timeout_seconds: int = 15
 
     @property
+    def google_missing(self) -> list[str]:
+        """The names — never the values — of the settings that stop a sign-in.
+
+        An operator reading "not configured" has to open this file to learn which of
+        the three is blank; naming them here puts the next step in the answer itself.
+        A variable name is not a credential, so this may cross to the login page.
+        """
+        missing: list[str] = []
+        if not self.google_client_id.strip():
+            missing.append("GOOGLE_CLIENT_ID")
+        if not self.google_client_secret.strip():
+            missing.append("GOOGLE_CLIENT_SECRET")
+        redirect = self.google_redirect_uri.strip().lower()
+        if not (redirect.startswith("https://") or redirect.startswith("http://")):
+            missing.append("GOOGLE_REDIRECT_URI")
+        return missing
+
+    @property
     def google_configured(self) -> bool:
         """All three values, and a callback address a browser could actually reach.
 
@@ -478,12 +496,7 @@ class Settings(BaseSettings):
         http(s) redirect URI here means the page can be honest before anything is
         clicked, and `start` re-checks rather than trusting that the property was read.
         """
-        redirect = self.google_redirect_uri.strip().lower()
-        return bool(
-            self.google_client_id.strip()
-            and self.google_client_secret.strip()
-            and (redirect.startswith("https://") or redirect.startswith("http://"))
-        )
+        return not self.google_missing
 
     # --- Email ------------------------------------------------------------------
     # Resend, for the six messages in app/services/email.py. Both values are blank
