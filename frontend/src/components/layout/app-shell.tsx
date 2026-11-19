@@ -18,8 +18,8 @@ import {
   Landmark,
   Lightbulb,
   ListChecks,
-  Menu,
   Mic,
+  MoreVertical,
   MessagesSquare,
   Settings,
   ShieldCheck,
@@ -283,87 +283,20 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const mobileNav = isParent ? PARENT_MOBILE_NAV : STUDENT_MOBILE_NAV;
 
-  const sidebar = (
-    <nav
-      aria-label={t("Main")}
-      className="relative flex h-full flex-col overflow-hidden bg-navy text-white/80"
-    >
-      {/* The same navy-and-glow language as the public hero, held back to a
-          suggestion so the nav stays the most readable thing in the column. */}
-      <div aria-hidden className="pointer-events-none absolute -left-16 -top-24 h-64 w-64 rounded-full bg-brand/25 blur-3xl" />
-      <div aria-hidden className="pointer-events-none absolute inset-0 cg-grid-lines opacity-20" />
-
-      <div className="relative px-5 pb-5 pt-6">
-        <Link href="/" className="block">
-          <Wordmark tone="white" />
-        </Link>
-        {/* The tagline above already says what the guide is; the class range is
-            student-facing copy, so a parent's column keeps just the three lines
-            the brand is made of. */}
-        {isParent ? null : (
-          <p className="mt-2 text-2xs text-white/50">{t("A guide for classes 6 to 12")}</p>
-        )}
-      </div>
-
-      <div className="cg-scrollbar relative flex-1 overflow-y-auto px-3 pb-6">
-        {/* One even list: the groups only decide which rows a parent may see, so
-            letting their boundaries add extra space made the column read as four
-            ragged clusters of two or three rows each. */}
-        <ul className="space-y-1">
-          {items
-            .filter((item) => !item.tileOnly)
-            .map((item) => {
-              const active = isActive(pathname, item.href);
-              const Icon = item.icon;
-              return (
-                <li key={item.href}>
-                  <Link
-                    href={item.href}
-                    onClick={() => closeDrawer(false)}
-                    aria-current={active ? "page" : undefined}
-                    className={cn(
-                      "flex min-h-10 items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium leading-snug transition-all",
-                      active
-                        ? "bg-brand-solid text-on-brand shadow-[0_10px_24px_-14px_rgba(37,99,235,0.9)]"
-                        : "text-white/70 hover:bg-white/8 hover:text-white",
-                    )}
-                  >
-                    <Icon className="h-4 w-4 shrink-0" aria-hidden />
-                    <span className="min-w-0 flex-1 break-words">{t(item.label)}</span>
-                  </Link>
-                </li>
-              );
-            })}
-        </ul>
-      </div>
-
-      <div className="relative border-t border-white/10 p-3">
-        <ProfileCard
-          href={isParent ? "/app/settings/profile" : "/app/profile"}
-          name={user?.display_name}
-          role={isParent ? t("Parent") : t("Student")}
-          roleBadge={isParent}
-          photoUrl={photo.url}
-          onNavigate={() => closeDrawer(false)}
-        />
-      </div>
-    </nav>
-  );
-
   return (
-    <div className="cg-app-shell min-h-dvh bg-canvas lg:grid lg:grid-cols-[280px_minmax(0,1fr)] print:block">
+    <div className="cg-app-shell min-h-dvh bg-canvas print:block">
       <a className="cg-skip-link" href="#main-content">
         {t("Skip to content")}
       </a>
-      <aside className="sticky top-0 hidden h-dvh lg:block print:hidden">{sidebar}</aside>
 
-      {/* Mobile drawer. Only reachable through the ☰ button in the header, and the
-          page behind it is dimmed and made non-interactive so the menu reads clearly
-          instead of overlapping whatever the student was looking at. */}
+      {/* The one menu, at every width. It used to sit permanently in a 280px
+          desktop column; closing it now hands that space back to the page, which
+          is what lets Home run the full width of the window. A tap on the dimmed
+          page behind it closes it, and so does Escape. */}
       <div
         id="app-drawer"
         className={cn(
-          "fixed inset-0 z-50 lg:hidden",
+          "fixed inset-0 z-50",
           drawerOpen ? "pointer-events-auto" : "pointer-events-none",
         )}
         inert={!drawerOpen}
@@ -387,10 +320,10 @@ export function AppShell({ children }: { children: ReactNode }) {
           )}
         >
           <div aria-hidden className="pointer-events-none absolute -left-20 top-8 h-64 w-64 rounded-full bg-brand/25 blur-3xl" />
-          {/* The same rows as the desktop sidebar, one per line: full labels stay
-              readable at 288px, and the phone already reaches the eight or so
-              guide and account rows without a scrollbar. Pages with their own
-              Explore tile stay one tap away on the dashboard grid. */}
+          {/* The full list, one per line: full labels stay readable at 288px, and
+              the eight or so guide and account rows fit without a scrollbar.
+              Pages with their own Explore tile stay one tap away on the dashboard
+              grid. */}
           <div className="relative flex items-center justify-between gap-3 px-4 pb-3 pt-4">
             <Wordmark tone="white" compact={!isParent} />
             <button
@@ -445,7 +378,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       </div>
 
       <div className="flex min-w-0 flex-col" inert={drawerOpen}>
-        <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-line bg-surface/90 px-4 py-3 backdrop-blur lg:hidden print:hidden">
+        <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-line bg-surface/90 px-4 py-3 backdrop-blur print:hidden">
           <button
             type="button"
             ref={openButtonRef}
@@ -453,10 +386,10 @@ export function AppShell({ children }: { children: ReactNode }) {
             aria-label={t("Open menu")}
             aria-controls="app-drawer"
             aria-expanded={drawerOpen}
-            className="flex min-h-11 items-center gap-2 rounded-control border border-line bg-surface px-3 py-2 text-ink transition-colors hover:border-brand/40 hover:text-brand"
+            aria-haspopup="dialog"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-control border border-line bg-surface text-ink transition-colors hover:border-brand/40 hover:text-brand"
           >
-            <Menu className="h-5 w-5" aria-hidden />
-            <span className="text-xs font-semibold">{t("Menu")}</span>
+            <MoreVertical className="h-5 w-5" aria-hidden />
           </button>
           <Wordmark compact />
           <Link
@@ -540,6 +473,7 @@ export function Screen({
   titleClassName,
   children,
   className,
+  fullWidth = false,
 }: {
   title: string;
   description?: ReactNode;
@@ -550,10 +484,20 @@ export function Screen({
   titleClassName?: string;
   children: ReactNode;
   className?: string;
+  /** Home is a workspace rather than a document: with the drawer closed it uses
+   * the whole window instead of a centred reading column. The other screens keep
+   * `max-w-page`, where a long line of prose would be worse on a wide monitor. */
+  fullWidth?: boolean;
 }) {
   const t = useT();
   return (
-    <div className={cn("mx-auto w-full max-w-page px-4 py-6 sm:px-6 sm:py-9", className)}>
+    <div
+      className={cn(
+        "mx-auto w-full px-4 py-6 sm:px-6 sm:py-9",
+        fullWidth ? "max-w-none" : "max-w-page",
+        className,
+      )}
+    >
       {/* The one printable thing inside a screen is the document the student wrote, not
           this heading and its buttons — a CV that opens with the app's own page title is
           the app printing itself on the child's paper. */}

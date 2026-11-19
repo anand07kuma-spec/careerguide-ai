@@ -997,6 +997,7 @@ export default function StudentHome() {
 
   return (
     <Screen
+      fullWidth
       title={tf("Hi {name}", { name })}
       description={t(
         "A workspace built from what you tell the guide — your conversations, saves and next steps, with nothing ranked.",
