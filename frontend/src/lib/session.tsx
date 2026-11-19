@@ -109,8 +109,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     // cookie the server wrote. Nothing is read out of storage, because nothing was ever
     // put there — a token a script could read is a token a script could hand over.
     try {
-      apply(await withDeadline(api.me(), CHECK_TIMEOUT_MS));
-      return;
+      const current = await withDeadline(api.me(), CHECK_TIMEOUT_MS);
+      if (current) {
+        apply(current);
+        return;
+      }
+      // 204: this browser presented no credential at all. That is a first-time
+      // visitor, not a refused one, so the next question is the device handshake.
     } catch (error) {
       if (isOffline(error)) {
         // The cookie *is* the account: there is no password to type again. A network
@@ -118,8 +123,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         setStatus("offline");
         return;
       }
-      // 401, or a shape this page cannot read. Either way the server has refused what
-      // this tab was holding, including any header it minted for itself a minute ago.
+      // A token that was presented and is wrong (401), or a shape this page cannot
+      // read. Either way the server has refused what this tab was holding, including
+      // any header it minted for itself a minute ago.
       setAuthToken(null);
     }
 

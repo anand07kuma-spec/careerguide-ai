@@ -170,6 +170,11 @@ class Settings(BaseSettings):
     # The same guard already runs automatically when `VERCEL` is set (see
     # `app/main.py`); this is the switch for a host that sets no flag of its own.
     require_postgres: bool = False
+    # Whether `/docs`, `/redoc` and `/openapi.json` are served. `None` means "decide
+    # from the host": off on a hosted deployment (the same two signals the storage
+    # guard already trusts — `VERCEL` and `REQUIRE_POSTGRES`), on for a laptop. Set it
+    # explicitly to `true` to publish the schema from a deployment on purpose.
+    api_docs_enabled: bool | None = None
     # The browser this API answers to. One origin (`https://site.example`), or a
     # comma-separated few when one backend serves several frontends; on Render this
     # is the *exact* value of the frontend's own URL, scheme included, with no

@@ -59,6 +59,7 @@ from ..security import (
     ensure_settings,
     get_current_session,
     get_current_user,
+    get_optional_user,
     get_raw_token,
     issue_token,
     renew_session,
@@ -570,7 +571,15 @@ def password_reset(
 
 
 @router.get("/me", response_model=SessionOut)
-def me(user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> SessionOut:
+def me(
+    user: User | None = Depends(get_optional_user),
+    db: Session = Depends(get_db),
+) -> SessionOut | Response:
+    # An anonymous visitor is not a refused one: asking "who am I" with no credential
+    # is answered 204, so a first page load does not log a 401. A credential that was
+    # presented and is wrong still raises 401 inside the dependency.
+    if user is None:
+        return Response(status_code=204)
     # An empty token on purpose: this reads the session that is already in the cookie or
     # the header, it does not hand out a second one.
     return session_for(db, user, "")

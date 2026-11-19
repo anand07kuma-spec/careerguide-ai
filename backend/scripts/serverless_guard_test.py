@@ -83,8 +83,14 @@ with TestClient(app) as client:
     catalogue = client.get("/api/careers", headers={"Origin": ORIGIN})
     check("read-only routes are refused too", catalogue.status_code == 503, catalogue.status_code)
 
-    docs = client.get("/docs")
-    check("non-API paths still serve", docs.status_code == 200, docs.status_code)
+    # A hosted deployment does not publish its schema. The path and the schema are
+    # both absent, which is a decision rather than the guard refusing a page.
+    check("the API docs are not published here",
+          client.get("/docs").status_code == 404)
+    check("…nor is the schema they would render",
+          client.get("/openapi.json").status_code == 404)
+    check("a path outside the API keeps its own answer, not the guard's",
+          client.get("/does-not-exist").status_code == 404)
 
 # Two shapes of the same question, asked of a fresh process each time because the
 # guard is decided at import: a host that sets no flag of its own but does say the
