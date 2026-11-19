@@ -248,7 +248,8 @@ def _verify_id_token(value: str, nonce: str, settings) -> dict:
 @router.get("/status", response_model=GoogleStatusOut)
 def google_status() -> GoogleStatusOut:
     """Whether this server can complete a sign-in, asked before anything is clicked."""
-    return GoogleStatusOut(configured=get_settings().google_configured)
+    settings = get_settings()
+    return GoogleStatusOut(configured=settings.google_configured, missing=settings.google_missing)
 
 
 @router.get("/start")

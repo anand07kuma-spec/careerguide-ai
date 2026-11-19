@@ -97,6 +97,7 @@ frontend code, never in a commit, never pasted into chat or a screenshot.
 | `CLERK_API_BASE` | backend | `https://api.clerk.com` | Where the backend verifies a browser token; change it only for a self-hosted Clerk or a custom domain |
 | `CLERK_WEBHOOK_SIGNING_SECRET` | backend | empty | `whsec_…` for this endpoint alone — without it `POST /api/webhooks/clerk` refuses every request rather than trusting an unsigned body |
 | `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | frontend | empty | The browser half of the same feature. It is public by design; the secret half stays on the server |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `GOOGLE_REDIRECT_URI` | backend | empty / empty / empty | The three values that switch on **Continue with Google** on `/login`. Any one blank — or a redirect URI that is not an absolute `http(s)` address — leaves the feature off: `GET /api/auth/google/status` answers `{"configured": false, "missing": ["GOOGLE_CLIENT_ID", …]}` (variable *names*, never values), the login page keeps the button disabled and says which setting is missing, and `/api/auth/google/start` answers `503` naming them. The secret signs the state cookie and proves this server is the app Google issued the code to, so it stays on the server: never in a `NEXT_PUBLIC_*` variable, a browser bundle, a commit or a log. `GOOGLE_REDIRECT_URI` must equal an Authorised redirect URI in the Google console character for character. The walkthrough is below |
 | `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` | backend | empty / empty | The two halves of a checkout. With either blank, `POST /api/payments/create-order` answers `503`, `GET /api/payments/plans` reports `payments_enabled: false`, and `/pricing` disables its own Upgrade buttons instead of opening a sheet that cannot work. There is deliberately **no** `NEXT_PUBLIC_RAZORPAY_KEY_ID`: the publishable key reaches the browser inside the order response and `/api/payments/me`, so it is not baked into a bundle twice |
 | `RAZORPAY_WEBHOOK_SECRET` | backend | empty | Without it `POST /api/payments/webhook` refuses every delivery rather than reading an unsigned body as an instruction to unlock a paid plan for nothing |
 | `RAZORPAY_API_BASE` | backend | `https://api.razorpay.com/v1` | The real endpoint already; override it only to point a test at a stub |
@@ -108,6 +109,66 @@ frontend code, never in a commit, never pasted into chat or a screenshot.
 cp backend/.env.example backend/.env                  # gitignored
 cp frontend/.env.example frontend/.env.local
 ```
+
+### Google sign-in
+
+Off until the **backend** has all three values. The flow is the server-side authorization-code
+one with PKCE, a signed `state` cookie and a verified identity token; the browser never holds a
+Google client id or secret. Nothing is merged by email address, an existing account keeps its
+role, and one Google subject id can only ever open one account.
+
+Until these are set, the login page says so — with the names of the missing variables — and no
+button pretends to work.
+
+**1. One project in [Google Cloud Console](https://console.cloud.google.com/):** create (or pick)
+a project for this app.
+
+**2. OAuth consent screen** (APIs & Services → OAuth consent screen): user type **External**, fill
+the app name and support email. Add exactly the scopes `openid`, `email` and `profile` — nothing
+else is requested. While the app is in **Testing**, only accounts listed under *Test users* can
+sign in; either add the Google account you will test with, or publish the app when it is ready.
+Google's *Branding* tab also wants a homepage and privacy-policy link — use the deployed
+frontend origin and its `/privacy` page.
+
+**3. OAuth client** (APIs & Services → Credentials → Create credentials → OAuth client ID →
+Application type **Web application**).
+
+**4. Authorised JavaScript origins** — the **frontend** origin, no path, no trailing slash:
+
+| Where | Origin |
+| --- | --- |
+| Local | `http://localhost:3000` |
+| Production | `https://careerguide-web.vercel.app` |
+
+**5. Authorised redirect URIs** — the **backend** callback, no trailing slash. This is the single
+most common mistake: it is the API's address, not the web app's.
+
+| Where | Redirect URI |
+| --- | --- |
+| Local | `http://localhost:8000/api/auth/google/callback` |
+| Production | `https://careerguide-api-omega.vercel.app/api/auth/google/callback` |
+
+**6. Copy the values into the API's environment** — `backend/.env` locally, and the **Vercel
+project that serves the API** (`careerguide-api-omega`) under Settings → Environment Variables:
+
+```
+GOOGLE_CLIENT_ID=…apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=…                  # server only
+GOOGLE_REDIRECT_URI=http://localhost:8000/api/auth/google/callback
+```
+
+Use the production redirect URI in production, and redeploy after changing an environment
+variable — Vercel bakes them into the running deployment. Then check, without secrets in the
+answer:
+
+```bash
+curl -s https://careerguide-api-omega.vercel.app/api/auth/google/status
+# {"configured":true,"missing":[]}
+```
+
+`GOOGLE_AUTH_URL`, `GOOGLE_TOKEN_URL` and `GOOGLE_JWKS_URL` already default to Google's real
+endpoints; they exist so the test suite can point at a stub. The full flow, its refusals and the
+account rules are covered by `backend/scripts/google_auth_test.py`.
 
 ### Database
 

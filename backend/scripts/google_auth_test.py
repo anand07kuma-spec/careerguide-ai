@@ -203,7 +203,8 @@ with client:
     section("Configuration is reported, never faked")
     answer = client.get("/api/auth/google/status")
     check("status says Google is configured when the three values are set",
-          answer.status_code == 200 and answer.json() == {"configured": True}, answer.text)
+          answer.status_code == 200 and answer.json() == {"configured": True, "missing": []},
+          answer.text)
 
     blank = Settings(
         google_client_id="",
@@ -211,16 +212,28 @@ with client:
         google_redirect_uri="",
     )
     check("blank credentials report configured: false", blank.google_configured is False)
+    check("blank credentials name the three variables, in order, and no value",
+          blank.google_missing
+          == ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "GOOGLE_REDIRECT_URI"],
+          str(blank.google_missing))
     half = Settings(
         google_client_id="abc",
         google_client_secret="def",
         google_redirect_uri="not-a-url",
     )
     check("a redirect URI that is not http(s) is not configured", half.google_configured is False)
+    check("only the missing redirect URI is named",
+          half.google_missing == ["GOOGLE_REDIRECT_URI"], str(half.google_missing))
 
     real_get_settings = google_auth_module.get_settings
     google_auth_module.get_settings = lambda: blank
     try:
+        status_when_blank = client.get("/api/auth/google/status")
+        check("the status route names the missing variables without echoing a value",
+              status_when_blank.json().get("missing")
+              == ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "GOOGLE_REDIRECT_URI"]
+              and get_settings().google_client_secret not in status_when_blank.text,
+              status_when_blank.text)
         unavailable = client.get("/api/auth/google/start", params={"consent": "1"})
         check("start answers 503 when Google is not configured", unavailable.status_code == 503,
               unavailable.text)

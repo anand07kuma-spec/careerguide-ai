@@ -166,10 +166,12 @@ class GoogleStatusOut(BaseModel):
 
     A false here is not a broken feature — it is the honest state of a server without
     Google credentials, and the login page says so instead of painting a button that
-    would fail after somebody had already chosen a Google account.
+    would fail after somebody had already chosen a Google account. `missing` names the
+    environment variables an operator still has to set; it never carries a value.
     """
 
     configured: bool
+    missing: list[str] = Field(default_factory=list)
 
 
 class SignInMethodsOut(BaseModel):

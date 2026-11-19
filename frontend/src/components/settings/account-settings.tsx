@@ -192,6 +192,11 @@ export function AccountSettings() {
                 {t(
                   "Google sign-in is not switched on for this deployment, so there is nothing to connect yet. The operator has to configure it on the server first.",
                 )}
+                {google.data?.missing?.length ? (
+                  <span className="mt-1.5 block font-mono text-[11px] text-muted">
+                    {t("Missing")}: {google.data.missing.join(", ")}
+                  </span>
+                ) : null}
               </DetailNote>
             </div>
           ) : null}

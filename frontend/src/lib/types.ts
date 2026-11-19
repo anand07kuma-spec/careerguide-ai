@@ -187,6 +187,11 @@ export interface ClerkStatus {
  */
 export interface GoogleStatus {
   configured: boolean;
+  /**
+   * Environment variable names this deployment has not set yet — `GOOGLE_CLIENT_ID`
+   * and its two neighbours — never their values. Empty when `configured` is true.
+   */
+  missing: string[];
 }
 
 /** Which doors open this account, as the server's own row holds them. */

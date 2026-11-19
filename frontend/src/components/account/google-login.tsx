@@ -116,6 +116,7 @@ export function GoogleLogin() {
    * arrival already answered this page's only question, so the control is not shown. */
   const [roleFromLink, setRoleFromLink] = useState<boolean | null>(null);
   const [configured, setConfigured] = useState<boolean | null>(null);
+  const [missing, setMissing] = useState<string[]>([]);
   const [statusError, setStatusError] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [redirecting, setRedirecting] = useState(false);
@@ -174,7 +175,10 @@ export function GoogleLogin() {
     api
       .googleStatus()
       .then((answer) => {
-        if (alive) setConfigured(answer.configured);
+        if (alive) {
+          setConfigured(answer.configured);
+          setMissing(answer.missing);
+        }
       })
       .catch(() => {
         if (alive) setStatusError(true);
@@ -389,7 +393,11 @@ export function GoogleLogin() {
                   type="button"
                   disabled
                   aria-describedby="google-unavailable"
-                  title={t("Google sign-in is not configured yet")}
+                  title={
+                    missing.length
+                      ? `${t("Google sign-in is not configured yet")}: ${missing.join(", ")}`
+                      : t("Google sign-in is not configured yet")
+                  }
                   className="flex min-h-12 w-full cursor-not-allowed items-center justify-center gap-3 rounded-xl border border-white/70 bg-white/95 px-5 text-sm font-medium text-[#3c4043] shadow-[0_14px_34px_-18px_rgba(0,0,0,0.8)]"
                 >
                   <GoogleMark className="h-5 w-5" />
@@ -426,6 +434,14 @@ export function GoogleLogin() {
                     {t(
                       "An operator must enable it for this server — nothing here pretends it works.",
                     )}
+                    {missing.length ? (
+                      <>
+                        {" "}
+                        <span className="mt-1 block font-mono text-[10.5px] text-white/50">
+                          {t("Missing")}: {missing.join(", ")}
+                        </span>
+                      </>
+                    ) : null}
                   </p>
                 </div>
               ) : null}
