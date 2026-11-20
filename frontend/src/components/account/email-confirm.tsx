@@ -5,9 +5,8 @@ import Link from "next/link";
 import { AlertTriangle, ArrowLeft, CheckCircle2, Loader2, MailCheck } from "lucide-react";
 import { Wordmark } from "@/components/brand";
 import { ThemeToggle } from "@/components/careers/theme-toggle";
-import { api } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 import { useT } from "@/lib/i18n";
-import { failureMessage } from "./email-forms";
 import { LoginScene } from "./login-scene";
 
 type Answer = { confirmed: boolean; note: string };
@@ -18,6 +17,18 @@ type State =
   | { kind: "confirmed"; note: string }
   | { kind: "refused"; note: string }
   | { kind: "failed"; note: string };
+
+/** This page's own wording for a failure, because the reset screens' sentence names
+ * the wrong feature: nothing here resets a password, and nothing here should claim to. */
+function confirmFailureMessage(error: unknown): string {
+  if (error instanceof ApiError) {
+    if (error.status === 503) {
+      return "Email is not set up on this server yet, so this address cannot be confirmed. Please ask the operator to enable it, then open the link again.";
+    }
+    return error.message;
+  }
+  return "Something went wrong. Please try again.";
+}
 
 /**
  * The page a confirmation mail opens.
@@ -56,7 +67,7 @@ export function EmailConfirm() {
       })
       .catch((error: unknown) => {
         if (!live) return;
-        setState({ kind: "failed", note: failureMessage(error) });
+        setState({ kind: "failed", note: confirmFailureMessage(error) });
       });
     return () => {
       live = false;
