@@ -1,8 +1,6 @@
 "use client";
 
 import { LegalLayout, LegalSection, REPO_URL, type SectionRef } from "@/components/legal/legal-layout";
-import { SampleNote } from "@/components/legal/identity-card";
-import { CITY } from "@/lib/legal-entity";
 import { useT } from "@/lib/i18n";
 
 /**
@@ -320,11 +318,10 @@ export default function TermsPage() {
           )}
         </p>
         <p>
-          {t("The usual next line names the courts of a city. Those are the")}&nbsp;
-          <span className="font-mono text-xs text-ink">{CITY}</span>&nbsp;
-          {t("courts, because that is where whoever operates this deployment works from.")}
+          {t(
+            "An ordinary terms page names the courts of a city at this point. This project has no registered office and has chosen no legal forum, so it names none — there is no city, court or registered address to point at.",
+          )}
         </p>
-        <SampleNote />
       </LegalSection>
 
       <LegalSection id="disputes" title={t("Disputes")}>
@@ -335,7 +332,7 @@ export default function TermsPage() {
         </p>
         <p>
           {t(
-            "A deployment that holds a real child's data needs that path working rather than merely named: an inbox somebody reads, an officer whose name is filled in, and a lawyer who has read this page. The note printed beside the contact details on these pages says which of those this build has.",
+            "A deployment that holds a real child's data needs that path working rather than merely named: an inbox somebody reads, an appointed grievance officer, and a lawyer who has read this page. This build has none of the three, and the contact card on these pages says so.",
           )}
         </p>
       </LegalSection>

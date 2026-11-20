@@ -2,7 +2,7 @@
 
 import { ShieldCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { IdentityCard } from "@/components/legal/identity-card";
+import { OperatorCard } from "@/components/legal/identity-card";
 import {
   LegalLayout,
   LegalSection,
@@ -43,7 +43,7 @@ const SECTIONS: SectionRef[] = [
   { id: "transfers", title: "International data transfers" },
   { id: "security", title: "Security measures" },
   { id: "cookies", title: "Cookies" },
-  { id: "grievance-officer", title: "Grievance officer" },
+  { id: "grievance-officer", title: "Grievances and contact" },
   { id: "changes", title: "Changes to this policy" },
   { id: "contact", title: "Contact us" },
 ];
@@ -226,7 +226,7 @@ export default function PrivacyPage() {
         </p>
         <p>
           {t(
-            "This is one document about one prototype. It is not a legal opinion, and it does not claim to satisfy any law — see the sections on legal basis and on the grievance officer for what is actually missing.",
+            "This is one document about one prototype. It is not a legal opinion, and it does not claim to satisfy any law — see the sections on legal basis and on grievances for what is actually missing.",
           )}
         </p>
       </LegalSection>
@@ -541,13 +541,18 @@ export default function PrivacyPage() {
         </p>
       </LegalSection>
 
-      <LegalSection id="grievance-officer" title={t("Grievance officer")}>
+      <LegalSection id="grievance-officer" title={t("Grievances and contact")}>
         <p>
           {t(
-            "A policy for users in India names a grievance officer who can be reached and who answers within a stated period. Those details live in one file in this project's code, and every legal page reads them from there, so a deployment changes them once instead of hunting through four documents.",
+            "An Indian data-protection policy usually names a grievance officer, a postal address and a response period. This is an individually developed student project: it has appointed no grievance officer, registered no company and promised no response time.",
           )}
         </p>
-        <IdentityCard fields="officer" />
+        <OperatorCard />
+        <p>
+          {t(
+            "A question about data still has a route — the contact form and the public repository. Neither is a staffed support desk, and neither is watched around the clock.",
+          )}
+        </p>
       </LegalSection>
 
       <LegalSection id="changes" title={t("Changes to this policy")}>
@@ -566,7 +571,7 @@ export default function PrivacyPage() {
       <LegalSection id="contact" title={t("Contact us")}>
         <p>
           {t(
-            "The grievance inbox and postal address above are the contact routes for anything about data. There is no separate support desk behind them, and a bug you can describe is usually faster reported where others can see it:",
+            "The contact details above are the route for anything about data. There is no separate support desk behind them, and a bug you can describe is usually faster reported where others can see it:",
           )}
         </p>
         <p>

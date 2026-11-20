@@ -11,13 +11,7 @@ import { CookieBanner } from "@/components/consent/cookie-banner";
 import { Analytics } from "@/components/analytics/Analytics";
 import { JsonLd } from "@/components/seo/json-ld";
 import { DEFAULT_DESCRIPTION, SITE_NAME, absolute, siteOrigin } from "@/lib/site";
-import {
-  CITY,
-  COMPANY,
-  GRIEVANCE_EMAIL,
-  IS_SAMPLE,
-  POSTAL_ADDRESS,
-} from "@/lib/legal-entity";
+import { CONTACT_EMAIL } from "@/lib/legal-entity";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -107,12 +101,11 @@ export const viewport: Viewport = {
  * The two blocks every crawler meets first: who publishes this site, and what
  * the site is.
  *
- * `Organization` carries no `legalName`, postal address or email while the
- * identity in `src/lib/legal-entity.ts` is still the sample set — a printed
+ * CareerGuide AI is an individually developed student project, not a registered
+ * company, so `Organization` carries no `legalName` and no postal address. It
+ * carries a contact email only when one is configured for this deployment — an
  * address that belongs to nobody, echoed into structured data, is a claim a
- * crawler repeats further than the page that made it. Once an operator fills
- * those five variables for a real deployment, the same file says so, and this
- * block then asserts what the site itself has published.
+ * crawler repeats further than the page that made it.
  *
  * The `SearchAction` is honest: `/careers?search=` is a real `GET` form on a
  * public page, so the template describes something a person can actually do.
@@ -126,13 +119,7 @@ const ORGANIZATION = {
   logo: { "@type": "ImageObject", url: absolute("/icon-512.png") },
   description: DEFAULT_DESCRIPTION,
   areaServed: "IN",
-  ...(IS_SAMPLE
-    ? {}
-    : {
-        legalName: COMPANY,
-        address: { "@type": "PostalAddress", streetAddress: POSTAL_ADDRESS, addressLocality: CITY, addressCountry: "IN" },
-        email: GRIEVANCE_EMAIL,
-      }),
+  ...(CONTACT_EMAIL ? { email: CONTACT_EMAIL } : {}),
 };
 
 const SITE_SCHEMAS = [

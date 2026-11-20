@@ -53,8 +53,11 @@ export const HI: Record<string, string> = {
   // ---- Footer
   Product: "प्रोडक्ट",
   Social: "सोशल",
+  More: "अधिक",
   "Chat with the guide": "गाइड से बात करें",
   "Streams after class 10": "कक्षा 10 के बाद के स्ट्रीम",
+  "inside the app": "ऐप के अंदर",
+  "inside the app; payments not open yet": "ऐप के अंदर; भुगतान अभी शुरू नहीं हुआ",
   "How it works": "यह कैसे काम करता है",
   Pricing: "कीमत",
   "nothing is for sale yet": "अभी बिक्री के लिए कुछ नहीं",
@@ -73,8 +76,8 @@ export const HI: Record<string, string> = {
   YouTube: "YouTube",
   "CareerGuide AI supports exploration. It is not a replacement for a qualified career counsellor, teacher or doctor.":
     "CareerGuide AI खोज में मदद करता है। यह किसी योग्य करियर काउंसलर, शिक्षक या डॉक्टर का बदल नहीं है।",
-  "A prototype for Indian students from class 6 to 12, and their parents.":
-    "कक्षा 6 से 12 के भारतीय स्टूडेंट्स और उनके माता-पिता के लिए बना प्रोटोटाइप।",
+  "An individually developed student project for Indian students from class 6 to 12, and their parents.":
+    "कक्षा 6 से 12 के भारतीय स्टूडेंट्स और उनके माता-पिता के लिए एक व्यक्तिगत रूप से विकसित स्टूडेंट प्रोजेक्ट।",
   "Prototype — no compliance claims": "प्रोटोटाइप — किसी क़ानून के पालन का दावा नहीं",
   "Made in India": "भारत में बना",
 
@@ -152,14 +155,12 @@ export const HI: Record<string, string> = {
     "इन शर्तों में उनकी शर्तें किसी ऐसे लिंक से शामिल नहीं की गई हैं जिस पर कोई क्लिक नहीं करता। वे गोपनीयता पेज पर लिखी हैं, यह बताते हुए कि हर एक को क्या मिलता है; और वे अपना डेटा कितने दिन रखती हैं, इसकी जाँच इस प्रोजेक्ट ने नहीं की है।",
   "These terms are written for use in India, and Indian law is the law this project assumes applies to them. That is a statement of intent, not a determination — no lawyer has reviewed it.":
     "ये शर्तें भारत में इस्तेमाल के लिए लिखी गई हैं, और इस प्रोजेक्ट का मानना है कि इन पर भारतीय क़ानून लागू होता है। यह इरादा ज़ाहिर करना है, तय करना नहीं — इसे किसी वकील ने नहीं पढ़ा।",
-  "The usual next line names the courts of a city. Those are the":
-    "अगली पंक्ति आमतौर पर किसी शहर की अदालतों का नाम लेती है। यहाँ वे",
-  "courts, because that is where whoever operates this deployment works from.":
-    "की अदालतें हैं, क्योंकि यह डिप्लॉयमेंट चलाने वाला उसी शहर से काम करता है।",
+  "An ordinary terms page names the courts of a city at this point. This project has no registered office and has chosen no legal forum, so it names none — there is no city, court or registered address to point at.":
+    "आम शर्तों वाला पेज यहाँ किसी शहर की अदालतों का नाम लिखता है। इस प्रोजेक्ट का कोई पंजीकृत कार्यालय नहीं है और इसने कोई क़ानूनी फ़ोरम नहीं चुना, इसलिए यह कोई नाम नहीं लिखता — न शहर, न अदालत, न पंजीकृत पता।",
   "There is no arbitration clause and no forum-selection clause, so the sentence above is the whole of it. If something here goes wrong for you, the contact form and the public issue tracker are the two routes, and the issue tracker is at least visible to others.":
     "न कोई सुलह (arbitration) अनुच्छेद है, न मंच-चुनाव की शर्त, इसलिए ऊपर लिखी पंक्ति ही इस हिस्से की पूरी बात है। अगर यहाँ आपके साथ कुछ ग़लत होता है तो संपर्क फ़ॉर्म और सार्वजनिक issue tracker — बस ये दो रास्ते हैं, और issue tracker की बात कम-से-कम दूसरे भी देख सकते हैं।",
-  "A deployment that holds a real child's data needs that path working rather than merely named: an inbox somebody reads, an officer whose name is filled in, and a lawyer who has read this page. The note printed beside the contact details on these pages says which of those this build has.":
-    "जो तैनाती असली बच्चे का डेटा रखती है, उसे शिकायत का रास्ता सिर्फ़ नाम से नहीं, चलते हुए चाहिए: कोई ऐसी इनबॉक्स जिसे कोई पढ़े, कोई अधिकारी जिसका नाम भरा हो, और कोई वकील जिसने यह पेज पढ़ा हो। इन पेजों पर संपर्क मानों के बगल में जो नोट छपता है, वह यही बताता है कि इस बिल्ड में उनमें से क्या मौजूद है।",
+  "A deployment that holds a real child's data needs that path working rather than merely named: an inbox somebody reads, an appointed grievance officer, and a lawyer who has read this page. This build has none of the three, and the contact card on these pages says so.":
+    "जो तैनाती किसी असली बच्चे का डेटा रखती है, उसके लिए यह रास्ता सिर्फ़ नाम का नहीं, काम करने वाला होना चाहिए: कोई पढ़ने वाला इनबॉक्स, नियुक्त शिकायत अधिकारी, और इस पेज को पढ़ चुका वकील। इस बिल्ड में तीनों में से कुछ नहीं है, और इन पेजों का संपर्क कार्ड यही कहता है।",
   "These terms change by being edited and republished, with the date at the top moved forward. There is no email to notify, no in-app banner and no version history shown to you — continuing to use the app after a change is the acceptance of it.":
     "ये शर्तें संपादित और दोबारा प्रकाशित होकर बदलती हैं, और ऊपर लिखी तारीख आगे खिसक जाती है। सूचित करने के लिए ईमेल नहीं, ऐप के अंदर बैनर नहीं, और आपको कोई संस्करण-इतिहास नहीं दिखता — बदलाव के बाद ऐप इस्तेमाल करना ही उसे स्वीकार करना है।",
   "The page you are reading is stored with the code, so the terms you see match the build you are using, and every past version is public in the repository.":
@@ -248,7 +249,7 @@ export const HI: Record<string, string> = {
     "इस पेज के बारे में सवाल — जिसमें यह भी कि पेड टियर सच में चल रहा है या नहीं — संपर्क फ़ॉर्म पर भेजें। भुगतान प्रोसेसर की रसीद का जवाब पहले वही प्रोसेसर देगा, क्योंकि लेनदेन उनके पास है, इस ऐप के पास नहीं।",
   "A refund question reaches whoever operates this deployment through the contact page; there is no separate refunds desk, and this page is not going to print an address the contact page has not already published.":
     "रिफ़ंड का सवाल संपर्क पेज के ज़रिए इस डिप्लॉयमेंट को चलाने वाले तक पहुँचता है; कोई अलग रिफ़ंड डेस्क नहीं है, और यह पेज ऐसा पता नहीं छापेगा जो संपर्क पेज ने पहले से न बताया हो।",
-  "Privacy: grievance officer": "गोपनीयता: शिकायत अधिकारी",
+  "Privacy: grievances": "गोपनीयता: शिकायतें",
 
   // ---- Disclaimer
   "General disclaimer": "सामान्य अस्वीकरण",
@@ -390,6 +391,8 @@ export const HI: Record<string, string> = {
     "बताने को कोई टीम नहीं है। यह एक व्यक्ति का प्रोटोटाइप प्रोजेक्ट है, एक सार्वजनिक रिपॉज़िटरी में प्रकाशित — न बताई जाने वाला कोई स्टाफ़, न शुक्रिया अदा करने योग्य कोई निवेशक।",
   "A normal About page would put a card here for each founder, an advisory board, and a sentence about investors. None of those exist, so this section names the operator instead of inventing people to fill it.":
     "एक आम About पेज यहाँ हर संस्थापक का कार्ड, एक सलाहकार बोर्ड और निवेशकों के बारे में एक पंक्ति डालता है। इनमें से कुछ भी मौजूद नहीं है, इसलिए यह हिस्सा गढ़े हुए लोगों की जगह उस संस्थाचालक का नाम बताता है जो यह चलाता है।",
+  "CareerGuide AI is an individually developed student project: not a registered company, with no registered address, no phone line and no dedicated support email. Questions and reports land in the public repository.":
+    "CareerGuide AI एक व्यक्तिगत रूप से विकसित स्टूडेंट प्रोजेक्ट है: कोई पंजीकृत कंपनी नहीं, न पंजीकृत पता, न फ़ोन लाइन, और न कोई समर्पित सहायता ईमेल। सवाल और रिपोर्ट सार्वजनिक रिपॉज़िटरी में पहुँचते हैं।",
   "No career counsellor, psychologist or education researcher has reviewed the questions the guide asks or the answers it gives. That review is on the list of things this project still needs, and it is the reason the safety and disclaimer pages say what they say.":
     "न किसी करियर काउंसलर, न मनोवैज्ञानिक और न शिक्षा शोधकर्ता ने गाइड के पूछे सवालों या दिए जवाबों की जाँच की है। वह समीक्षा इस प्रोजेक्ट की बाक़ी ज़रूरतों की सूची में है, और इसीलिए सुरक्षा और अस्वीकरण पेज जो कहते हैं वह सच कहते हैं।",
   "Read before a child uses it": "बच्चे को देने से पहले पढ़ें",
@@ -443,17 +446,12 @@ export const HI: Record<string, string> = {
     "यह फ़ॉर्म इसी साइट के अपने एंडपॉइंट पर भेजता है, जो टेक्स्ट एक ईमेल सेवा (Resend) को दे देता है ताकि वह एक ही मेलबॉक्स तक पहुँचे। एप्लिकेशन डेटाबेस में कुछ नहीं लिखा जाता, कोई बातचीत संलग्न नहीं होती, और संदेश का पूरा टेक्स्ट सर्वर लॉग में भी नहीं जाता।",
   "The reply address is the email you type, so whoever answers can reply to you. If the mail service is not configured on this deployment, the form says so on screen and sends nothing — it will not show you a success message that no mailbox received.":
     "जवाब का पता वही ईमेल है जो आप लिखते हैं, इसलिए जवाब देने वाला आपको सीधे जवाब लिख सकता है। अगर यह डिप्लॉयमेंट मेल सेवा के साथ सेट नहीं है तो फ़ॉर्म स्क्रीन पर यही कहेगा और कुछ भेजेगा नहीं — वह आपको कोई सफलता-संदेश नहीं दिखाएगा जो किसी मेलबॉक्स तक पहुँचा ही नहीं।",
-  "A service for users in India names a grievance officer who answers within a stated period. Those details are kept in one place in this project's code and every legal page reads them from there, so this list and the one on the privacy policy cannot drift apart.":
-    "भारत में इस्तेमाल होने वाली सेवा एक शिकायत अधिकारी का नाम बताती है जो तय समय में जवाब दे। वे मान इस प्रोजेक्ट के कोड की एक ही जगह रखे हैं, और हर क़ानूनी पेज उन्हें वहीं से पढ़ता है — इसलिए यह सूची और गोपनीयता नीति वाली सूची एक-दूसरे से अलग नहीं हो सकतीं।",
-  "Response time": "जवाब का समय",
-  "The period named above is the one a configured deployment answers within. Where the note on these cards says the details are still samples, there is no queue yet and nobody reading one, so the honest version of that promise is: write it down, expect silence, and use the repository if the question is about something broken.":
-    "ऊपर लिखा समय वह अंतराल है जिसमें एक सेट-अप हो चुकी तैनाती जवाब देती है। जहाँ इन कार्डों का नोट कहता है कि ये मान अभी नमूने हैं, वहाँ कोई क़तार भी नहीं है और पढ़ने वाला भी कोई नहीं — इसलिए उस वादे का ईमानदार रूप यही है: बात लिख दीजिए, चुप्पी की उम्मीद रखिए, और अगर सवाल किसी ख़राब चीज़ के बारे में है तो रिपॉज़िटरी इस्तेमाल कीजिए।",
-  "The same details, written out for anyone who wants to know who runs the site rather than who answers a complaint.":
-    "वही मान, एक बार और लिखे गए — उन लोगों के लिए जो यह जानना चाहते हैं कि साइट कौन चलाता है, शिकायत का जवाब कौन देता है यह नहीं।",
-  "Registered address": "पंजीकृत पता",
-  Phone: "फ़ोन",
-  "What can be said either way: a privacy or grievance message is the one kind that should be answered first, and the GitHub issue is visible to everyone, which usually makes it the fastest of the two.":
-    "दोनों सूरतों में इतना कहा जा सकता है: गोपनीयता या शिकायत वाला संदेश सबसे पहले जवाब माँगता है, और GitHub issue सबको दिखता है, जिससे वह अक्सर दोनों में तेज़ हो जाता है।",
+  "An Indian service usually names a grievance officer who answers within a stated period. This is an individually developed student project, so there is no appointed officer, no registered company behind it and no promised response time.":
+    "भारत में सेवा आमतौर पर शिकायत अधिकारी का नाम बताती है जो तय समय में जवाब दे। यह व्यक्तिगत रूप से बनाया गया स्टूडेंट प्रोजेक्ट है, इसलिए न कोई नियुक्त अधिकारी है, न पीछे कोई पंजीकृत कंपनी, और न जवाब देने का कोई वादा।",
+  "There is no promised response time. A message is read by whoever develops this project when they can, and the form says on screen when this deployment cannot send mail at all.":
+    "जवाब देने की कोई तय समय-सीमा नहीं है। संदेश उसी व्यक्ति द्वारा पढ़ा जाता है जो यह प्रोजेक्ट बनाता है, जब वह कर सके; और जब यह डिप्लॉयमेंट मेल ही नहीं भेज सकता तो फ़ॉर्म स्क्रीन पर बता देता है।",
+  "A privacy or grievance message is the one kind that should be looked at first, and the GitHub issue is visible to everyone, which usually makes it the fastest of the two.":
+    "गोपनीयता या शिकायत वाला संदेश सबसे पहले देखा जाना चाहिए, और GitHub issue सबको दिखता है, जिससे वह अक्सर दोनों में तेज़ हो जाता है।",
   "The only place a message is certain to be seen is the project’s public GitHub repository — bug reports, wrong career information and privacy concerns included.":
     "एक ही जगह है जहाँ संदेश पढ़ा जाना पक्का है — प्रोजेक्ट की सार्वजनिक GitHub रिपॉज़िटरी, चाहे बात बग की हो, ग़लत करियर जानकारी की या गोपनीयता की चिंता की।",
   "It is a public repository. Nothing private about a child belongs in it.":
