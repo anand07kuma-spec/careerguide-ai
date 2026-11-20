@@ -231,21 +231,23 @@ configure()
 check("Edge's note names the service it uses", "Edge TTS" in tts.provider_note())
 
 print("\n--- what /api/health reports ---")
+from fastapi.testclient import TestClient  # noqa: E402
 from app import main as app_main  # noqa: E402
 from app.schemas import TTSIn  # noqa: E402
 
+health_client = TestClient(app_main.app)
 configure(azure_speech_key=KEY, azure_speech_region="eastus")
-body = app_main.health()
+body = health_client.get("/api/health").json()
 check("health reports the service that will be called",
-      body.tts_provider == tts.AZURE, body)
-check("health says the voice is ready once a key exists", body.tts_ready is True, body)
+      body["tts_provider"] == tts.AZURE, body)
+check("health says the voice is ready once a key exists", body["tts_ready"] is True, body)
 configure(tts_provider="azure")
-body = app_main.health()
-check("health does not call a keyless Azure ready", body.tts_ready is False, body)
+body = health_client.get("/api/health").json()
+check("health does not call a keyless Azure ready", body["tts_ready"] is False, body)
 configure()
-body = app_main.health()
+body = health_client.get("/api/health").json()
 check("health reports Edge when there is no key",
-      body.tts_provider == tts.EDGE and body.tts_ready is True, body)
+      body["tts_provider"] == tts.EDGE and body["tts_ready"] is True, body)
 
 print("\n--- a long guide reply is shortened, not rejected ---")
 long_reply = "karim " * 900  # longer than anything that is comfortable to listen to
@@ -279,8 +281,8 @@ print("\n--- what the last real call actually said ---")
 attempt = tts.last_attempt()
 check("a call that produced audio is remembered as working",
       attempt["ok"] is True and attempt["provider"] == tts.EDGE, attempt)
-check("health carries that verdict next to the config flag",
-      app_main.health().tts_last_attempt.ok is True, app_main.health().tts_last_attempt)
+reported = health_client.get("/api/health").json()["tts_last_attempt"]
+check("health carries that verdict next to the config flag", reported["ok"] is True, reported)
 
 
 class SilentCommunicate:
@@ -306,8 +308,9 @@ check("and the verdict names the provider that failed",
       attempt["provider"] == tts.EDGE, attempt)
 check("the spoken text is not kept in the verdict", "hello" not in str(attempt["reason"]),
       attempt["reason"])
+reported = health_client.get("/api/health").json()
 check("health still reports the configuration as ready",
-      app_main.health().tts_ready is True and app_main.health().tts_last_attempt.ok is False)
+      reported["tts_ready"] is True and reported["tts_last_attempt"]["ok"] is False, reported)
 
 tts.edge_tts.Communicate = FakeCommunicate
 
@@ -408,13 +411,13 @@ check("a Gemini voice can be chosen by the student", tts.voice_for("hi", "Puck")
 check("an unknown Gemini voice cannot replace a known one", tts.voice_for("hi", "nope") == "Sulafat")
 check("the student is offered a real list of voices",
       len(tts.voice_options()[0]["voices"]) >= 4, tts.voice_options())
-body = app_main.health()
+body = health_client.get("/api/health").json()
 check("health reports Gemini as the service that will be called",
-      body.tts_provider == tts.GEMINI, body)
-check("health says the voice is ready once a Gemini key exists", body.tts_ready is True, body)
+      body["tts_provider"] == tts.GEMINI, body)
+check("health says the voice is ready once a Gemini key exists", body["tts_ready"] is True, body)
 configure(tts_provider="gemini")
-body = app_main.health()
-check("health does not call a keyless Gemini ready", body.tts_ready is False, body)
+body = health_client.get("/api/health").json()
+check("health does not call a keyless Gemini ready", body["tts_ready"] is False, body)
 
 print("\n--- live calls ---")
 # Read from this machine's real configuration, so a developer who has a key in

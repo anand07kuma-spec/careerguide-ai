@@ -198,6 +198,20 @@ export function isOffline(error: unknown): boolean {
 }
 
 /**
+ * How long a request may wait for an answer.
+ *
+ * Without a deadline a connection that is accepted and then stalls leaves the screen on
+ * its spinner forever — the sign-in page said "Checking sign-in…" with no way forward.
+ * The default is longer than any ordinary page read; the routes below that wait on an
+ * outside model override it, because the server itself waits up to `ai_timeout_seconds`
+ * (45s) before it gives up on a provider.
+ */
+const DEFAULT_TIMEOUT_MS = 30_000;
+const AI_TIMEOUT_MS = 90_000;
+const GOOGLE_STATUS_TIMEOUT_MS = 8_000;
+const PDF_TIMEOUT_MS = 60_000;
+
+/**
  * The session this page load was handed, or null.
  *
  * A cookie is normally enough, and this is the fallback for the browsers where it is not:
@@ -217,7 +231,11 @@ function dropInMemoryToken() {
   token = null;
 }
 
-async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+async function request<T>(
+  path: string,
+  init: RequestInit = {},
+  timeoutMs = DEFAULT_TIMEOUT_MS,
+): Promise<T> {
   const headers = new Headers(init.headers);
   // A FormData body carries its own multipart boundary in the header the browser writes,
   // so setting JSON here would both lie about the body and hide that boundary.
@@ -226,11 +244,23 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   }
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
+  // A caller may pass its own signal; this one only adds the deadline beside it, so an
+  // unmount that aborts its fetch still stops the request rather than being replaced.
+  const controller = new AbortController();
+  const callerSignal = init.signal;
+  const abort = () => controller.abort();
+  if (callerSignal) {
+    if (callerSignal.aborted) controller.abort();
+    else callerSignal.addEventListener("abort", abort, { once: true });
+  }
+  const timer = setTimeout(abort, timeoutMs);
+
   let response: Response;
   try {
     response = await fetch(`${apiBase()}${path}`, {
       ...init,
       headers,
+      signal: controller.signal,
       cache: "no-store",
       // The session cookie is attached to this request and accepted from the reply. With
       // the default `same-origin` a cross-origin API call would run with no credential at
@@ -238,11 +268,22 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
       credentials: "include",
     });
   } catch {
+    // A deadline of our own is a slow or absent answer, not a page that gave up on it.
+    if (controller.signal.aborted && !callerSignal?.aborted) {
+      throw new ApiError(
+        `The server did not answer within ${Math.round(timeoutMs / 1000)} seconds. ` +
+          "Please try again in a moment.",
+        0,
+      );
+    }
     throw new ApiError(
       "Cannot reach the CareerGuide AI server right now. It may be starting up or " +
         "temporarily offline — please try again in a moment.",
       0,
     );
+  } finally {
+    clearTimeout(timer);
+    callerSignal?.removeEventListener("abort", abort);
   }
 
   if (response.status === 204) return undefined as T;
@@ -277,8 +318,13 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
  * them. These numbers go on a child's result page, so a shape that changed in
  * transit is a visible error rather than a blank space next to "Building and doing".
  */
-async function checked<T>(schema: ZodType<T>, path: string, init: RequestInit = {}): Promise<T> {
-  const data = await request<unknown>(path, init);
+async function checked<T>(
+  schema: ZodType<T>,
+  path: string,
+  init: RequestInit = {},
+  timeoutMs = DEFAULT_TIMEOUT_MS,
+): Promise<T> {
+  const data = await request<unknown>(path, init, timeoutMs);
   const parsed = schema.safeParse(data);
   if (!parsed.success) {
     throw new ApiError(
@@ -301,19 +347,33 @@ async function binary(path: string): Promise<Blob> {
   const headers = new Headers();
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
+  // A render can take a moment; a connection that is accepted and then says nothing is
+  // still a failure, and a download screen must not wait on it forever.
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), PDF_TIMEOUT_MS);
+
   let response: Response;
   try {
     response = await fetch(`${apiBase()}${path}`, {
       headers,
+      signal: controller.signal,
       cache: "no-store",
       credentials: "include",
     });
   } catch {
+    if (controller.signal.aborted) {
+      throw new ApiError(
+        "The report took too long to arrive. Nothing was lost — please try again.",
+        0,
+      );
+    }
     throw new ApiError(
       "Cannot reach the CareerGuide AI server right now. It may be starting up or " +
         "temporarily offline — please try again in a moment.",
       0,
     );
+  } finally {
+    clearTimeout(timer);
   }
 
   if (!response.ok) {
@@ -350,7 +410,11 @@ export const api = {
    * answer, not an error, so the app can go straight to the one question. */
   guest: (device_id: string) =>
     request<GuestResult>("/api/auth/guest", { method: "POST", body: JSON.stringify({ device_id }) }),
-  me: () => request<Session>("/api/auth/me"),
+  /** An anonymous browser is answered 204, not 401: asking who you are is not a
+   * failed request, and a visitor with no session has not been refused one. A token
+   * that was presented and is wrong still raises 401. */
+  me: async (): Promise<Session | null> =>
+    (await request<Session | undefined>("/api/auth/me")) ?? null,
   /**
    * Ask the server to push this session's expiry back. It needs a session to work, and
    * it cannot create one — the point of calling it from a timer is that a questionnaire
@@ -446,7 +510,10 @@ export const api = {
    * on the previous screen and only decides what a brand-new account is — the callback
    * never reads it from a URL, and the server's stored role always wins.
    */
-  googleStatus: () => request<GoogleStatus>("/api/auth/google/status"),
+  // Short on purpose: this only reports whether Google sign-in is configured, so a
+  // stalled answer is better shown as "couldn't reach the server" than spun on.
+  googleStatus: () =>
+    request<GoogleStatus>("/api/auth/google/status", {}, GOOGLE_STATUS_TIMEOUT_MS),
   googleStartUrl: (role: Role | null, deviceId: string) => {
     const params = new URLSearchParams({ consent: "1", device_id: deviceId });
     if (role) params.set("role", role);
@@ -556,10 +623,14 @@ export const api = {
    * once the reply is on screen, so the text is never held behind the voice.
    */
   sendMessage: async (sessionId: number, message: string, planOf?: number | null) => {
-    const reply = await request<ChatReply>(`/api/conversations/${sessionId}/messages`, {
-      method: "POST",
-      body: JSON.stringify({ message, plan_of: planOf ?? null }),
-    });
+    const reply = await request<ChatReply>(
+      `/api/conversations/${sessionId}/messages`,
+      {
+        method: "POST",
+        body: JSON.stringify({ message, plan_of: planOf ?? null }),
+      },
+      AI_TIMEOUT_MS,
+    );
     return { ...reply, audio_url: mediaUrl(reply.audio_url) };
   },
   messages: (sessionId: number) => request<ChatMessage[]>(`/api/conversations/${sessionId}/messages`),
@@ -570,10 +641,14 @@ export const api = {
   listConversations: () => request<ConversationInfo[]>("/api/conversations"),
 
   speak: async (text: string, language: string, voice?: string | null) => {
-    const result = await request<{ audio_url: string; provider: string }>("/api/voice/speak", {
-      method: "POST",
-      body: JSON.stringify({ text, language, voice: voice ?? null }),
-    });
+    const result = await request<{ audio_url: string; provider: string }>(
+      "/api/voice/speak",
+      {
+        method: "POST",
+        body: JSON.stringify({ text, language, voice: voice ?? null }),
+      },
+      AI_TIMEOUT_MS,
+    );
     return { ...result, audio_url: mediaUrl(result.audio_url) ?? result.audio_url };
   },
   voices: () => request<VoiceInfo>("/api/voice/voices"),
@@ -640,15 +715,21 @@ export const api = {
       resultSchema,
       `/api/assessments/result/${resultId}/roadmap${language ? `?language=${encodeURIComponent(language)}` : ""}`,
       { method: "POST" },
+      AI_TIMEOUT_MS,
     ),
 
   // The printed version of a student's questionnaires. `language` is which language
   // the *page* is printed in; the answers keep the language they were given in.
   generatePdfReport: (assessmentId: number, language?: string) =>
-    checked<PdfReport>(pdfReportSchema, "/api/reports/generate", {
-      method: "POST",
-      body: JSON.stringify(language ? { assessment_id: assessmentId, language } : { assessment_id: assessmentId }),
-    }),
+    checked<PdfReport>(
+      pdfReportSchema,
+      "/api/reports/generate",
+      {
+        method: "POST",
+        body: JSON.stringify(language ? { assessment_id: assessmentId, language } : { assessment_id: assessmentId }),
+      },
+      PDF_TIMEOUT_MS,
+    ),
   pdfReports: () => checked(pdfReportListSchema, "/api/reports/pdf"),
   pdfReportFile: (reportId: number) => binary(`/api/reports/pdf/${reportId}`),
   deletePdfReport: (reportId: number) =>
@@ -694,10 +775,14 @@ export const api = {
    * suggested" would be a claim this project does not get to make.
    */
   resumeSuggest: (target_role: string) =>
-    request<ResumeSuggestion>("/api/ai/resume-suggest", {
-      method: "POST",
-      body: JSON.stringify({ target_role }),
-    }),
+    request<ResumeSuggestion>(
+      "/api/ai/resume-suggest",
+      {
+        method: "POST",
+        body: JSON.stringify({ target_role }),
+      },
+      AI_TIMEOUT_MS,
+    ),
   /**
    * One turn of a practice interview.
    *
@@ -709,10 +794,14 @@ export const api = {
    * be a judgement about a child that nobody made.
    */
   mockInterview: (payload: { role: string; history: InterviewLine[]; language?: string }) =>
-    request<InterviewTurn>("/api/ai/mock-interview", {
-      method: "POST",
-      body: JSON.stringify(payload),
-    }),
+    request<InterviewTurn>(
+      "/api/ai/mock-interview",
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+      },
+      AI_TIMEOUT_MS,
+    ),
 
   resources: (params: { search?: string; category?: string; kind?: string; language?: string } = {}) => {
     const query = new URLSearchParams(

@@ -42,6 +42,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
+from urllib.parse import urlsplit
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -124,7 +125,41 @@ _settings = get_settings()
 # Blank means `memory://`, which is what this file has always been: one process, its
 # own counters. A Redis URL is only worth setting when the API runs as several workers
 # or several containers — see `RATE_LIMIT_REDIS_URL` in `app/config.py`.
-_REDIS = _settings.rate_limit_redis_url.strip()
+_REDIS_SCHEMES = {"redis", "rediss", "unix", "redis+unix"}
+
+
+def validate_redis_url(value: str) -> str:
+    """The Redis URL to hand slowapi, or `""` to keep this process's own counters.
+
+    A value with the wrong scheme is a configuration mistake, and slowapi would raise
+    while building the storage — at import, which means the API never boots. That is a
+    worse failure than the limiter it was meant to strengthen, so an unusable value is
+    logged and ignored: the deployment keeps the in-memory brake and stays up. A blank
+    value is the normal laptop case and is not an error.
+    """
+    candidate = (value or "").strip()
+    if not candidate:
+        return ""
+    try:
+        parts = urlsplit(candidate)
+    except ValueError:
+        parts = None
+    scheme = (parts.scheme.lower() if parts else "")
+    usable = scheme in _REDIS_SCHEMES and (
+        bool(parts.hostname) if scheme in {"redis", "rediss"} else bool(parts.path)
+    )
+    if not usable:
+        log.error(
+            "RATE_LIMIT_REDIS_URL is not a usable Redis URL (scheme %r). Counters stay "
+            "in this process's memory, so a serverless deployment enforces each limit "
+            "per warm instance. Expected redis://, rediss:// or unix://.",
+            scheme or "(none)",
+        )
+        return ""
+    return candidate
+
+
+_REDIS = validate_redis_url(_settings.rate_limit_redis_url)
 
 limiter = Limiter(
     key_func=client_identity,
@@ -156,7 +191,11 @@ limiter = Limiter(
 if _REDIS:
     log.info("Rate limit counters are held in Redis, so every worker shares them.")
 else:
-    log.info("Rate limit counters live in this process's memory.")
+    log.info(
+        "Rate limit counters live in this process's memory — one set per instance. "
+        "Serverless hosting starts several, so a hosted deployment enforces each rule "
+        "once per warm instance; set RATE_LIMIT_REDIS_URL to share one bucket."
+    )
 
 
 def _rule(attribute: str, fallback: str) -> str:

@@ -302,10 +302,7 @@ def renew_session(db: Session, record: AuthToken) -> AuthToken:
     return record
 
 
-def get_current_user(
-    record: AuthToken = Depends(get_current_session),
-    db: Session = Depends(get_db),
-) -> User:
+def _user_for_session(record: AuthToken, db: Session) -> User:
     user = db.get(User, record.user_id)
     if user is None or not user.is_active:
         raise CREDENTIALS_EXC
@@ -319,6 +316,51 @@ def get_current_user(
     ):
         renew_session(db, record)
     return user
+
+
+def get_current_user(
+    record: AuthToken = Depends(get_current_session),
+    db: Session = Depends(get_db),
+) -> User:
+    return _user_for_session(record, db)
+
+
+def _optional_presented_token(request: Request, authorization: str | None) -> str | None:
+    """The session this request offers, or `None` when it offers nothing.
+
+    `None` means *no credential at all*: no header and no session-shaped cookie. A
+    header that was written but is not a bearer string, and a cookie that carries our
+    name but not our shape, are still refusals — anonymity is the absence of an
+    attempt, never an attempt that failed.
+    """
+    if authorization:
+        return _bearer_or_raise(authorization)
+    cookie = (request.cookies.get(get_settings().auth_cookie_name) or "").strip()
+    if cookie:
+        if TOKEN_SHAPE.fullmatch(cookie):
+            return cookie
+        raise CREDENTIALS_EXC
+    return None
+
+
+def get_optional_user(
+    request: Request,
+    authorization: str | None = Header(default=None),
+    db: Session = Depends(get_db),
+) -> User | None:
+    """Who is asking, or `None` for a browser that has not asked to be anyone yet.
+
+    Used only by the session probe (`GET /api/auth/me`), which a page calls before it
+    knows whether a visitor has an account. Every route that needs a person keeps
+    `get_current_user`, so an unauthenticated call to those still answers 401.
+    """
+    raw = _optional_presented_token(request, authorization)
+    if raw is None:
+        return None
+    record = db.get(AuthToken, token_hash_of(raw))
+    if record is None or record.expires_at < datetime.now(timezone.utc):
+        raise CREDENTIALS_EXC
+    return _user_for_session(record, db)
 
 
 def revoke_session(db: Session, raw_token: str) -> None:

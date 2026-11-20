@@ -15,7 +15,7 @@ import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 
 from .config import get_settings
 from .database import Base, SessionLocal, engine
@@ -43,9 +43,17 @@ settings = get_settings()
 # by itself, and `REQUIRE_POSTGRES`, for a host that sets nothing and simply rebuilds
 # the container on every push — Render being the one this project is configured for.
 # A disk that is thrown away between deploys is the hazard, not a particular vendor.
-storage_unusable = (
-    bool(os.environ.get("VERCEL")) or settings.require_postgres
-) and settings.database_url.startswith("sqlite")
+# The same two signals decide whether the interactive API docs are published: a
+# public deployment should not hand out its schema unless an operator asks for it.
+hosted_deployment = bool(os.environ.get("VERCEL")) or settings.require_postgres
+
+storage_unusable = hosted_deployment and settings.database_url.startswith("sqlite")
+
+docs_enabled = (
+    settings.api_docs_enabled
+    if settings.api_docs_enabled is not None
+    else not hosted_deployment
+)
 
 STORAGE_UNAVAILABLE_DETAIL = (
     "This deployment has no database attached yet, so nothing can be saved or read. "
@@ -84,6 +92,11 @@ app = FastAPI(
     version="1.0.0",
     description="Career exploration and guidance backend for students and parents.",
     lifespan=lifespan,
+    # A public deployment does not need to advertise every route it has. Locally the
+    # schema stays one click away; `API_DOCS_ENABLED=true` publishes it on a host too.
+    docs_url="/docs" if docs_enabled else None,
+    redoc_url="/redoc" if docs_enabled else None,
+    openapi_url="/openapi.json" if docs_enabled else None,
 )
 
 
@@ -103,6 +116,20 @@ async def refuse_without_storage(request: Request, call_next):
 
 configure_cors(app, settings)
 register_rate_limiting(app)
+
+
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    """The one browser-facing header every reply from this API carries.
+
+    Registered after CORS on purpose, which makes this the outer middleware: a
+    preflight is answered inside `CORSMiddleware` without ever reaching a route, and
+    the browser must still see the header on that reply. `setdefault` leaves any
+    header a route already chose alone.
+    """
+    response = await call_next(request)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    return response
 
 for module in (
     auth,
@@ -143,8 +170,12 @@ app.include_router(resume.ai_router)
 app.include_router(interview.ai_router)
 
 
-@app.get("/api/health", response_model=HealthOut, tags=["meta"])
-def health() -> HealthOut:
+@app.api_route("/api/health", methods=["GET", "HEAD"], response_model=HealthOut, tags=["meta"])
+def health(request: Request) -> HealthOut | Response:
+    # A monitor may ask with HEAD: the answer is the status, not the JSON. Returning a
+    # body here would also make a HEAD reply longer than the GET it stands in for.
+    if request.method == "HEAD":
+        return Response(status_code=200, media_type="application/json")
     return HealthOut(
         status="ok",
         storage="unconfigured" if storage_unusable else "ready",

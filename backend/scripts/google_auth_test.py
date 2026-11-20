@@ -616,7 +616,7 @@ with client:
           student.get("/api/auth/me").status_code == 200)
     check("logout answers 204", student.post("/api/auth/logout").status_code == 204)
     check("the cookie no longer opens the account",
-          student.get("/api/auth/me").status_code == 401)
+          student.get("/api/auth/me").status_code in (204, 401))
 
 print(f"\n{len(PASS)} passed, {len(FAIL)} failed")
 if FAIL:

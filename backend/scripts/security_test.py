@@ -742,7 +742,8 @@ sane = client.get("/api/journey/events?limit=50", headers=head_a)
 check("an ordinary event count still works", sane.status_code == 200, sane.status_code)
 
 # --- the bearer header is checked on shape before anything else
-check("no header and no cookie is refused", jarless.get("/api/auth/me").status_code == 401)
+check("no header and no cookie is answered as a visitor, not as an error",
+      jarless.get("/api/auth/me").status_code == 204)
 check(
     "a truncated token is refused without a database lookup",
     client.get("/api/auth/me", headers={"authorization": "Bearer short"}).status_code == 401,
