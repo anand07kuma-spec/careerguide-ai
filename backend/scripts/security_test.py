@@ -292,6 +292,55 @@ check(
     > int(re.match(r"\d+", defaults["rate_limit_admin"].default).group()),
 )
 
+# ------------------------------------------- 2b. the counter store is reported honestly
+print("\n[2b] A shared counter store is claimed only when one was actually accepted")
+
+for url in (
+    "redis://cache.internal:6379/0",
+    "rediss://cache.internal:6380",
+    "unix:///var/run/redis.sock",
+    "redis+unix:///var/run/redis.sock",
+    "  redis://cache.internal:6379/0  ",
+):
+    check(
+        f"{url.strip()!r} is accepted as the counter store",
+        rate_limit_module.validate_redis_url(url) == url.strip(),
+        rate_limit_module.validate_redis_url(url),
+    )
+
+for url in ("http://cache.internal:6379/0", "cache.internal:6379", "redis://", "ftp://cache"):
+    check(
+        f"{url!r} is refused rather than handed to slowapi at import",
+        rate_limit_module.validate_redis_url(url) == "",
+        rate_limit_module.validate_redis_url(url),
+    )
+
+check(
+    "a blank URL is the laptop case, not a configuration mistake",
+    rate_limit_module.validate_redis_url("") == "",
+)
+check(
+    "a refused URL does not switch the throttles off",
+    rate_limit_module.validate_redis_url("http://cache.internal:6379/0") == ""
+    and limiter.enabled is True,
+)
+check(
+    "this process runs without a shared store, and the module says so",
+    rate_limit_module.counters_are_shared() is False,
+    rate_limit_module.counters_are_shared(),
+)
+# The operator screen reads the limiter's answer, not the raw environment variable: a
+# malformed URL must not be displayed as "shared by every worker" while this process is
+# counting on its own.
+from app.routers import admin as admin_router  # noqa: E402
+
+report = admin_router.deployment()
+check(
+    "the deployment report says the counters are per process",
+    report.rate_limit_shared_storage is False,
+    report.rate_limit_shared_storage,
+)
+
 # ------------------------------------------------------------------------ 3. who may call
 print("\n[3] Only the origins this site is actually served from")
 
@@ -815,11 +864,12 @@ check(
 )
 
 # A cookie is a credential the browser offers without any script of ours asking, which is
-# the whole reason a bearer-only design did not have this problem and this one does. Two
-# things stand between a foreign page and a write to a child's account, and both are checked
-# rather than assumed: every mutating route here reads a JSON body, and a body a form can
-# produce is refused before anything is looked at; while a JSON body cannot be sent
-# cross-site at all without a preflight, which the exact origin list answers with nothing.
+# the whole reason a bearer-only design did not have this problem and this one does. Now
+# two independent things stand between a foreign page and a write to a child's account:
+# the CSRF guard refuses every state-changing request whose Origin is not this site — before
+# the route runs, whatever the content type — and a form-shaped body is refused by the
+# route's strict JSON schema even when the origin is allowed. A JSON body cannot be sent
+# cross-site without a preflight, which the exact origin list answers with nothing.
 form_shaped = client.patch(
     "/api/auth/settings",
     content='{"language": "en"}',
@@ -827,17 +877,36 @@ form_shaped = client.patch(
 )
 check(
     "a cross-site request shaped like a form is refused before its body is read",
-    form_shaped.status_code in (415, 422),
+    form_shaped.status_code == 403,
     f"{form_shaped.status_code} {form_shaped.text[:120]}",
 )
-written = client.patch(
+form_allowed = client.patch(
+    "/api/auth/settings",
+    content='{"language": "en"}',
+    headers={"content-type": "text/plain", "origin": "https://family.example"},
+)
+check(
+    "…and from this site itself, a form-shaped body is still refused by the route",
+    form_allowed.status_code in (415, 422),
+    f"{form_allowed.status_code} {form_allowed.text[:120]}",
+)
+foreign_json = client.patch(
     "/api/auth/settings",
     json={"speak_responses": False},
     headers={"origin": "http://evil.example"},
 )
 check(
-    "…and the guard is the content type rather than a broken route: the session cookie by "
-    "itself does authorise this write, which is why nothing but JSON is ever accepted",
+    "a cross-site JSON write is refused before anything is changed",
+    foreign_json.status_code == 403,
+    f"{foreign_json.status_code} {foreign_json.text[:120]}",
+)
+written = client.patch(
+    "/api/auth/settings",
+    json={"speak_responses": False},
+    headers={"origin": "https://family.example"},
+)
+check(
+    "…and the same write from this site's own pages is carried out",
     written.status_code == 200 and written.json().get("speak_responses") is False,
     f"{written.status_code} {written.text[:120]}",
 )

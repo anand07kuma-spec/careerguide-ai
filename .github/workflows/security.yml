@@ -201,12 +201,32 @@ jobs:
       - name: No credential-shaped strings in source
         shell: bash
         run: |
-          hits=$(git grep -nEI \
-            '(sk-[A-Za-z0-9]{24,}|sk_live_[A-Za-z0-9]{20,}|rzp_live_[A-Za-z0-9]{14,}|whsec_[A-Za-z0-9]{20,}|re_[A-Za-z0-9]{30,}|AKIA[0-9A-Z]{16}|AIza[0-9A-Za-z_-]{30,}|ghp_[A-Za-z0-9]{30,})' \
-            -- '.' ':!*requirements*.txt' || true)
+          # One variable, used by both the scan and the self-test below: if the pattern
+          # ever gets narrowed until it stops matching a real key, the self-test fails
+          # and the scan can no longer pass by being blind.
+          pattern='(sk-[A-Za-z0-9]{24,}|sk_live_[A-Za-z0-9]{20,}|rzp_live_[A-Za-z0-9]{14,}|whsec_[A-Za-z0-9]{20,}|re_[A-Za-z0-9]{30,}|AKIA[0-9A-Z]{16}|AIza[0-9A-Za-z_-]{30,}|ghp_[A-Za-z0-9]{30,})'
+
+          hits=$(git grep -nEI "$pattern" -- '.' ':!*requirements*.txt' || true)
           if [ -n "$hits" ]; then
             echo "$hits"
             echo "::error::something in the tracked tree looks like a live credential. Rotate it, then remove it from history — a warning is not enough for this one."
             exit 1
           fi
           echo "ok: no live-shaped keys in the tree"
+
+          # Regression proof that "no hits" means the tree is clean, not that the scan
+          # stopped working. Each sample is built from two adjacent quoted fragments —
+          # bash joins them into the real shape at run time, while the file itself holds
+          # no contiguous credential, so this step does not trip its own scan.
+          check_shape() {
+            if ! printf '%s\n' "$2" | grep -qE "$pattern"; then
+              echo "::error::the secret scanner no longer catches a realistic $1"
+              exit 1
+            fi
+            echo "ok: the scanner still catches a realistic $1"
+          }
+          check_shape "Razorpay live key" "rzp_live_""9fQ2xK7pLm4Rt8Yz"
+          check_shape "OpenAI key"        "sk-""abcdefghijklmnopqrstuvwxyzAB"
+          check_shape "AWS access key"    "AKIA""ABCDEFGHIJKLMNOP"
+          check_shape "GitHub token"      "ghp_""ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+          check_shape "webhook secret"    "whsec_""ABCDEFGHIJKLMNOPQRSTUVWXYZ012345"

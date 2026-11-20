@@ -88,16 +88,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   } catch {
     career = null;
   }
-  if (!career) {
-    return pageMeta({
-      title: "Career profile | CareerGuide",
-      absoluteTitle: true,
-      path: `/careers/${slug}`,
-      description:
-        "This career is not in the catalogue on this deployment. Browse the profiles that are.",
-      robots: { index: false, follow: true },
-    });
-  }
+  if (!career) notFound();
 
   return pageMeta({
     title: `${career.title} — what the work is, and how to reach it`,

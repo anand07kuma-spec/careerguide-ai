@@ -1243,7 +1243,7 @@ do the indexable half. The rules worth knowing:
 ```bash
 cd backend
 ./.venv/Scripts/python.exe scripts/smoke_test.py
-./.venv/Scripts/python.exe scripts/login_test.py
+./.venv/Scripts/python.exe scripts/password_reset_test.py
 ./.venv/Scripts/python.exe scripts/guest_session_test.py
 ./.venv/Scripts/python.exe scripts/conversation_facts_test.py
 ./.venv/Scripts/python.exe scripts/ai_provider_test.py
@@ -1254,6 +1254,7 @@ cd backend
 ./.venv/Scripts/python.exe scripts/serverless_guard_test.py
 ./.venv/Scripts/python.exe scripts/clerk_auth_test.py
 ./.venv/Scripts/python.exe scripts/security_test.py
+./.venv/Scripts/python.exe scripts/csrf_test.py
 ./.venv/Scripts/python.exe scripts/payments_test.py
 ./.venv/Scripts/python.exe scripts/email_test.py
 ./.venv/Scripts/python.exe scripts/email_flow_test.py
@@ -1267,7 +1268,7 @@ cd backend
 ./.venv/Scripts/python.exe scripts/interview_test.py
 ./.venv/Scripts/python.exe scripts/verification_test.py
 ./.venv/Scripts/python.exe scripts/schema_fit_check.py
-cd ../frontend && npx tsc --noEmit && npx eslint src && npm run build
+cd ../frontend && npx tsc --noEmit && npx eslint src && npm run build && npm run test:routes
 node scripts/hi-coverage.mjs          # which UI strings have no Hindi yet
 node scripts/hi-prose-check.mjs       # the ones passed through a variable (SECTIONS, VALUES)
 node scripts/hi-duplicates.mjs        # the same key written twice — the last file wins, so check it
@@ -1275,6 +1276,45 @@ node scripts/hi-duplicates.mjs        # the same key written twice — the last 
 
 Last runs on this machine. The date in the right-hand column is the last time that row was actually
 executed — a suite that has not been re-run says so rather than riding on an older result.
+
+### The journeys, end to end
+
+Every feature the product offers, traced from the screen that opens it to the row it writes and the
+suite that proves it. Each row is one path through the same three layers: a Next.js page calls the API
+in `backend/app/routers/`, which resolves the caller from the session token and touches `models.py`.
+
+| Journey | Frontend entry | API | Server code / data | Who may | Proved by |
+| --- | --- | --- | --- | --- | --- |
+| First visit, no account | `/get-started`, `/onboarding` (`lib/session.tsx`) | `POST /api/auth/guest`, `GET /api/auth/me` | `routers/auth.py`, `security.py`; `users` | anyone — the device id is only a lookup, never a token | `guest_session_test`, `onboarding` checks in `smoke_test` |
+| Sign in, sign up, reset | `/login`, `/reset-password`, `/sign-in` | `POST /api/auth/email/*`, `/api/auth/google/*`, `/api/clerk/*` | `routers/auth.py`, `google_auth.py`, `clerk.py`, `services/passwords.py`; `users` | public, 5 a minute per address; token travels as an `httpOnly` cookie | `email_auth_test`, `google_auth_test`, `clerk_auth_test`, `password_reset_test` |
+| Chat with the guide | `/app/chat` | `POST /api/conversations`, `/api/conversations/{id}/messages` | `routers/conversations.py`, `services/ai_provider.py`; `ConversationSession`, `Message` | the student who owns the session; a parent is refused the route | `chat_pipeline_test`, `conversation_facts_test`, `ai_provider_test` |
+| Spoken replies | `/app/call` | `POST /api/voice/speak` | `routers/voice.py`, `services/tts.py`; nothing persisted | authenticated student | `tts_provider_test` |
+| Questionnaires and plan | `/app/assessments`, result page | `/api/assessments/*`, `POST /api/assessments/result/{id}/roadmap` | `routers/assessments.py`, `services/roadmap.py`; `Result` (plan lives in `roadmap_json`) | the student who owns the result; parents refused the AI rewrite | `assessment_test`, `recommendation_assessment_test`, `roadmap_test` |
+| Practice interview | `/interview-prep` | `POST /api/ai/mock-interview` | `routers/interview.py`, `services/mock_interview.py`; **no table is written** | authenticated student; parent refused before the provider is called | `interview_test` |
+| Resume | `/app/resume` | `GET`/`POST /api/resume`, `POST /api/ai/resume-suggest` | `routers/resume.py`; `Resume` keyed by `user_id` | the student it belongs to; parents and counsellors refused the route | `resume_test` |
+| Reports | `/app/reports` | `GET /api/reports`, `/api/reports/pdf` | `routers/reports.py`, `services/pdf_report.py`; `Result` | the student, and a consented guardian on the read-only routes | `report_pdf_test`, `guardian_consent_test`, `parent_privacy_test` |
+| Journey and parent view | `/app/journey`, parent dashboard | `GET /api/journey`, parent reads under `/api/reports` | `routers/journey.py`; consent columns on the guardian link | active consent required; revoked consent and pending invitations see nothing | `guardian_consent_test`, `parent_privacy_test` |
+| Mail these screens cause | `/email/confirm`, `/reset-password`, Family settings | `/api/email/*` | `routers/email.py`, outbox worker; `EmailJob` | authenticated or token-bearing, 10 a minute; `EMAIL_ENABLED=false` records without sending | `email_test`, `email_flow_test` |
+| School and counsellor portals | `/school/*` | `/api/organizations/*` | `routers/organizations.py`; `Organization`, `Membership` | the role that owns the portal; a student and a parent see only their own link | `tenancy_test` |
+| Studying abroad | `/study-abroad/*` | `/api/study-abroad/*` | `routers/study_abroad.py`; country/university rows and enquiries | public read; the enquiry form is per-address (10 an hour) | `study_abroad_test` |
+| Billing | `/app/billing` | `/api/payments/*` | `routers/payments.py`; `Order`, `Subscription` | the account owner; the webhook is signature-checked and CSRF-exempt | `payments_test` |
+| Operator screens | `/app/admin/*` | `/api/admin/*`, `/api/exams` | `routers/admin.py`, `exams.py`; `AuditEvent` | operator role only, 10 writes a minute | `admin_test`, `exams_test` |
+| Profile photo | Settings → Profile | `POST`/`GET`/`DELETE /api/profile/photo` | `routers/profile_photos.py`; `ProfilePhoto` | the account owner; multipart covered by the CSRF guard | `profile_photo_test` |
+| Delete an account | Settings → Account | `DELETE /api/users/me` | `routers/users.py`; every row the account owns goes | the account owner only; final, no undo | `erasure_test`, `hardening_test` |
+| Is it alive, is it configured | `/api/health`, admin **Deployment** | `GET /api/health`, `GET /api/admin/deployment` | `main.py`, `routers/admin.py` | health is public; deployment needs an operator | `smoke_test`, `admin_test`, `serverless_guard_test` |
+
+Three failure modes cut across those rows, and each one fails in the honest direction: a missing AI,
+voice, mail or payment key turns the feature into a **labelled** demo or a stated "not configured"
+rather than a silent fake (`ai_provider_test`, `tts_provider_test`, `email_test`, `payments_test`); an
+unreachable database answers `503` from the storage guard instead of serving an empty screen
+(`smoke_test`, `serverless_guard_test`); and a session the server refuses clears the cookie and returns
+the student to onboarding rather than a dead "checking" state (`guest_session_test`).
+
+Every suite above runs against a temporary SQLite file and local stand-ins — no live provider, no
+production database, no real email. What that leaves **not verified here**, and what a staging pass
+must exercise with real credentials: an actual Groq reply, Gemini/Azure speech, a Neon round trip, the
+two OAuth round trips, a delivered email and a Razorpay test payment. A key being present
+(`ai_configured: true`, `tts_ready: true`) is configuration, not a successful call.
 
 **On 2026-10-22, students got a resume.** The §4 row above says what the screen is; this is the measurement
 behind it. `Resume` joined `backend/app/models.py` and migration `0014_resume` built it (fourteen revisions,
@@ -1973,10 +2013,12 @@ removed.
   `form-action 'self'` still keeps a pasted script from posting a form to a foreign address. What it does
   still buy is the right to make this origin's own requests with that cookie attached, which is what a
   browser does for any script on the page — `httpOnly` protects the *secret*, not the *session*. The
-  weight on that side is carried by rules that do not depend on this header: every write demands a JSON
-  body, so a form-shaped cross-site request cannot reach one; CORS answers only the origins named in
-  `FRONTEND_URL` and `CORS_ORIGINS`; which account a request speaks for comes from the session, never from an id in the
-  body; and the throttles below cap what one tab can ask for. Dropping `'unsafe-inline'` needs a nonce,
+  weight on that side is carried by rules that do not depend on this header: the CSRF guard refuses a
+  state-changing request whose origin is not this site (next bullet); every write demands a JSON
+  body, so a form-shaped cross-site request could not reach one even if the guard were absent; CORS
+  answers only the origins named in `FRONTEND_URL` and `CORS_ORIGINS`; which account a request speaks
+  for comes from the session, never from an id in the body; and the throttles below cap what one tab
+  can ask for. Dropping `'unsafe-inline'` needs a nonce,
   and a nonce needs every page rendered per request — a change to how this site is deployed, not a
   header edit, which is why it is written down instead of done.
 
@@ -2021,6 +2063,41 @@ removed.
   `security_test.py` asserts that a listed origin gets `access-control-allow-credentials: true`, that
   a stranger's `Origin` comes back with no `access-control-allow-origin` attached to it at all, that
   `CORS_ORIGINS` cannot replace `FRONTEND_URL`, and that the unset fallback is exactly the three dev origins.
+* A write is carried out only when it came from this site (`backend/app/middleware/csrf.py`, added
+  2026-11-20). CORS stops a foreign page reading an answer; this stops the write happening at all, and
+  it is a separate middleware on purpose. Every `POST`/`PUT`/`PATCH`/`DELETE` under `/api` must carry
+  an `Origin` that equals one entry of the same allowlist CORS uses — exact string, no `*`, no suffix
+  match, `Origin: null` refused — or, when the browser sends no `Origin`, a `Sec-Fetch-Site` of
+  `same-origin` or `none`. A request with neither header is a non-browser client (curl, the CLI
+  scripts, the mail worker) and is allowed; browsers attach at least one of the two. The two provider
+  webhooks (`/api/payments/webhook`, `/api/webhooks/clerk`) are exempt by **exact path**, because they
+  are signature-authenticated and carry no session cookie; a route added beside one does not inherit
+  the exemption. The refusal is a `403` with one sentence and no stack trace, and it happens before the
+  route, so a body-less logout and a multipart photo upload are covered exactly like a JSON body. The
+  Google flow is unaffected: `/api/auth/google/start` and `/callback` are `GET` navigations. Cookie
+  settings did not change. `csrf_test.py` (27 checks) covers allowed and foreign origins, `null`, a
+  longer-port suffix, a scheme change, both `Sec-Fetch-Site` directions, a no-header client, a GET and
+  an OPTIONS preflight, logout, multipart upload, both webhooks plus the near-path refusal, and a
+  bearer token that must not bypass the guard; `security_test.py` now asserts the same rule from the
+  credentialed-cookie side.
+* A throttle says where its counters live, and claims "shared" only when a shared store was actually
+  accepted (`backend/app/middleware/rate_limit.py`, checked 2026-11-20). The buckets and thresholds are
+  unchanged. With `RATE_LIMIT_REDIS_URL` blank the limiter uses `memory://` — one set of counters per
+  process — and the startup log says so; setting a `redis://`, `rediss://`, `unix://` or
+  `redis+unix://` URL makes every worker share one window. A value with any other shape is logged and
+  **rejected at import** rather than handed to slowapi, because slowapi would raise while building the
+  storage and the API would never boot; the throttles stay switched on and count per process instead, so
+  a malformed variable cannot become a bypass. `in_memory_fallback_enabled` is set only beside a real
+  Redis URL, so a store that is briefly unreachable degrades to this process rather than turning a read
+  into a `500` (the read bucket catches its own storage errors for the same reason, and both cases are
+  asserted). The operator **Deployment** screen now reads `counters_are_shared()` — the *validated*
+  answer — instead of the raw environment string, so a refused URL is displayed as per-process rather
+  than as "shared by every worker". `security_test.py` gained **13** checks: four accepted scheme
+  shapes (including whitespace trimming), four refused shapes, the blank laptop case, throttles still on
+  after a refusal, the module's own answer in this process, and the deployment report agreeing with it.
+  **Distributed counting is NOT CONFIGURED in the shipped deployment** — `RATE_LIMIT_REDIS_URL` is in
+  `render.yaml` with `sync: false` and no value — so every stated rule is a per-instance floor, exactly
+  as §2.2 says.
 * Every request body says what it will not accept. All **57** input models inherit `StrictIn`
   (`extra="forbid"` — count them with `grep -c 'class .*StrictIn)' app/schemas.py`), so an undocumented key is a `422` rather than a field someone *might* read later;
   every free-text field has a stated length; ids must be `ge=1`; a device id has a character class and a
@@ -2360,9 +2437,16 @@ a `docker volume rm`, or a `DROP TABLE`.
 ```bash
 cd backend
 sh scripts/backup_db.sh --dry-run                      # which database, which file, writes nothing
-sh scripts/backup_db.sh                                # into ./backups, keeps the last 14
+sh scripts/backup_db.sh                                # into ~/.local/share/careerguide/backups, keeps the last 14
 sh scripts/backup_db.sh --dest /mnt/nas/careerguide --keep 30
 ```
+
+The default destination is **outside the repository** and its directory is created mode `0700` with
+the archive written `0600` (`umask 077`, plus an explicit `chmod` because `docker cp` keeps the mode
+the file had inside the container). A dump under `backend/backups` sits one careless `git add -A`
+away from a commit, and it contains children's names, answers and conversations. `XDG_DATA_HOME`
+moves the default; `BACKUP_DIR` or `--dest` names a directory explicitly. Nothing is ever uploaded
+to a GitHub artifact or any public storage.
 
 It writes PostgreSQL custom format (`pg_dump -Fc`) rather than a `.sql` because that is the only
 format that is compressed *and* selective: `pg_restore --list` shows the tables and a restore can
@@ -2384,8 +2468,13 @@ order matters because a scheduled job has no terminal that sourced anything:
 
 Rotation deletes only files named `careerguide-*.dump` inside the destination, and only *after* the
 new archive has been read back — a run that fails can never be the reason the last good backup
-disappeared. A dump under 1 KB is kept as `<name>.failed` and the script exits non-zero, because a
-truncated archive is worse than no archive: it "succeeds" and restores into nothing.
+disappeared. Two runs inside the same second write `careerguide-<stamp>.dump` and
+`careerguide-<stamp>-1.dump` rather than one overwriting the other. A failed run deletes its partial
+file (the `EXIT` trap only does so until the archive has been proven), and a dump under 1 KB is kept
+as `<name>.failed` with the script exiting non-zero, because a truncated archive is worse than no
+archive: it "succeeds" and restores into nothing. A `pg_dump` that fails prints the four common
+causes by name — client/server version mismatch, TLS mode, unreachable host, insufficient
+privilege — instead of one libpq sentence that could mean any of them.
 
 Scheduling — compose has no clock, so the cron line lives on the host:
 
@@ -2405,6 +2494,42 @@ On Windows the equivalent is Task Scheduler running `sh scripts/backup_db.sh` th
 `db-backup` service is the version that does not care what the host is. It is behind a `backup`
 profile and writes into its own named volume (`db-backups`), so `docker compose down` — which removes
 containers, not volumes — cannot take the last backup with the stack.
+
+#### The restore drill
+
+`backend/scripts/restore_check.sh` is the repeatable version of the manual restore below, and the
+safe way to answer "does this archive actually restore?":
+
+```bash
+cd backend
+CREATEDB="psql -d postgres -c"   # create the scratch database yourself, once
+psql -d postgres -c 'create database careerguide_restore_check'
+sh scripts/restore_check.sh \
+  --from ~/.local/share/careerguide/backups/careerguide-20261120T021700Z.dump \
+  --to postgresql://owner@127.0.0.1:5432/careerguide_restore_check
+```
+
+The guard rails are the point, and they are refusals rather than warnings:
+
+* the target host must be local (`localhost`, `127.0.0.1`, `::1`, `host.docker.internal`) unless
+  `--allow-remote` says a remote *scratch* instance is meant;
+* the target must not be `DATABASE_URL`, the same host+database reached another way, or
+  `postgres`/`template0`/`template1`;
+* the target must have **no user tables**, because the script never drops or overwrites anything —
+  restoring over a populated database is how a drill wipes the thing it was protecting;
+* an interactive run asks you to type the database's name; `--yes` (CI) skips the prompt but none of
+  the refusals;
+* after `pg_restore --exit-on-error --no-owner --no-privileges`, every table the archive lists must
+  be present, every one must be readable, and the total row count must be above zero. An "empty
+  restore that succeeded" is the failure this exists to catch.
+
+It never drops the scratch database; when the evidence is recorded, drop it yourself. On 2026-11-20
+this script was syntax-checked (`sh -n`) and every guard path was exercised against stub
+`pg_restore`/`psql` binaries (wrong confirmation, non-empty target, `DATABASE_URL` target, remote
+host, missing archive, and an incomplete restore all exit non-zero with the sentence above). **A real
+restore against a real PostgreSQL server has not been run from this machine** — the manual drill two
+paragraphs down was run previously inside the compose container, and this script is the same sequence
+with the guards made executable.
 
 Verified on this machine on 2026-10-20, against the running compose stack (Postgres 17.11, the 11
 accounts and 510 universities that were in it at the time):
@@ -2441,6 +2566,43 @@ will dump one if it is reachable and the local `pg_dump` is not older than the s
 only rate-limit counters and is deliberately not backed up; and generated speech is not in the dump
 because it is not in the database — the app re-renders it on request (see §1).
 
+#### Managed backups for the hosted deployment — NOT CONFIGURED
+
+The hosted stack is the Render blueprint (`render.yaml`, API) talking to a Neon Postgres database.
+**No automated backup or point-in-time restore has been configured or verified from this repository,
+and nothing below should be read as a claim that one exists.** The free plans this project runs on
+are not assumed to include anything; the restore window and retention are whatever the provider's
+console shows for the account, and that console is the only authority.
+
+What the owner has to do, in the provider dashboards — names are the settings to look for, not
+values to copy here:
+
+| Where | Setting / name | What the check is |
+| --- | --- | --- |
+| Neon console → Project → Settings → Backups / Restore | restore window / history retention, scheduled snapshots | Find the retained window for the current plan. If it is shorter than a day, that is the whole backup story until something else is set up. |
+| Neon console → Project → Branches | `restore-check` branch (optional scratch copy) | A branch is the natural scratch target for the restore drill; create one only for the drill, and delete it afterwards. |
+| Render dashboard → service → Environment | `DATABASE_URL` | The API reads the same Neon database the drill dumps. Rotating it is a dashboard edit plus a redeploy. |
+| Render dashboard → service → Environment | `DB_AUTO_SETUP` (`false`), `FRONTEND_URL`, `RATE_LIMIT_REDIS_URL` | Existing production settings; a backup does not change them, and this document does not ask for any of them to be changed. |
+| The machine that runs the schedule | `DATABASE_URL`, `BACKUP_DIR`, `BACKUP_KEEP`, `XDG_DATA_HOME` | `backup_db.sh` reads these. `BACKUP_DIR` must be off the repository and encrypted at rest by whatever holds it (provider-side encryption, or a restic/borg repository). |
+| The machine that runs the schedule | `NEON_API_KEY` (only if `neonctl` is used for branches) | An external credential; it is not needed to run `backup_db.sh`, and nothing in the repository reads it. |
+
+What "done" looks like, and why none of it can be claimed today:
+
+* a scheduler (host cron, Task Scheduler, or the hosting provider's own scheduler if one exists on
+  the plan) runs `backup_db.sh` daily against the Neon `DATABASE_URL`, writing outside the repository
+  with `umask 077` and retaining `BACKUP_KEEP` copies;
+* the destination is encrypted at rest and readable only by the owner's account; dumps are never
+  attached to GitHub issues, actions artifacts, PRs, or any public storage — they contain children's
+  names, answers and conversations;
+* the newest dump has been restored with `restore_check.sh` into a scratch Neon branch or a local
+  Postgres and the drill passed;
+* the answer "which window could we recover from if the database were dropped right now?" is written
+  down from the provider's console, not inferred from a plan name.
+
+Until every line above is true and checked by the owner, automated backups are **NOT CONFIGURED**.
+`backup_db.sh` is the tool; it is not a schedule, and the repository cannot see the provider's
+settings.
+
 ## 8. Housekeeping
 
 * Reset local data: delete `backend/careerguide.db` and restart uvicorn (catalogue re-seeds,
@@ -2452,6 +2614,7 @@ because it is not in the database — the app re-renders it on request (see §1)
   to prevent, and it does not happen at all on a deployment that sets `DB_AUTO_SETUP=false`.
 * Generated speech is never written to disk, so there is no `backend/media/` to clean up.
 * Backups: `scripts/backup_db.sh` on a schedule, kept off the machine (§7). The housekeeping half is
-  the drill — restore the newest dump into a scratch database every quarter and read a row back. A
-  directory full of archives nobody has opened is not a backup, it is a folder of maybes.
+  the drill — every quarter, restore the newest dump into an empty scratch database with
+  `scripts/restore_check.sh` and confirm it reports the expected table and row counts. A directory
+  full of archives nobody has opened is not a backup, it is a folder of maybes.
 * `frontend/AGENTS.md` and `frontend/README.md` came with the Next.js scaffold.

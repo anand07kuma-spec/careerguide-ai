@@ -161,6 +161,20 @@ def validate_redis_url(value: str) -> str:
 
 _REDIS = validate_redis_url(_settings.rate_limit_redis_url)
 
+
+def counters_are_shared() -> bool:
+    """Whether one counter set serves every worker.
+
+    True only when `RATE_LIMIT_REDIS_URL` was *accepted* — a malformed value is
+    rejected above and leaves this process counting on its own, so reporting the raw
+    string instead would tell an operator their limits are shared while they are not.
+    A store that is configured but unreachable at runtime degrades to this process
+    until it answers again (that is what `in_memory_fallback_enabled` buys), so this
+    says what the deployment asked for, and the startup log says which is running.
+    """
+    return bool(_REDIS)
+
+
 limiter = Limiter(
     key_func=client_identity,
     # The rules are per route below, so nothing is added automatically to every
