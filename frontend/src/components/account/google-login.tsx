@@ -282,6 +282,10 @@ export function GoogleLogin() {
           aria-label={t("Choose sign in or sign up")}
           className="flex min-h-0 flex-1 flex-col items-center justify-center py-6"
         >
+          {/* The card's visible title is the Log in / Sign up tab pair, which is a
+              control rather than a heading. This says the same thing to a screen
+              reader once, so the page has one h1 and the tabs stay a tablist. */}
+          <h1 className="sr-only">{t("Sign in or create your CareerGuide AI account")}</h1>
           <div className="cg-login-card relative max-h-full w-full max-w-[24.5rem] overflow-y-auto overscroll-contain rounded-[26px] border border-white/15 p-5 text-center shadow-[0_40px_90px_-30px_rgba(2,6,18,0.9),0_0_80px_-34px_rgba(139,124,246,0.5)] backdrop-blur-xl [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:p-6">
             <span
               aria-hidden

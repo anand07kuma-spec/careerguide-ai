@@ -319,7 +319,9 @@ section("Signatures: the only thing that turns a request into money")
 env(RAZORPAY_KEY_ID=KEY_ID, RAZORPAY_KEY_SECRET=KEY_SECRET, RAZORPAY_WEBHOOK_SECRET=WEBHOOK_SECRET)
 check("the provider is now considered configured", razorpay.configured() is True)
 check("a test key is reported as test mode", razorpay.is_test_mode() is True)
-env(RAZORPAY_KEY_ID="rzp_live_AaBbCcDdEeFfGg")
+# Only the prefix is read, so the fixture stays unambiguously fake and cannot be
+# mistaken for a key that leaked into the repository by the secret scan.
+env(RAZORPAY_KEY_ID="rzp_live_fixture_only")
 check("a live key is reported as live", razorpay.is_test_mode() is False)
 env(RAZORPAY_KEY_ID=KEY_ID)
 

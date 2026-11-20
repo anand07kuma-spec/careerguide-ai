@@ -33,21 +33,40 @@
 #
 # Run from `backend/`:
 #
-#     ./scripts/backup_db.sh                      # into ./backups, keep the last 14
+#     ./scripts/backup_db.sh                      # into ~/.local/share/careerguide/backups, keep the last 14
 #     ./scripts/backup_db.sh --dest /mnt/nas/careerguide --keep 30
 #     ./scripts/backup_db.sh --dry-run            # what it would do, and to what database
+#
+# The default destination is deliberately *outside* the repository: a dump under
+# `backend/backups` sits one careless `git add -A` away from a commit, and it holds children's
+# names, answers and conversations. Set `BACKUP_DIR` (or `--dest`) to put it on another disk.
 #
 # Then schedule it — see docs/ARCHITECTURE_AND_TESTS.md §7, "Backing up the database", for the cron line. A backup that
 # only exists because somebody remembered to run it is not a backup.
 
 set -eu
 
+# The archive is a copy of every child's data. Nothing but the owner should be able to read the
+# directory this creates, or the file inside it.
+umask 077
+
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
-DEST="${BACKUP_DIR:-$ROOT/backups}"
+if [ -n "${BACKUP_DIR:-}" ]; then
+  DEST="$BACKUP_DIR"
+elif [ -n "${XDG_DATA_HOME:-}" ]; then
+  DEST="$XDG_DATA_HOME/careerguide/backups"
+elif [ -n "${HOME:-}" ]; then
+  DEST="$HOME/.local/share/careerguide/backups"
+else
+  echo "HOME and XDG_DATA_HOME are both unset, so there is no safe default destination." >&2
+  echo "Pass --dest <directory> or set BACKUP_DIR." >&2
+  exit 1
+fi
 KEEP="${BACKUP_KEEP:-14}"
 PREFIX="careerguide"
 STAMP=$(date -u +%Y%m%dT%H%M%SZ)
 DRY=0
+SUCCESS=0
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -60,15 +79,14 @@ while [ $# -gt 0 ]; do
 done
 
 mask() {
-  # Keep the host and the database name, hide the credential. Only a URL has a credential
+  # Keep the scheme, host and database name, hide the credential. Only a URL has a credential
   # in it: `127.0.0.1:5432/careerguide` is a libpq target whose colon separates a host from
   # a *port*, and printing it as `127.0.0.1:****@5432/…` would be worse than printing it —
   # it would look like a masked secret and hide nothing.
   case "$1" in
     *://*@*)
-      head=$(printf '%s' "$1" | cut -d: -f1)
-      tail=$(printf '%s' "$1" | cut -d: -f2-)
-      printf '%s:****@%s\n' "$head" "$(printf '%s' "$tail" | sed 's|^//[^@]*@|//|')"
+      scheme=${1%%://*}
+      printf '%s://****@%s\n' "$scheme" "$(printf '%s' "${1#*://}" | sed 's|^[^@]*@||')"
       ;;
     *) printf '%s\n' "$1" ;;
   esac
@@ -84,7 +102,16 @@ fi
 
 TARGET=""
 MODE=""
-DUMPFILE="$DEST/$PREFIX-$STAMP.dump"
+# Two runs finishing inside the same second would otherwise share a name, and the second would
+# overwrite the first — which may already be the proven copy. The suffix loop makes every run
+# write a new file, so "never overwrite a valid backup" is a fact about the code, not a habit.
+BASE="$DEST/$PREFIX-$STAMP"
+DUMPFILE="$BASE.dump"
+n=1
+while [ -e "$DUMPFILE" ]; do
+  DUMPFILE="$BASE-$n.dump"
+  n=$((n + 1))
+done
 
 if [ -n "${DATABASE_URL:-}" ]; then
   case "$DATABASE_URL" in
@@ -157,6 +184,40 @@ fi
 
 mkdir -p "$DEST"
 
+# The destination has to be writable, and saying so here is clearer than `pg_dump` reporting a
+# permission error three seconds later, with a half-written file already named like a backup.
+if [ ! -w "$DEST" ]; then
+  echo "The destination $DEST exists but this user cannot write to it." >&2
+  echo "Pass --dest <writable directory> or fix its permissions; nothing was written." >&2
+  exit 1
+fi
+
+# A failed run must not leave a file that looks like a backup. Cleanup runs only while SUCCESS is
+# still 0, so a proven archive is never deleted by its own trap. In container mode it also removes
+# the temporary copy inside the container, which `set -e` would otherwise strand there.
+cleanup_failed() {
+  if [ "$SUCCESS" = "0" ]; then
+    rm -f "$DUMPFILE" 2>/dev/null || true
+    if [ "$MODE" = "container" ] && [ -n "${CONTAINER:-}" ]; then
+      docker exec "$CONTAINER" sh -c 'rm -f /tmp/careerguide-backup.dump' >/dev/null 2>&1 || true
+    fi
+  fi
+}
+trap cleanup_failed EXIT
+
+# `pg_dump` fails for four common reasons, and two of them are configuration rather than a broken
+# database. The message names all four instead of printing whatever libpq chose to say.
+dump_failed() {
+  echo "The dump failed; nothing was kept." >&2
+  echo "  * 'server version mismatch' — the local pg_dump is older than the server. Install" >&2
+  echo "    client tools at least as new as the database's major version." >&2
+  echo "  * 'no pg_hba.conf entry' / 'SSL required' — the URL needs the TLS mode its provider" >&2
+  echo "    documents (Neon and Supabase include one in the string they hand out)." >&2
+  echo "  * 'connection refused' / timeout — the database is not reachable from this machine." >&2
+  echo "  * 'permission denied' — the role can read the app's tables but not dump them." >&2
+  exit 1
+}
+
 # `--no-owner --no-privileges` belong to the *restore* rather than the dump, so the archive keeps
 # the roles it was taken from and can be read on a server where those names mean something else.
 #
@@ -166,12 +227,16 @@ mkdir -p "$DEST"
 TOC=""
 case "$MODE" in
   url)
-    pg_dump --format=custom --file="$DUMPFILE" "$TARGET"
-    if command -v pg_restore >/dev/null 2>&1; then TOC=$(pg_restore --list "$DUMPFILE"); fi
+    pg_dump --format=custom --file="$DUMPFILE" "$TARGET" || dump_failed
+    if command -v pg_restore >/dev/null 2>&1; then
+      TOC=$(pg_restore --list "$DUMPFILE") || { echo "The archive was written but cannot be read back; it is not usable." >&2; exit 1; }
+    fi
     ;;
   libpq)
-    pg_dump --format=custom --file="$DUMPFILE"
-    if command -v pg_restore >/dev/null 2>&1; then TOC=$(pg_restore --list "$DUMPFILE"); fi
+    pg_dump --format=custom --file="$DUMPFILE" || dump_failed
+    if command -v pg_restore >/dev/null 2>&1; then
+      TOC=$(pg_restore --list "$DUMPFILE") || { echo "The archive was written but cannot be read back; it is not usable." >&2; exit 1; }
+    fi
     ;;
   container)
     # The container's own POSTGRES_* variables are what `docker exec` inherits, so no
@@ -183,10 +248,12 @@ case "$MODE" in
     # `pg_restore --list` failed on the very next line. One quoted command string, converted
     # nowhere.
     docker exec "$CONTAINER" sh -c \
-      'pg_dump --format=custom --file=/tmp/careerguide-backup.dump "postgres://$POSTGRES_USER:$POSTGRES_PASSWORD@127.0.0.1:5432/$POSTGRES_DB"'
-    TOC=$(docker exec "$CONTAINER" sh -c 'pg_restore --list /tmp/careerguide-backup.dump' || true)
-    docker cp "$CONTAINER:/tmp/careerguide-backup.dump" "$DUMPFILE"
-    docker exec "$CONTAINER" sh -c 'rm -f /tmp/careerguide-backup.dump'
+      'pg_dump --format=custom --file=/tmp/careerguide-backup.dump "postgres://$POSTGRES_USER:$POSTGRES_PASSWORD@127.0.0.1:5432/$POSTGRES_DB"' \
+      || dump_failed
+    TOC=$(docker exec "$CONTAINER" sh -c 'pg_restore --list /tmp/careerguide-backup.dump') \
+      || { echo "The archive inside the container cannot be read back; it is not usable." >&2; exit 1; }
+    docker cp "$CONTAINER:/tmp/careerguide-backup.dump" "$DUMPFILE" || dump_failed
+    docker exec "$CONTAINER" sh -c 'rm -f /tmp/careerguide-backup.dump' || true
     ;;
 esac
 
@@ -219,6 +286,15 @@ else
   echo "verified   : $BYTES bytes, and nothing opened the archive to read it back — there is no" \
     "pg_restore where this ran. Do the first restore on a scratch database before you trust it." >&2
 fi
+
+# `docker cp` keeps the mode the file had inside the container (usually world-readable), so the
+# restrictive umask above is repeated here rather than assumed. Best effort: a filesystem without
+# POSIX modes (exFAT, some network shares) has nothing to chmod, and refusing to keep the backup
+# because of that would be worse than the backup.
+chmod 600 "$DUMPFILE" 2>/dev/null || true
+
+# From here on the archive is proven, and the EXIT trap must leave it alone.
+SUCCESS=1
 
 # Rotation happens after the new file is proven, so a failed run can never be the reason the
 # last good backup disappeared. Only files this script wrote are counted, and only in $DEST.

@@ -87,6 +87,15 @@ jobs:
       - name: Nothing that ships fails to parse
         run: python -m compileall -q app scripts migrations
 
+      # The backup and restore-drill scripts are the only code here that touches every
+      # child's data, and they run on a machine with no Python. A broken shell script is
+      # discovered on the day it is needed, so the parse happens on every push instead.
+      - name: The backup and restore scripts parse
+        run: |
+          sh -n scripts/backup_db.sh
+          sh -n scripts/restore_check.sh
+          echo "ok: both shell scripts parse"
+
       - name: The migration chain renders on PostgreSQL
         run: |
           DATABASE_URL="postgresql+psycopg://ci:ci@127.0.0.1:5432/ci" \

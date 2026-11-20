@@ -20,6 +20,7 @@ from fastapi.responses import JSONResponse, Response
 from .config import get_settings
 from .database import Base, SessionLocal, engine
 from .middleware.cors import configure_cors
+from .middleware.csrf import configure_csrf
 from .middleware.rate_limit import register_rate_limiting
 from .routers import admin, assessments, auth, catalogue, careers, clerk, clerk_webhooks, conversations
 from .routers import email, exams, google_auth, interests, interview, journey, organizations, payments, recommendations
@@ -114,6 +115,7 @@ async def refuse_without_storage(request: Request, call_next):
     return await call_next(request)
 
 
+configure_csrf(app, settings)
 configure_cors(app, settings)
 register_rate_limiting(app)
 
