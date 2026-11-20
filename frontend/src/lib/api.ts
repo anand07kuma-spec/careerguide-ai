@@ -557,6 +557,15 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ token, password }),
     }),
+  /** Opens the link a confirmation mail carried. Public by design: the token is the
+   * whole credential, and a route that asked for a session could not be opened on the
+   * phone the message usually arrives at. A link that is wrong, expired or already
+   * used comes back as `confirmed: false` with a sentence, not as an error. */
+  confirmEmailAddress: (token: string) =>
+    request<{ confirmed: boolean; note: string }>("/api/email/confirm", {
+      method: "POST",
+      body: JSON.stringify({ token }),
+    }),
   signInMethods: () => request<SignInMethods>("/api/auth/methods"),
 
   shareCode: () => request<ShareCode>("/api/auth/share-code"),
