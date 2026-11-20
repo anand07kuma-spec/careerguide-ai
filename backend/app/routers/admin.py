@@ -67,7 +67,7 @@ from sqlalchemy.orm import Session
 from ..config import get_settings
 from ..database import get_db
 from ..middleware.cors import browser_origins
-from ..middleware.rate_limit import admin_limit
+from ..middleware.rate_limit import admin_limit, counters_are_shared
 from ..models import (
     Assessment,
     AuditEvent,
@@ -1026,7 +1026,9 @@ def deployment() -> AdminDeploymentOut:
         rate_limit_admin=s.rate_limit_admin,
         rate_limit_lead=s.rate_limit_lead,
         rate_limit_org=s.rate_limit_org,
-        rate_limit_shared_storage=bool(s.rate_limit_redis_url.strip()),
+        # Read from the limiter, not from the raw variable: a URL that was refused
+        # leaves the counters in this process, and this screen must say so.
+        rate_limit_shared_storage=counters_are_shared(),
         database_engine=engine,
         db_auto_setup=s.db_auto_setup,
         plan_limits_enforced=s.plan_limits_enforced,

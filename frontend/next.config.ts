@@ -18,6 +18,10 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     "/blog": ["./src/content/blog/*.md"],
     "/blog/[slug]": ["./src/content/blog/*.md"],
+    // The proxy's 404 check reads the same files through this route, so it needs
+    // the markdown too — without this the list is empty in production and every
+    // guide would be left to the page's own (streamed, 200) not-found screen.
+    "/api/blog-slugs": ["./src/content/blog/*.md"],
     "/sitemap.xml": ["./src/content/blog/*.md"],
   },
   // The dev server's live-reload socket only accepts origins it knows, and in dev

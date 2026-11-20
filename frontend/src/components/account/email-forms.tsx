@@ -51,7 +51,10 @@ export function passwordProblem(value: string, t: (en: string) => string): strin
 export function failureMessage(error: unknown): string {
   if (error instanceof ApiError) {
     if (error.status === 503) {
-      return "Password reset email is not set up on this server yet. Please ask the operator to enable it.";
+      // Nothing was queued and nothing will arrive. Saying that, and naming the
+      // route back in that actually exists, is the whole point: the other option
+      // is a "check your inbox" screen for a mail that was never sent.
+      return "Password reset email is not enabled on this server, so no reset link was sent. If you connected Google to this account, sign in with Google. Otherwise, ask whoever runs this site to enable password reset email.";
     }
     return error.message;
   }

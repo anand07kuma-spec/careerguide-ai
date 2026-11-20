@@ -1,7 +1,7 @@
 import { NextResponse, type NextMiddleware, type NextRequest } from "next/server";
 import { clerkMiddleware } from "@clerk/nextjs/server";
 import { clerkEnabled } from "@/lib/clerk";
-import { allowedLogoHosts } from "@/lib/site";
+import { allowedLogoHosts, backendBase } from "@/lib/site";
 
 /**
  * Security headers, on every document this site serves.
@@ -250,6 +250,142 @@ function applySecurityHeaders(request: NextRequest, response: NextResponse): Nex
 }
 
 /**
+ * A real 404 for a public slug that is not in its catalogue.
+ *
+ * `/careers/<slug>`, `/blog/<slug>` and the two study-abroad detail routes read
+ * their row at request time, and their pages call `notFound()` when it is missing.
+ * With Cache Components that interrupt runs after the prerendered shell has
+ * already been sent, so the not-found UI arrives with a `200` — Next.js says as
+ * much in its `loading.js` reference, where the prescribed fix is this one: check
+ * the slug here, before the response begins, and rewrite an unknown one onto the
+ * router's own not-found path.
+ *
+ * The check is evidence-based and fails open. A slug is rewritten only when a
+ * catalogue was actually read and does not contain it; a backend that is slow,
+ * unavailable or returning something unexpected leaves the request alone, and the
+ * page's own `notFound()` still shows an honest noindexed not-found screen. The
+ * alternative — treating "could not read the catalogue" as "this page does not
+ * exist" — would 404 every career profile during one bad minute at the API.
+ *
+ * The four catalogues are held for five minutes per instance and a failure is
+ * remembered for thirty seconds, so this adds one small request per instance per
+ * window rather than one per page view. The blog's list is served by
+ * `/api/blog-slugs` because the posts are files on disk, not rows in the API.
+ */
+type CatalogueKind = "careers" | "countries" | "services" | "blog";
+
+const CATALOGUE_ROUTES: { pattern: RegExp; kind: CatalogueKind }[] = [
+  { pattern: /^\/careers\/([^/]+)\/?$/, kind: "careers" },
+  // Before the country pattern, whose single segment would otherwise read
+  // `/study-abroad/services` as a destination called "services".
+  { pattern: /^\/study-abroad\/services\/([^/]+)\/?$/, kind: "services" },
+  { pattern: /^\/study-abroad\/([^/]+)\/?$/, kind: "countries" },
+  { pattern: /^\/blog\/([^/]+)\/?$/, kind: "blog" },
+];
+
+const CATALOGUE_TTL_MS = 5 * 60_000;
+const CATALOGUE_FAILURE_TTL_MS = 30_000;
+const CATALOGUE_TIMEOUT_MS = 1_500;
+
+/** A path no route serves, so the rewrite lands on the root `not-found.tsx` with
+ * the router's own 404 status. The address bar keeps the URL that was asked for. */
+const NOT_FOUND_PATH = "/__careerguide_not_found__";
+
+const catalogueCache = new Map<CatalogueKind, { slugs: Set<string> | null; expires: number }>();
+const catalogueLoads = new Map<CatalogueKind, Promise<Set<string> | null>>();
+
+function catalogueUrl(kind: CatalogueKind, request: NextRequest): string {
+  switch (kind) {
+    case "careers":
+      // The same ceiling the sitemap asks for, so a catalogue that grows past the
+      // default page size does not start 404ing its own newer profiles.
+      return `${backendBase()}/api/careers?limit=400`;
+    case "countries":
+      return `${backendBase()}/api/study-abroad/countries`;
+    case "services":
+      return `${backendBase()}/api/study-abroad/services`;
+    case "blog":
+      return new URL("/api/blog-slugs", request.nextUrl.origin).toString();
+  }
+}
+
+/** Accepts the two shapes this reads: a bare array of rows, or `{ slugs: [] }`. */
+function readSlugs(body: unknown): Set<string> | null {
+  const rows = Array.isArray(body)
+    ? body
+    : body && typeof body === "object" && Array.isArray((body as { slugs?: unknown }).slugs)
+      ? ((body as { slugs: unknown[] }).slugs)
+      : null;
+  if (!rows) return null;
+  const slugs = new Set<string>();
+  for (const row of rows) {
+    const value =
+      typeof row === "string" ? row : ((row as { slug?: unknown } | null)?.slug ?? null);
+    if (typeof value === "string" && value !== "") slugs.add(value);
+  }
+  return slugs;
+}
+
+async function catalogueSlugs(kind: CatalogueKind, request: NextRequest): Promise<Set<string> | null> {
+  const now = Date.now();
+  const cached = catalogueCache.get(kind);
+  if (cached && cached.expires > now) return cached.slugs;
+
+  const running = catalogueLoads.get(kind);
+  if (running) return running;
+
+  const load = (async () => {
+    let slugs: Set<string> | null = null;
+    try {
+      const res = await fetch(catalogueUrl(kind, request), {
+        signal: AbortSignal.timeout(CATALOGUE_TIMEOUT_MS),
+        cache: "no-store",
+        headers: { accept: "application/json" },
+      });
+      if (res.ok) {
+        const parsed = readSlugs(await res.json());
+        // An empty catalogue is not proof a page is missing; it is more likely a
+        // seed that has not run. Only a non-empty list may 404 a slug.
+        if (parsed && parsed.size > 0) slugs = parsed;
+      }
+    } catch {
+      // Timeout or network failure: leave the request to the page.
+    } finally {
+      catalogueLoads.delete(kind);
+    }
+    catalogueCache.set(kind, {
+      slugs,
+      expires: Date.now() + (slugs ? CATALOGUE_TTL_MS : CATALOGUE_FAILURE_TTL_MS),
+    });
+    return slugs;
+  })();
+
+  catalogueLoads.set(kind, load);
+  return load;
+}
+
+/** Whether this request is for a slug its catalogue does not have. */
+async function isUnknownSlug(request: NextRequest): Promise<boolean> {
+  const { pathname } = request.nextUrl;
+  for (const { pattern, kind } of CATALOGUE_ROUTES) {
+    const match = pattern.exec(pathname);
+    if (!match) continue;
+    let slug: string;
+    try {
+      slug = decodeURIComponent(match[1]);
+    } catch {
+      return false;
+    }
+    // `/study-abroad/services` is the services index, not a destination named
+    // "services", and the country pattern above cannot tell the difference.
+    if (kind === "countries" && slug === "services") return false;
+    const slugs = await catalogueSlugs(kind, request);
+    return slugs !== null && !slugs.has(slug);
+  }
+  return false;
+}
+
+/**
  * Clerk's middleware, mounted for the email routes and nothing else.
  *
  * The obvious-looking thing to do here — gate `/app/*`, `/assessments/*` and
@@ -276,6 +412,16 @@ const clerkHandle = clerkEnabled()
     null;
 
 const proxy: NextMiddleware = async (request, event) => {
+  if (
+    (request.method === "GET" || request.method === "HEAD") &&
+    (await isUnknownSlug(request))
+  ) {
+    return applySecurityHeaders(
+      request,
+      NextResponse.rewrite(new URL(NOT_FOUND_PATH, request.url)),
+    );
+  }
+
   const isClerkRoute = CLERK_ROUTES.some((pattern) => pattern.test(request.nextUrl.pathname));
   const response =
     isClerkRoute && clerkHandle

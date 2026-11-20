@@ -232,9 +232,9 @@ function DeploymentPanel({ config }: { config: AdminDeployment }) {
           />
         </dl>
         <Caption>
-          The counters live in this process’s memory. One instance means honest limits; a hosted
-          deployment that runs several has a ceiling of the rule times however many are warm, which
-          is a brake rather than a wall.
+          {config.rate_limit_shared_storage
+            ? "Every worker counts against the same store, so the rules above are the whole site’s ceiling. If that store is briefly unreachable the counters fall back to each process until it answers again, which is logged."
+            : "The counters live in this process’s memory. One instance means honest limits; a hosted deployment that runs several has a ceiling of the rule times however many are warm, which is a brake rather than a wall."}
         </Caption>
       </Card>
 
