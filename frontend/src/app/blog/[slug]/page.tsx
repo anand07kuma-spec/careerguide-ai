@@ -134,8 +134,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 
   if (!post) {
     return pageMeta({
-      title: "Guide not found | CareerGuide",
-      absoluteTitle: true,
+      title: "Guide not found",
       path: `/blog/${slug}`,
       description: "This guide is not published on this deployment. Browse the guides that are.",
       robots: { index: false, follow: true },

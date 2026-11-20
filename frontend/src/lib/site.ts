@@ -34,6 +34,16 @@ export const DEFAULT_ORIGIN = "https://careerguide-web.vercel.app";
 export const DEFAULT_DESCRIPTION =
   "A voice and chat guide for Indian students from class 6 to 12: explore careers, choose a stream, prepare for an entrance exam and involve a parent — in Hindi, English or Hinglish.";
 
+/** The generated 1200×630 share card. `app/opengraph-image.tsx` serves this
+ * path, and `pageMeta()` points every public page at it explicitly. The root
+ * layout's file-convention image is only inherited by pages that do not export
+ * their own `openGraph` — and every public page does — so relying on that
+ * inheritance left the legal pages, the catalogue and the blog with no card at
+ * all. Naming the URL here makes it one value for both metadata and the image. */
+export const OG_IMAGE_PATH = "/opengraph-image";
+
+export const OG_IMAGE_ALT = `${SITE_NAME}: a voice and chat career guide for Indian students from class 6 to 12, in Hindi, English or Hinglish.`;
+
 export function siteOrigin(): string {
   const raw = (process.env.NEXT_PUBLIC_SITE_URL ?? "").trim();
   const value = raw || DEFAULT_ORIGIN;
@@ -200,10 +210,12 @@ type PageMetaOptions = {
 /**
  * The metadata every public page should carry, built once.
  *
- * The image is deliberately absent: `app/opengraph-image.tsx` is the app-level
- * metadata image, so a page that sets nothing still gets a real 1200×630 card,
- * and `twitter.image` falls back to `openGraph.images` for the same reason. A
- * page that wants its own picture sets it after calling this.
+ * Every page that exports `openGraph` replaces the parent object wholesale, so
+ * the share card is named here rather than inherited: without `images` the
+ * OpenGraph and Twitter tags came out empty on every page except `/`, whose
+ * metadata happens to sit in the same segment as `app/opengraph-image.tsx`.
+ * A page that wants its own picture can still replace `images` after calling
+ * this.
  */
 export function pageMeta(o: PageMetaOptions): Metadata {
   const url = absolute(o.path);
@@ -220,6 +232,7 @@ export function pageMeta(o: PageMetaOptions): Metadata {
       title: o.title,
       description: o.description,
       locale: "en_IN",
+      images: [{ url: OG_IMAGE_PATH, width: 1200, height: 630, alt: OG_IMAGE_ALT }],
       ...(o.type === "article"
         ? {
             publishedTime: o.publishedTime,
@@ -232,6 +245,7 @@ export function pageMeta(o: PageMetaOptions): Metadata {
       card: "summary_large_image",
       title: o.title,
       description: o.description,
+      images: [{ url: OG_IMAGE_PATH, alt: OG_IMAGE_ALT }],
     },
   };
 }

@@ -386,13 +386,12 @@ export const HI: Record<string, string> = {
     "क्षमता, व्यक्तित्व या बुद्धि के बारे में कुछ भी आवाज़, उच्चारण या बोलने की गति से नहीं जोड़ा जाता। गाइड कभी नहीं कहेगा कि किसी स्टूडेंट के लिए कोई करियर बंद है — अंक, आय, लिंग, क्षेत्र या दिव्यांगता की वजह से नहीं।",
   "It is a language model, not a counsellor. It can be confident and wrong in the same sentence.":
     "यह एक भाषा मॉडल है, काउंसलर नहीं। एक ही वाक्य में यह पूरे भरोसे के साथ ग़लत हो सकता है।",
-  "The team": "टीम",
-  "There is no team to list. This is one person’s prototype project, published in a public repository, with no staff to name and no investors to thank.":
-    "बताने को कोई टीम नहीं है। यह एक व्यक्ति का प्रोटोटाइप प्रोजेक्ट है, एक सार्वजनिक रिपॉज़िटरी में प्रकाशित — न बताई जाने वाला कोई स्टाफ़, न शुक्रिया अदा करने योग्य कोई निवेशक।",
-  "A normal About page would put a card here for each founder, an advisory board, and a sentence about investors. None of those exist, so this section names the operator instead of inventing people to fill it.":
-    "एक आम About पेज यहाँ हर संस्थापक का कार्ड, एक सलाहकार बोर्ड और निवेशकों के बारे में एक पंक्ति डालता है। इनमें से कुछ भी मौजूद नहीं है, इसलिए यह हिस्सा गढ़े हुए लोगों की जगह उस संस्थाचालक का नाम बताता है जो यह चलाता है।",
-  "CareerGuide AI is an individually developed student project: not a registered company, with no registered address, no phone line and no dedicated support email. Questions and reports land in the public repository.":
-    "CareerGuide AI एक व्यक्तिगत रूप से विकसित स्टूडेंट प्रोजेक्ट है: कोई पंजीकृत कंपनी नहीं, न पंजीकृत पता, न फ़ोन लाइन, और न कोई समर्पित सहायता ईमेल। सवाल और रिपोर्ट सार्वजनिक रिपॉज़िटरी में पहुँचते हैं।",
+  "The founder": "संस्थापक",
+  "Founder & CEO, CareerGuide AI": "संस्थापक और CEO, CareerGuide AI",
+  "CareerGuide AI is designed, built and maintained by one person. There is no team to list, no staff to name and no investors to thank — this section names the operator instead of inventing people to fill it.":
+    "CareerGuide AI को एक ही व्यक्ति डिज़ाइन करता, बनाता और चलाता है। बताने को कोई टीम नहीं, नाम लेने को कोई स्टाफ़ नहीं और शुक्रिया अदा करने योग्य कोई निवेशक नहीं — यह हिस्सा गढ़े हुए लोगों की जगह उसी संचालक का नाम बताता है।",
+  "CareerGuide AI is a student project: not a registered company, with no registered address, no phone line and no dedicated support email. Questions and reports land in the public repository.":
+    "CareerGuide AI एक स्टूडेंट प्रोजेक्ट है: कोई पंजीकृत कंपनी नहीं, न पंजीकृत पता, न फ़ोन लाइन, और न कोई समर्पित सहायता ईमेल। सवाल और रिपोर्ट सार्वजनिक रिपॉज़िटरी में पहुँचते हैं।",
   "No career counsellor, psychologist or education researcher has reviewed the questions the guide asks or the answers it gives. That review is on the list of things this project still needs, and it is the reason the safety and disclaimer pages say what they say.":
     "न किसी करियर काउंसलर, न मनोवैज्ञानिक और न शिक्षा शोधकर्ता ने गाइड के पूछे सवालों या दिए जवाबों की जाँच की है। वह समीक्षा इस प्रोजेक्ट की बाक़ी ज़रूरतों की सूची में है, और इसीलिए सुरक्षा और अस्वीकरण पेज जो कहते हैं वह सच कहते हैं।",
   "Read before a child uses it": "बच्चे को देने से पहले पढ़ें",

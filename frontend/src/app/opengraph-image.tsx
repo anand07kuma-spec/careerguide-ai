@@ -3,7 +3,7 @@ import { join } from "node:path";
 
 import { ImageResponse } from "next/og";
 
-import { DEFAULT_DESCRIPTION, SITE_NAME } from "@/lib/site";
+import { DEFAULT_DESCRIPTION, OG_IMAGE_ALT } from "@/lib/site";
 
 /**
  * The site's OpenGraph card image: `/opengraph-image`.
@@ -27,7 +27,7 @@ import { DEFAULT_DESCRIPTION, SITE_NAME } from "@/lib/site";
 
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
-export const alt = `${SITE_NAME}: a voice and chat career guide for Indian students from class 6 to 12, in Hindi, English or Hinglish.`;
+export const alt = OG_IMAGE_ALT;
 
 /** The approved white-lettering artwork, inlined because a share card is one
  * request and must not depend on a second one reaching this server. The card is

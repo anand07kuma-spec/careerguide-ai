@@ -1,3 +1,6 @@
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+
 import {
   ArrowRight,
   BadgeIndianRupee,
@@ -30,6 +33,7 @@ import { LinkButton } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import type { Metadata } from "next";
 
+import { FOUNDER } from "@/lib/founder";
 import { DEFAULT_DESCRIPTION, pageMeta } from "@/lib/site";
 
 export const metadata: Metadata = pageMeta({
@@ -45,6 +49,12 @@ export const metadata: Metadata = pageMeta({
     "study plan",
   ],
 });
+
+/** Checked at build time on purpose: the photo was never delivered with the
+ * repository, and this page must not render an image tag that 404s. Dropping
+ * the file in `public/images/` and redeploying turns it on; no other edit is
+ * needed, and no stand-in picture is ever drawn in its place. */
+const FOUNDER_PHOTO_EXISTS = existsSync(join(process.cwd(), "public", FOUNDER.photoFile));
 
 const BENEFITS = [
   {
@@ -478,6 +488,59 @@ export default function LandingPage() {
               </div>
             </div>
           </div>
+        </section>
+
+        {/* Meet the founder — a person, not a team organogram. */}
+        <section id="founder" className="mx-auto max-w-page scroll-mt-20 px-4 py-12 sm:px-6 lg:py-14">
+          <Card className="p-6 sm:p-8">
+            <div
+              className={
+                FOUNDER_PHOTO_EXISTS
+                  ? "grid gap-7 lg:grid-cols-[18rem_1fr] lg:items-center lg:gap-10"
+                  : ""
+              }
+            >
+              {FOUNDER_PHOTO_EXISTS ? (
+                <>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={FOUNDER.photoPath}
+                    alt={FOUNDER.photoAlt}
+                    width={420}
+                    height={525}
+                    className="aspect-[4/5] w-full max-w-[18rem] rounded-2xl object-cover shadow-lift"
+                  />
+                </>
+              ) : null}
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-brand">
+                  Meet the founder
+                </p>
+                <h2 className="mt-3 text-3xl font-bold tracking-tight text-heading sm:text-4xl">
+                  {FOUNDER.name}
+                </h2>
+                <p className="mt-1.5 text-sm font-semibold text-brand-dark">
+                  {FOUNDER.title} · {FOUNDER.organisation}
+                </p>
+                <p className="mt-4 max-w-xl leading-relaxed text-muted">
+                  CareerGuide AI is designed, built and maintained by one person. There is no
+                  company behind it, no team to list and no investors to thank — which is also why
+                  the app can stay free and keep so little about a student.
+                </p>
+                <p className="mt-3 max-w-xl text-sm leading-relaxed text-muted">
+                  Founder &amp; CEO describes who leads the work, not a registered company.
+                  Questions and bug reports reach the project through its public repository, and{" "}
+                  <Link
+                    className="font-medium text-brand underline-offset-2 hover:underline"
+                    href="/about#founder"
+                  >
+                    the About page
+                  </Link>{" "}
+                  records what it does not claim.
+                </p>
+              </div>
+            </div>
+          </Card>
         </section>
 
         {/* Closing CTA */}

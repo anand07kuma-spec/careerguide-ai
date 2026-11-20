@@ -18,14 +18,16 @@ import { SiteHeader } from "@/components/layout/site-header";
 import { LinkButton } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { REPO_URL } from "@/components/legal/legal-layout";
+import { FOUNDER } from "@/lib/founder";
 import { useT } from "@/lib/i18n";
 
 /**
  * About — the page that explains what this project is before a parent decides
  * whether to let a child use it. It is written to the same rule as the legal
- * pages: describe the build that exists. So the team section says there is no
- * team, the money section says which part of a checkout is built and which is not,
- * and the numbers are the ones this repository can actually count.
+ * pages: describe the build that exists. So the founder section names the one
+ * person who builds it and says there is no team to list, the money section
+ * says which part of a checkout is built and which is not, and the numbers are
+ * the ones this repository can actually count.
  */
 
 const STEPS = [
@@ -185,25 +187,37 @@ export default function AboutPage() {
           </div>
         </section>
 
-        {/* Team */}
-        <section className="mt-12">
+        {/* The founder. The project has one operator, so this section names that
+            person rather than inventing a team organogram to sit around him. */}
+        <section id={FOUNDER.anchor} className="mt-12 scroll-mt-8">
           <h2 className="text-xl font-bold tracking-tight text-heading sm:text-2xl">
-            {t("The team")}
+            {t("The founder")}
           </h2>
           <div className="mt-4 rounded-card border border-line bg-canvas/50 p-5">
-            <p className="text-sm leading-relaxed text-ink">
+            <div className="flex items-center gap-5">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={FOUNDER.photoPath}
+                alt={FOUNDER.photoAlt}
+                width={160}
+                height={200}
+                className="aspect-[4/5] w-24 shrink-0 rounded-xl object-cover shadow-lift sm:w-32"
+              />
+              <div className="min-w-0">
+                <p className="text-base font-semibold text-heading">{FOUNDER.name}</p>
+                <p className="mt-0.5 text-sm font-medium text-brand-dark">
+                  {t("Founder & CEO, CareerGuide AI")}
+                </p>
+              </div>
+            </div>
+            <p className="mt-4 text-sm leading-relaxed text-ink">
               {t(
-                "There is no team to list. This is one person’s prototype project, published in a public repository, with no staff to name and no investors to thank.",
+                "CareerGuide AI is designed, built and maintained by one person. There is no team to list, no staff to name and no investors to thank — this section names the operator instead of inventing people to fill it.",
               )}
             </p>
             <p className="mt-3 text-sm leading-relaxed text-ink">
               {t(
-                "A normal About page would put a card here for each founder, an advisory board, and a sentence about investors. None of those exist, so this section names the operator instead of inventing people to fill it.",
-              )}
-            </p>
-            <p className="mt-3 text-sm leading-relaxed text-ink">
-              {t(
-                "CareerGuide AI is an individually developed student project: not a registered company, with no registered address, no phone line and no dedicated support email. Questions and reports land in the public repository.",
+                "CareerGuide AI is a student project: not a registered company, with no registered address, no phone line and no dedicated support email. Questions and reports land in the public repository.",
               )}
             </p>
           </div>

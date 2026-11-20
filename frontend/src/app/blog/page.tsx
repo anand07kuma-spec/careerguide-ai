@@ -29,8 +29,7 @@ import { SITE_NAME, absolute, pageMeta, siteOrigin } from "@/lib/site";
  */
 
 export const metadata: Metadata = pageMeta({
-  title: "Career guides for students and parents | CareerGuide",
-  absoluteTitle: true,
+  title: "Career guides for students and parents",
   path: "/blog",
   description:
     "Longer written guides: how to choose a stream after class 10, what an interest test can and cannot tell you, how to read an entrance exam notification, and how a parent can stay useful in the decision.",

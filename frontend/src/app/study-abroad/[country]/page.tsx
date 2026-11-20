@@ -61,8 +61,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   }
   if (!row) {
     return pageMeta({
-      title: "Study abroad destination | CareerGuide",
-      absoluteTitle: true,
+      title: "Study abroad destination",
       path: `/study-abroad/${country}`,
       description:
         "This destination is not in the directory on this deployment. The destinations that are can be browsed from the study abroad page.",
