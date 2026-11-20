@@ -194,11 +194,23 @@ export default function AboutPage() {
             {t("The founder")}
           </h2>
           <div className="mt-4 rounded-card border border-line bg-canvas/50 p-5">
-            <p className="text-base font-semibold text-heading">{FOUNDER.name}</p>
-            <p className="mt-0.5 text-sm font-medium text-brand-dark">
-              {t("Founder & CEO, CareerGuide AI")}
-            </p>
-            <p className="mt-3 text-sm leading-relaxed text-ink">
+            <div className="flex items-center gap-5">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={FOUNDER.photoPath}
+                alt={FOUNDER.photoAlt}
+                width={160}
+                height={200}
+                className="aspect-[4/5] w-24 shrink-0 rounded-xl object-cover shadow-lift sm:w-32"
+              />
+              <div className="min-w-0">
+                <p className="text-base font-semibold text-heading">{FOUNDER.name}</p>
+                <p className="mt-0.5 text-sm font-medium text-brand-dark">
+                  {t("Founder & CEO, CareerGuide AI")}
+                </p>
+              </div>
+            </div>
+            <p className="mt-4 text-sm leading-relaxed text-ink">
               {t(
                 "CareerGuide AI is designed, built and maintained by one person. There is no team to list, no staff to name and no investors to thank — this section names the operator instead of inventing people to fill it.",
               )}

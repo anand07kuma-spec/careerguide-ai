@@ -6,10 +6,9 @@
  * what a crawler is told. `title` is the public role; it does not imply a
  * registered company, and every page that prints it says so in the same breath.
  *
- * `photoFile` is a path under `public/`, not a promise that a file is there.
- * The artwork was never delivered with this repository, so a component must
- * check that it exists before pointing an `<img>` at it — a broken image is a
- * worse claim than no image, and this module has no business guessing one.
+ * `photoFile` is a path under `public/` and `photoPath` is what an `<img>`
+ * points at. The homepage still checks that the file resolves before printing
+ * it — a broken image is a worse claim than no image.
  */
 export const FOUNDER = {
   name: "Anand Kumar",
