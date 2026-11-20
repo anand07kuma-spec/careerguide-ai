@@ -49,7 +49,7 @@ export const HI: Record<string, string> = {
   "International data transfers": "अंतरराष्ट्रीय डेटा ट्रांसफर",
   "Security measures": "सुरक्षा के उपाय",
   Cookies: "कुकीज़",
-  "Grievance officer": "शिकायत अधिकारी",
+  "Grievances and contact": "शिकायतें और संपर्क",
   "Changes to this policy": "इस नीति में बदलाव",
   "Contact us": "संपर्क करें",
   "In the app": "ऐप में मौजूद",
@@ -60,15 +60,17 @@ export const HI: Record<string, string> = {
   Deletion: "मिटाना",
   Portability: "डेटा निकालकर ले जाना",
   "Withdraw consent": "अनुमति वापस लेना",
-  Company: "कंपनी",
-  "Officer’s name": "अधिकारी का नाम",
+  Project: "प्रोजेक्ट",
   Email: "ईमेल",
-  "Postal address": "डाक पता",
-  "Sample values": "नमूना मान",
-  "None — the email above is the only line in.":
-    "कोई नहीं — ऊपर दिया ईमेल ही एकमात्र रास्ता है।",
-  "These details are sample values on a demonstration build. Nobody monitors this inbox yet, and no company has been registered behind them, so treat an answer as unlikely rather than slow. Whoever runs a real deployment replaces them by setting NEXT_PUBLIC_LEGAL_COMPANY, _OFFICER, _EMAIL, _ADDRESS and _CITY at build time, and this note then disappears.":
-    "ये मान एक डेमो बिल्ड के नमूना मान हैं। अभी इस इनबॉक्स पर कोई नहीं देखता और इनके पीछे कोई कंपनी रजिस्टर नहीं हुई है, इसलिए यहाँ जवाब देर से नहीं, बल्कि संभवतः कभी नहीं आएगा। जो भी इसका असली डिप्लॉयमेंट चलाएगा, वह बिल्ड के समय NEXT_PUBLIC_LEGAL_COMPANY, _OFFICER, _EMAIL, _ADDRESS और _CITY भरकर इन्हें बदल देगा, और फिर यह नोट अपने आप हट जाएगा।",
+  "Run by": "कौन चलाता है",
+  "Contact email": "संपर्क ईमेल",
+  "What works instead": "इसके बदले क्या काम करता है",
+  "An individual student developer. Not a registered company, and no officer or postal address is published.":
+    "एक व्यक्तिगत रूप से बनाया गया स्टूडेंट प्रोजेक्ट। कोई पंजीकृत कंपनी नहीं, और कोई अधिकारी या डाक पता प्रकाशित नहीं है।",
+  "No dedicated support email is currently available.":
+    "इस समय कोई समर्पित सहायता ईमेल उपलब्ध नहीं है।",
+  "The contact form and the public GitHub repository. The form says on screen when this deployment cannot send mail, and neither is a staffed support desk.":
+    "संपर्क फ़ॉर्म और सार्वजनिक GitHub रिपॉज़िटरी। जब यह डिप्लॉयमेंट मेल नहीं भेज सकता, तो फ़ॉर्म स्क्रीन पर बता देता है; इनमें से कोई भी स्टाफ़ वाला सपोर्ट डेस्क नहीं है।",
   "The application database": "ऐप का डेटाबेस",
   "17 October 2026": "17 अक्तूबर 2026",
 
@@ -270,15 +272,17 @@ export const HI: Record<string, string> = {
   "With no project named, which is how this prototype runs, this site sets no cookie other than its own session cookie and contacts no measurement service at all.":
     "जब कोई प्रोजेक्ट नाम से नहीं बताया गया — जैसा कि यह प्रोटोटाइप अभी चल रहा है — तो यह साइट अपनी सेशन कुकी के सिवाय कोई कुकी नहीं लगाती और किसी मापने वाली सेवा से संपर्क ही नहीं करती।",
 
-  // Privacy page — grievance officer, changes, contact
-  "A policy for users in India names a grievance officer who can be reached and who answers within a stated period. Those details live in one file in this project's code, and every legal page reads them from there, so a deployment changes them once instead of hunting through four documents.":
-    "भारत के उपयोगकर्ताओं के लिए नीति एक शिकायत अधिकारी का नाम बताती है, जिस तक पहुँचा जा सके और जो तय समय में जवाब दे। वे मान इस प्रोजेक्ट के कोड की एक ही फ़ाइल में हैं, और हर क़ानूनी पेज उन्हें वहीं से पढ़ता है — इसलिए असली तैनाती पर उन्हें चार जगह नहीं, एक बार बदलना होता है।",
+  // Privacy page — grievances, changes, contact
+  "An Indian data-protection policy usually names a grievance officer, a postal address and a response period. This is an individually developed student project: it has appointed no grievance officer, registered no company and promised no response time.":
+    "भारत की डेटा-सुरक्षा नीति आमतौर पर शिकायत अधिकारी, डाक पता और जवाब देने की समय-सीमा बताती है। यह एक व्यक्तिगत रूप से बनाया गया स्टूडेंट प्रोजेक्ट है: इसने न कोई शिकायत अधिकारी नियुक्त किया है, न कोई कंपनी रजिस्टर कराई है, और न कोई जवाब देने का वादा किया है।",
+  "A question about data still has a route — the contact form and the public repository. Neither is a staffed support desk, and neither is watched around the clock.":
+    "डेटा से जुड़ा सवाल फिर भी पहुँच सकता है — संपर्क फ़ॉर्म और सार्वजनिक रिपॉज़िटरी के ज़रिए। इनमें से कोई भी स्टाफ़ वाला सपोर्ट डेस्क नहीं है और कोई भी चौबीसों घंटे नहीं देखा जाता।",
   "This page is updated by editing it and putting the new version online, with the date at the top changed. There is no notification system — no in-app banner, no email list, because there is no email on file. A student who wants to know whether this page changed has to read the date at the top.":
     "इस पेज को अपडेट करने का मतलब है उसे एडिट करके नया संस्करण ऑनलाइन डालना और ऊपर लिखी तारीख़ बदलना। कोई सूचना-तंत्र नहीं है — न ऐप के अंदर बैनर, न ईमेल लिस्ट, क्योंकि सिस्टम में कोई ईमेल है ही नहीं। यह जानना चाहने वाला विद्यार्थी ऊपर लिखी तारीख़ ख़ुद देखेगा।",
   "The text of the policy itself is stored with the code, so the version you are reading matches the version of the app you are using. Its history is public in the Git repository this project is kept in.":
     "नीति का टेक्स्ट कोड के साथ ही सहेजा जाता है, इसलिए आप जो पढ़ रहे हैं वह आपके इस्तेमाल कर रहे ऐप के संस्करण से मेल खाता है। इसका इतिहास इस प्रोजेक्ट की Git रिपॉज़िटरी में सार्वजनिक है।",
-  "The grievance inbox and postal address above are the contact routes for anything about data. There is no separate support desk behind them, and a bug you can describe is usually faster reported where others can see it:":
-    "ऊपर दिया शिकायत इनबॉक्स और डाक पता ही डेटा से जुड़ी हर बात पहुँचाने के रास्ते हैं। इनके पीछे कोई अलग सपोर्ट डेस्क नहीं है, और जिस बग का आप वर्णन कर सकते हैं, वह दूस लोगों के सामने बता देने से आमतौर पर जल्दी ठीक होता है:",
+  "The contact details above are the route for anything about data. There is no separate support desk behind them, and a bug you can describe is usually faster reported where others can see it:":
+    "ऊपर दिए संपर्क विवरण ही डेटा से जुड़ी हर बात पहुँचाने का रास्ता हैं। इनके पीछे कोई अलग सपोर्ट डेस्क नहीं है, और जिस बग का आप वर्णन कर सकते हैं, वह दूसरों के सामने बताने से आमतौर पर जल्दी ठीक होता है:",
   "If a student is in danger right now, this app is not the right place to ask for help. In India, Childline is reachable at 1098, and the app itself points a disclosure toward a trusted adult or a local service rather than waiting for anyone to read it.":
     "अगर कोई विद्यार्थी अभी ख़तरे में है, तो मदद माँगने के लिए यह ऐप सही जगह नहीं है। भारत में चाइल्डलाइन 1098 पर पहुँचा जा सकता है, और ऐप ख़ुद किसी के पढ़ने का इंतज़ार किए बिना ऐसी बात को भरोसेमंद बड़े या नज़दीकी सेवा की ओर ले जाता है।",
 

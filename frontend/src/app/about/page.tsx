@@ -18,8 +18,6 @@ import { SiteHeader } from "@/components/layout/site-header";
 import { LinkButton } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { REPO_URL } from "@/components/legal/legal-layout";
-import { SampleNote } from "@/components/legal/identity-card";
-import { COMPANY, PHONE, POSTAL_ADDRESS } from "@/lib/legal-entity";
 import { useT } from "@/lib/i18n";
 
 /**
@@ -203,11 +201,11 @@ export default function AboutPage() {
                 "A normal About page would put a card here for each founder, an advisory board, and a sentence about investors. None of those exist, so this section names the operator instead of inventing people to fill it.",
               )}
             </p>
-            <p className="mt-3 font-mono text-xs text-muted">
-              {COMPANY} · {POSTAL_ADDRESS}
-              {PHONE ? ` · ${PHONE}` : null}
+            <p className="mt-3 text-sm leading-relaxed text-ink">
+              {t(
+                "CareerGuide AI is an individually developed student project: not a registered company, with no registered address, no phone line and no dedicated support email. Questions and reports land in the public repository.",
+              )}
             </p>
-            <SampleNote />
           </div>
           <p className="mt-4 text-sm leading-relaxed text-muted">
             {t(

@@ -38,16 +38,19 @@ const COLUMNS: { title: string; items: Item[] }[] = [
   {
     title: "Product",
     items: [
-      { label: "Chat with the guide", href: "/app/chat" },
-      { label: "Careers", href: "/app/careers" },
-      { label: "Streams after class 10", href: "/app/streams" },
-      { label: "Exams", href: "/app/exams" },
-      { label: "Career profiles", href: "/careers" },
+      { label: "Start exploring", href: "/welcome" },
+      { label: "Careers", href: "/careers" },
       { label: "Study abroad", href: "/study-abroad" },
-      { label: "Assessments", href: "/app/assessments" },
       { label: "How it works", href: "/about#how-it-works" },
       { label: "Pricing", href: "/pricing" },
-      { label: "Billing & plan", href: "/app/billing" },
+      // The five rows below are screens inside the signed-in app. No public page
+      // exists for them, so they are printed as text with what it takes to open
+      // them instead of linking a visitor to a redirect.
+      { label: "Chat with the guide", note: "inside the app" },
+      { label: "Streams after class 10", note: "inside the app" },
+      { label: "Exams", note: "inside the app" },
+      { label: "Assessments", note: "inside the app" },
+      { label: "Billing & plan", note: "inside the app; payments not open yet" },
     ],
   },
   {
@@ -62,7 +65,9 @@ const COLUMNS: { title: string; items: Item[] }[] = [
     ],
   },
   {
-    title: "Company",
+    // Not "Company": these pages belong to an individual student project, and
+    // the legal pages say so plainly. A heading is a claim like any other.
+    title: "More",
     items: [
       { label: "About", href: "/about" },
       { label: "Contact", href: "/contact" },
@@ -118,7 +123,7 @@ export function Footer() {
               )}
             </p>
             <p className="mt-3 text-xs leading-relaxed text-white/60">
-              {t("A prototype for Indian students from class 6 to 12, and their parents.")}
+              {t("An individually developed student project for Indian students from class 6 to 12, and their parents.")}
             </p>
           </div>
 

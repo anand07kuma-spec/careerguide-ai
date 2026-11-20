@@ -246,7 +246,7 @@ export default function RefundPage() {
             className="text-brand underline-offset-2 hover:underline"
             href="/privacy#grievance-officer"
           >
-            {t("Privacy: grievance officer")}
+            {t("Privacy: grievances")}
           </a>{" "}
           ·{" "}
           <a

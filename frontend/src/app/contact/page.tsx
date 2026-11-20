@@ -9,7 +9,7 @@ import {
   REPO_URL,
   type SectionRef,
 } from "@/components/legal/legal-layout";
-import { IdentityCard } from "@/components/legal/identity-card";
+import { OperatorCard } from "@/components/legal/identity-card";
 import { Button, LinkButton } from "@/components/ui/button";
 import { Input, Select, Textarea } from "@/components/ui/field";
 import { useT } from "@/lib/i18n";
@@ -27,8 +27,7 @@ import { useT } from "@/lib/i18n";
 const SECTIONS: SectionRef[] = [
   { id: "send-a-message", title: "Send a message" },
   { id: "what-happens", title: "What happens to what you write" },
-  { id: "grievance-officer", title: "Grievance officer" },
-  { id: "business-contact", title: "Business contact" },
+  { id: "grievance-officer", title: "Grievances and contact" },
   { id: "response-time", title: "How long an answer takes" },
   { id: "danger", title: "If a child is in danger right now" },
   { id: "other-channel", title: "The channel that always works" },
@@ -220,33 +219,24 @@ export default function ContactPage() {
         </p>
       </LegalSection>
 
-      <LegalSection id="grievance-officer" title={t("Grievance officer")}>
+      <LegalSection id="grievance-officer" title={t("Grievances and contact")}>
         <p>
           {t(
-            "A service for users in India names a grievance officer who answers within a stated period. Those details are kept in one place in this project's code and every legal page reads them from there, so this list and the one on the privacy policy cannot drift apart.",
+            "An Indian service usually names a grievance officer who answers within a stated period. This is an individually developed student project, so there is no appointed officer, no registered company behind it and no promised response time.",
           )}
         </p>
-        <IdentityCard fields="officer" />
-      </LegalSection>
-
-      <LegalSection id="business-contact" title={t("Business contact")}>
-        <p>
-          {t(
-            "The same details, written out for anyone who wants to know who runs the site rather than who answers a complaint.",
-          )}
-        </p>
-        <IdentityCard fields="business" showNote={false} />
+        <OperatorCard />
       </LegalSection>
 
       <LegalSection id="response-time" title={t("How long an answer takes")}>
         <p>
           {t(
-            "The period named above is the one a configured deployment answers within. Where the note on these cards says the details are still samples, there is no queue yet and nobody reading one, so the honest version of that promise is: write it down, expect silence, and use the repository if the question is about something broken.",
+            "There is no promised response time. A message is read by whoever develops this project when they can, and the form says on screen when this deployment cannot send mail at all.",
           )}
         </p>
         <p>
           {t(
-            "What can be said either way: a privacy or grievance message is the one kind that should be answered first, and the GitHub issue is visible to everyone, which usually makes it the fastest of the two.",
+            "A privacy or grievance message is the one kind that should be looked at first, and the GitHub issue is visible to everyone, which usually makes it the fastest of the two.",
           )}
         </p>
       </LegalSection>
