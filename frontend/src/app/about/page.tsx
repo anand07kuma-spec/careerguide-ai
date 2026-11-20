@@ -217,8 +217,16 @@ export default function AboutPage() {
             </p>
             <p className="mt-3 text-sm leading-relaxed text-ink">
               {t(
-                "CareerGuide AI is a student project: not a registered company, with no registered address, no phone line and no dedicated support email. Questions and reports land in the public repository.",
+                "CareerGuide AI is a student project: not a registered company, with no registered address and no dedicated support email. Questions and reports land in the public repository.",
               )}
+            </p>
+            <p className="mt-4 text-sm">
+              <a
+                className="text-brand underline-offset-2 hover:underline"
+                href="/founder/anand-kumar"
+              >
+                {t("Read the full founder profile")}
+              </a>
             </p>
           </div>
           <p className="mt-4 text-sm leading-relaxed text-muted">

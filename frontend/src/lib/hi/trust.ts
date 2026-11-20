@@ -390,8 +390,9 @@ export const HI: Record<string, string> = {
   "Founder & CEO, CareerGuide AI": "संस्थापक और CEO, CareerGuide AI",
   "CareerGuide AI is designed, built and maintained by one person. There is no team to list, no staff to name and no investors to thank — this section names the operator instead of inventing people to fill it.":
     "CareerGuide AI को एक ही व्यक्ति डिज़ाइन करता, बनाता और चलाता है। बताने को कोई टीम नहीं, नाम लेने को कोई स्टाफ़ नहीं और शुक्रिया अदा करने योग्य कोई निवेशक नहीं — यह हिस्सा गढ़े हुए लोगों की जगह उसी संचालक का नाम बताता है।",
-  "CareerGuide AI is a student project: not a registered company, with no registered address, no phone line and no dedicated support email. Questions and reports land in the public repository.":
-    "CareerGuide AI एक स्टूडेंट प्रोजेक्ट है: कोई पंजीकृत कंपनी नहीं, न पंजीकृत पता, न फ़ोन लाइन, और न कोई समर्पित सहायता ईमेल। सवाल और रिपोर्ट सार्वजनिक रिपॉज़िटरी में पहुँचते हैं।",
+  "CareerGuide AI is a student project: not a registered company, with no registered address and no dedicated support email. Questions and reports land in the public repository.":
+    "CareerGuide AI एक स्टूडेंट प्रोजेक्ट है: कोई पंजीकृत कंपनी नहीं, न पंजीकृत पता, और न कोई समर्पित सहायता ईमेल। सवाल और रिपोर्ट सार्वजनिक रिपॉज़िटरी में पहुँचते हैं।",
+  "Read the full founder profile": "संस्थापक की पूरी प्रोफ़ाइल पढ़ें",
   "No career counsellor, psychologist or education researcher has reviewed the questions the guide asks or the answers it gives. That review is on the list of things this project still needs, and it is the reason the safety and disclaimer pages say what they say.":
     "न किसी करियर काउंसलर, न मनोवैज्ञानिक और न शिक्षा शोधकर्ता ने गाइड के पूछे सवालों या दिए जवाबों की जाँच की है। वह समीक्षा इस प्रोजेक्ट की बाक़ी ज़रूरतों की सूची में है, और इसीलिए सुरक्षा और अस्वीकरण पेज जो कहते हैं वह सच कहते हैं।",
   "Read before a child uses it": "बच्चे को देने से पहले पढ़ें",

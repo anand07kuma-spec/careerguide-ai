@@ -529,7 +529,14 @@ export default function LandingPage() {
                 </p>
                 <p className="mt-3 max-w-xl text-sm leading-relaxed text-muted">
                   Founder &amp; CEO describes who leads the work, not a registered company.
-                  Questions and bug reports reach the project through its public repository, and{" "}
+                  Questions and bug reports reach the project through its public repository. The{" "}
+                  <Link
+                    className="font-medium text-brand underline-offset-2 hover:underline"
+                    href="/founder/anand-kumar"
+                  >
+                    founder profile
+                  </Link>{" "}
+                  has the full biography and business contact details, and{" "}
                   <Link
                     className="font-medium text-brand underline-offset-2 hover:underline"
                     href="/about#founder"
