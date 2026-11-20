@@ -203,6 +203,9 @@ try {
     ["/study-abroad/services/profile-building", 200],
     // Real markdown, real content.
     ["/blog/riasec-test-explained", 200],
+    // A fixed public page, for the same reason as the indexes below: nothing
+    // may rewrite a real route.
+    ["/founder/anand-kumar", 200],
     // The indexes whose single segment must not be mistaken for a slug.
     ["/careers", 200],
     ["/blog", 200],

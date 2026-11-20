@@ -146,6 +146,7 @@ export const PUBLIC_PAGES: PublicPage[] = [
   { path: "/study-abroad", changeFrequency: "monthly", priority: 0.7 },
   { path: "/blog", changeFrequency: "weekly", priority: 0.7 },
   { path: "/about", changeFrequency: "yearly", priority: 0.5 },
+  { path: "/founder/anand-kumar", lastModified: new Date("2026-11-20"), changeFrequency: "yearly", priority: 0.5 },
   { path: "/legal", changeFrequency: "yearly", priority: 0.4 },
   { path: "/privacy", lastModified: new Date("2026-10-18"), changeFrequency: "yearly", priority: 0.4 },
   { path: "/terms", lastModified: new Date("2026-10-18"), changeFrequency: "yearly", priority: 0.3 },

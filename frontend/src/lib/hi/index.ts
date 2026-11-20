@@ -34,6 +34,7 @@ import { HI as PUBLIC_PAGES } from "./public-pages";
 import { HI as STUDY_ABROAD } from "./study-abroad";
 import { HI as STREAM } from "./stream";
 import { HI as TRUST } from "./trust";
+import { HI as FOUNDER } from "./founder";
 import { HI as WELCOME } from "./welcome";
 
 export const HI: Record<string, string> = {
@@ -66,4 +67,5 @@ export const HI: Record<string, string> = {
   ...ADMIN,
   ...ADMIN_CONTENT,
   ...PORTAL,
+  ...FOUNDER,
 };

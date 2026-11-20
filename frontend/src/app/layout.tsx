@@ -10,7 +10,7 @@ import { Footer } from "@/components/layout/footer";
 import { CookieBanner } from "@/components/consent/cookie-banner";
 import { Analytics } from "@/components/analytics/Analytics";
 import { JsonLd } from "@/components/seo/json-ld";
-import { FOUNDER } from "@/lib/founder";
+import { founderPerson } from "@/lib/founder";
 import { DEFAULT_DESCRIPTION, OG_IMAGE_ALT, OG_IMAGE_PATH, SITE_NAME, absolute, siteOrigin } from "@/lib/site";
 import { CONTACT_EMAIL } from "@/lib/legal-entity";
 
@@ -155,21 +155,17 @@ const ORGANIZATION = {
 };
 
 /**
- * The person named in the homepage's founder section and the About page. The
- * `@id` is what `Organization.founder` and the About page's `mainEntity` point
- * at, so the graph holds one person rather than several look-alike nodes. It
- * carries no `sameAs`, no `alumniOf` and no address: none of those were supplied
- * with the project, and a made-up profile link is exactly the kind of claim a
- * search engine would surface as fact.
+ * The person named in the homepage's founder section, the About page and the
+ * founder profile. The `@id` is what `Organization.founder` and the founder
+ * page's `mainEntity` point at, so the graph holds one person rather than
+ * several look-alike nodes. The node itself lives in `lib/founder.ts` because
+ * the profile page embeds the same entity; it carries no `sameAs`, no
+ * `alumniOf` and no telephone number: none of those belong in structured data
+ * this project cannot stand behind.
  */
 const FOUNDER_SCHEMA = {
   "@context": "https://schema.org",
-  "@type": "Person",
-  "@id": `${siteOrigin()}/#anand-kumar`,
-  name: FOUNDER.name,
-  jobTitle: FOUNDER.title,
-  url: absolute(`/about#${FOUNDER.anchor}`),
-  worksFor: { "@id": `${siteOrigin()}/#organization` },
+  ...founderPerson(),
 };
 
 const SITE_SCHEMAS = [
