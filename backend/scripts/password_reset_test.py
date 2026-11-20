@@ -23,9 +23,12 @@ Run from `backend/`:
 
 from __future__ import annotations
 
+import contextlib
+import io
 import json
 import os
 import pathlib
+import re
 import subprocess
 import sys
 import tempfile
@@ -58,11 +61,33 @@ from app.services import email_messages, passwords  # noqa: E402
 
 PASS, FAIL = [], []
 
+# A failed assertion prints its diagnostic, and CI keeps that output. The diagnostic
+# must never carry a recovery link, the token inside it, an address, or the captured
+# message — all of which this file handles on purpose. Redaction happens in one place
+# so a new check cannot reintroduce the leak by passing a richer detail.
+_LINK_RE = re.compile(r"https?://\S+")
+_ADDRESS_RE = re.compile(r"[\w.+-]+@[\w-]+\.[\w.-]+")
+_SECRET_RE = re.compile(r"[A-Za-z0-9_-]{32,}")
 
-def check(label: str, condition, detail: str = "") -> None:
-    (PASS if condition else FAIL).append(label)
+
+def redact(value: object) -> str:
+    """The printable form of a diagnostic: no link, no address, no token."""
+    text = _LINK_RE.sub("<link>", str(value))
+    text = _ADDRESS_RE.sub("<address>", text)
+    text = _SECRET_RE.sub("<token>", text)
+    return text[:200]
+
+
+def report(label: str, condition, detail: object = "") -> str:
+    """One result line. Split from `check` so a test can prove the redaction."""
     mark = "PASS" if condition else "FAIL"
-    print(f"  [{mark}] {label}{(' - ' + str(detail)) if detail and not condition else ''}")
+    suffix = f" - {redact(detail)}" if detail != "" and not condition else ""
+    return f"  [{mark}] {label}{suffix}"
+
+
+def check(label: str, condition, detail: object = "") -> None:
+    (PASS if condition else FAIL).append(label)
+    print(report(label, condition, detail))
 
 
 def section(title: str) -> None:
@@ -151,13 +176,14 @@ with TestClient(app) as client:
     check("...with exactly the same body",
           known.json() == unknown.json(), (known.text, unknown.text))
     check("...and only the registered one produced a message",
-          len(sent) == 1 and sent[0]["to"] == EMAIL, sent)
+          len(sent) == 1 and sent[0]["to"] == EMAIL, f"{len(sent)} captured")
     check("the message is the reset template", sent[0]["template"] == "password_reset.html", sent[0]["template"])
 
     first_token = token_from_last_mail()
     link = sent[0]["context"]["reset_url"]
     check("the mailed link names the site and the page a browser opens",
-          link.startswith("https://") and "/reset-password?token=" in link, link)
+          link.startswith("https://") and "/reset-password?token=" in link,
+          {"https": link.startswith("https://"), "reset page": "/reset-password?token=" in link})
     check("...and carries a token long enough to be unguessable", len(first_token) >= 40, len(first_token))
     check("no response ever carried the token",
           first_token not in known.text and first_token not in unknown.text)
@@ -316,7 +342,7 @@ def run_rate_child() -> dict:
         if line.startswith("RESULT "):
             return json.loads(line[len("RESULT "):])
     detail = (child.stderr or child.stdout or "").strip()[-500:]
-    raise RuntimeError(f"rate child did not report: {detail}")
+    raise RuntimeError(f"rate child did not report: {redact(detail)}")
 
 
 section("10. both routes are throttled, and the answer is a sentence")
@@ -341,6 +367,41 @@ check("...with Retry-After and the email sentence",
       and "too many email requests" in forgot_codes[10]["detail"].lower(), forgot_codes[10])
 check("a throttled caller learns nothing about an address",
       "example.com" not in forgot_codes[10]["detail"])
+
+section("11. a failed assertion cannot leak a link, a token or an address")
+SENTINEL_TOKEN = "SentinelTokenNotReal0000000000000000abc"
+SENTINEL_ADDRESS = "sentinel.reader@example.org"
+SENTINEL_LINK = f"https://careerguide-web.vercel.app/reset-password?token={SENTINEL_TOKEN}"
+captured = {
+    "to": SENTINEL_ADDRESS,
+    "template": "password_reset.html",
+    "subject": "Choose a new password",
+    "context": {"reset_url": SENTINEL_LINK},
+}
+
+line = report("a deliberately failing assertion", False, captured)
+check("the failure still names what failed",
+      "[FAIL]" in line and "deliberately failing assertion" in line)
+check("...carries no link", "https://" not in line and "reset-password" not in line)
+check("...carries no token", SENTINEL_TOKEN not in line and "SentinelToken" not in line)
+check("...carries no address", SENTINEL_ADDRESS not in line and "example.org" not in line)
+check("...while a harmless diagnostic survives",
+      "[FAIL] round trip" in report("round trip", False, "status=204 count=2"))
+mixed = redact(f"mailed {SENTINEL_ADDRESS} via {SENTINEL_LINK}")
+check("a bare string is redacted before it is truncated",
+      SENTINEL_ADDRESS not in mixed and SENTINEL_TOKEN not in mixed and "https://" not in mixed)
+
+# The real printer, not only the formatter: a failing check() must emit the same
+# redacted line. Its label is taken back out of the tally before anything else runs.
+emitted = io.StringIO()
+with contextlib.redirect_stdout(emitted):
+    check("sentinel failure", False, captured)
+printed = emitted.getvalue()
+if FAIL and FAIL[-1] == "sentinel failure":
+    FAIL.pop()
+check("check() prints a redacted line",
+      SENTINEL_TOKEN not in printed and SENTINEL_ADDRESS not in printed
+      and "https://" not in printed and "[FAIL] sentinel failure" in printed)
 
 print(f"\n{len(PASS)} passed, {len(FAIL)} failed")
 if FAIL:
