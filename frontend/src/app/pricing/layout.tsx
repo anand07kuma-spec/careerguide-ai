@@ -8,8 +8,7 @@ import { pageMeta } from "@/lib/site";
  * module cannot export `metadata`. The `FAQPage` structured data is rendered by
  * the page, next to the questions it describes, so the two cannot drift. */
 export const metadata: Metadata = pageMeta({
-  title: "Plans and pricing | CareerGuide",
-  absoluteTitle: true,
+  title: "Plans and pricing",
   path: "/pricing",
   description:
     "Free, Pro, Pro Yearly and a School Plan. Every career, stream, exam, scholarship and institute stays free on every plan — a paid plan buys conversation, questionnaires, a printed report and a parent's view.",

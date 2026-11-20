@@ -9,8 +9,7 @@ import { pageMeta } from "@/lib/site";
  * module cannot export `metadata`.
  */
 export const metadata: Metadata = pageMeta({
-  title: "Terms of Use | CareerGuide",
-  absoluteTitle: true,
+  title: "Terms of use",
   path: "/terms",
   description:
     "The terms for a prototype with no password and no advertising: what the guide promises, what it refuses to do, and which clauses — including the ones about money — are honestly marked as missing.",

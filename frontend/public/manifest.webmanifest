@@ -2,12 +2,15 @@
   "name": "CareerGuide AI",
   "short_name": "CareerGuide",
   "description": "Career exploration for Indian students from class 6 to 12 and their parents. Talk or type with a friendly guide in Hindi, English or Hinglish.",
+  "id": "/",
+  "scope": "/",
   "start_url": "/app",
   "display": "standalone",
   "background_color": "#f5f8ff",
   "theme_color": "#0b1730",
   "lang": "en-IN",
   "dir": "ltr",
+  "categories": ["education", "productivity"],
   "icons": [
     {
       "src": "/icon-192.png",

@@ -45,8 +45,7 @@ import { THEME_LABELS, type ThemeKey } from "@/lib/types";
  */
 
 export const metadata: Metadata = pageMeta({
-  title: "Career profiles | CareerGuide",
-  absoluteTitle: true,
+  title: "Career profiles",
   path: "/careers",
   description:
     "Plain-language profiles of careers an Indian student can aim at: what the work is, which subjects and class levels lead to it, what the route costs, and what still has to be checked on an official site.",

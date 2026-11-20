@@ -15,8 +15,7 @@ import { pageMeta } from "@/lib/site";
  * page itself prints the "Last updated" line a human should read.
  */
 export const metadata: Metadata = pageMeta({
-  title: "Privacy Policy | CareerGuide",
-  absoluteTitle: true,
+  title: "Privacy policy",
   path: "/privacy",
   description:
     "What CareerGuide AI stores about a student, what it never asks for, who outside services see the text of a conversation, and what this prototype does not claim.",

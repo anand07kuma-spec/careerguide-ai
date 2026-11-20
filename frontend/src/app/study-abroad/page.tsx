@@ -37,8 +37,7 @@ import type { StudyCountryCard, StudyService, StudyStory } from "@/lib/types";
  */
 
 export const metadata: Metadata = pageMeta({
-  title: "Study abroad made simple | CareerGuide",
-  absoluteTitle: true,
+  title: "Study abroad made simple",
   path: "/study-abroad",
   description:
     "Six destinations explained in plain language, 100+ universities with their official sites, and what a consultancy actually does at each stage — with the fees, deadlines and visa rules left as gaps to be read from the source rather than guessed at.",

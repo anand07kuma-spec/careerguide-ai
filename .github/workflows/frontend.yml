@@ -103,6 +103,15 @@ jobs:
           NEXT_PUBLIC_SITE_URL: http://localhost:3000
         run: npm run build
 
+      # Cache Components sends the prerendered shell before a page's own data
+      # check runs, so an unknown catalogue slug cannot be 404ed from inside the
+      # page — the proxy decides it. This starts the build it just made against a
+      # stub API and asserts both directions: unknown slugs 404, listed ones (and
+      # the index routes next to them) still answer, and an unreachable API never
+      # turns a listed page into a 404.
+      - name: Catalogue routes answer with the right status
+        run: npm run test:routes
+
       # Not a nicety. The service worker and the manifest live in `public/` and are served
       # verbatim; if that breaks, the installed app stops opening offline and nothing else
       # in this app complains. And a route that did not make it into the build is a 404 in
